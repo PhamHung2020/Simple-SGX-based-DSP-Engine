@@ -1,5 +1,7 @@
 #include <iostream>
 
+#include "App/CsvSource.h"
+
 typedef struct
 {
     double timestamp;
@@ -54,9 +56,29 @@ int nestedLoopJoin(CustomEvent1* event1s, CustomEvent2* event2s, int n1, int n2,
     return nItems;
 }
 
+void writeEvent(MyEvent event)
+{
+    std::cout << event.timestamp << " " << event.sourceId << " " << event.key << " " << event.data << " " <<  event.message << std::endl;
+}
+
 int main()
 {
-    printf("%ld", sizeof(CustomEvent1));
+    CsvSource source(1, "test_data.csv", -1);
+    int status = source.start(writeEvent);
+    std::cout << "Status: " << status << std::endl;
+
+
+
+
+
+
+
+
+
+
+
+
+
     // int n1 = 5;
     // int n2 = 10;
 

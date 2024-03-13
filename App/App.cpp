@@ -20,6 +20,8 @@
 #include <sstream>
 #include <fstream>
 #include <vector>
+
+#include "CsvSource.h"
 #include "../include/common.h"
 #include "../include/data_types.h"
 
@@ -28,6 +30,10 @@
 sgx_enclave_id_t globalEnclaveID;
 std::vector<MyEvent> source;
 std::vector<MyEvent> sink;
+
+
+HotCall hotEcall = HOTCALL_INITIALIZER;
+const uint16_t requestedCallID = 0;
 
 using namespace std;
 
@@ -256,6 +262,19 @@ void* EnclaveFilterThread(void*)
     return NULL;
 }
 
+void sendToEngine(MyEvent event)
+{
+    HotCall_requestCall(&hotEcall, requestedCallID, &event);
+}
+
+
+void* startSource(void* sourceAsVoid)
+{
+    Source* source = (Source*) sourceAsVoid;
+    source->start(sendToEngine);
+    return NULL;
+}
+
 /* Application entry */
 int SGX_CDECL main(int argc, char *argv[])
 {
@@ -270,19 +289,25 @@ int SGX_CDECL main(int argc, char *argv[])
         return -1; 
     }
 
-    HotCall     hotEcall        = HOTCALL_INITIALIZER;
     pthread_create(&hotEcall.responderThread, NULL, EnclaveResponderThread, (void*)&hotEcall);
 
     pthread_t filterThread;
     pthread_create(&filterThread, NULL, EnclaveFilterThread, NULL);
 
-    const uint16_t requestedCallID = 0;
 
-    MyEvent event = { 1.0, 1, 2, 7, "Message" };
-    HotCall_requestCall( &hotEcall, requestedCallID, &event);
+    // MyEvent event = { 1.0, 1, 2, 7, "Message" };
+    // HotCall_requestCall( &hotEcall, requestedCallID, &event);
 
-    MyEvent event2 = { 1.0, 2, 2, -4, "Message" };
-    HotCall_requestCall( &hotEcall, requestedCallID, &event2);
+    // MyEvent event2 = { 1.0, 2, 2, -4, "Message" };
+    // HotCall_requestCall( &hotEcall, requestedCallID, &event2);
+    CsvSource source1(1, "test_data.csv");
+    CsvSource source2(2, "test_data2.csv");
+
+    pthread_t sourceThread1, sourceThread2;
+    pthread_create(&sourceThread1, NULL, startSource, (void*) &source1);
+    pthread_create(&sourceThread2, NULL, startSource, (void*) &source2);
+    pthread_join(sourceThread1, NULL);
+    pthread_join(sourceThread2, NULL);
 
     MyEvent stopEvent = { 2.0, 0, 0, 0, "Stop" };
     HotCall_requestCall(&hotEcall, requestedCallID, &stopEvent);
@@ -291,8 +316,6 @@ int SGX_CDECL main(int argc, char *argv[])
 
     pthread_join(hotEcall.responderThread, NULL);
     pthread_join(filterThread, NULL);
-
-    printf("Data: %d\n", event.data);
 
     printf("Filtered data: %ld item(s)\n", sink.size());
     for (int i = 0; i < sink.size(); ++i)
