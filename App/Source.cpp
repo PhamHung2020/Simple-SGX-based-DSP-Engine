@@ -27,7 +27,7 @@ int Source::getDelay()
         return this->delay;
     }
 
-    return rand() % 6;
+    return rand() % 3;
 }
 
 bool Source::isRunning()

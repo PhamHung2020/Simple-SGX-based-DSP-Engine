@@ -29,7 +29,7 @@
 
 sgx_enclave_id_t globalEnclaveID;
 std::vector<MyEvent> source;
-std::vector<MyEvent> sink;
+std::vector<JoinResult> sink;
 
 
 HotCall hotEcall = HOTCALL_INITIALIZER;
@@ -223,9 +223,23 @@ void ocall_print_string(const char *str)
     printf("%s", str);
 }
 
-void test(MyEvent* event)
+void test(JoinResult* joinResult)
 {
-    sink.push_back(*event);
+    MyEvent currentEvent1 = joinResult->event1;
+    MyEvent currentEvent2 = joinResult->event2;
+    printf(
+        "(%lf %d %d %d %s) (%lf %d %d %d %s)\n", 
+        currentEvent1.timestamp, currentEvent1.sourceId, currentEvent1.key, currentEvent1.data, currentEvent1.message,
+        currentEvent2.timestamp, currentEvent2.sourceId, currentEvent2.key, currentEvent2.data, currentEvent2.message
+    );
+    sink.push_back(*joinResult);
+}
+
+void printEvent(MyEvent event)
+{
+    printf(
+        "(%lf %d %d %d %s)\n", 
+        event.timestamp, event.sourceId, event.key, event.data, event.message); 
 }
 
 void* EnclaveResponderThread( void* hotEcallAsVoidP )
@@ -256,6 +270,22 @@ void* EnclaveFilterThread(void*)
     else
     {
         printf("Filter Failed!\n");
+        print_error_message(filterResult);
+    }
+
+    return NULL;
+}
+
+void* EnclaveJoinThread(void*)
+{
+    sgx_status_t filterResult = NestedJoin(globalEnclaveID);
+    if (filterResult == SGX_SUCCESS)
+    {
+        printf("Join Success!\n");
+    }
+    else
+    {
+        printf("Join Failed!\n");
         print_error_message(filterResult);
     }
 
@@ -294,6 +324,9 @@ int SGX_CDECL main(int argc, char *argv[])
     pthread_t filterThread;
     pthread_create(&filterThread, NULL, EnclaveFilterThread, NULL);
 
+    pthread_t joinThread;
+    pthread_create(&joinThread, NULL, EnclaveJoinThread, NULL);
+
 
     // MyEvent event = { 1.0, 1, 2, 7, "Message" };
     // HotCall_requestCall( &hotEcall, requestedCallID, &event);
@@ -316,13 +349,19 @@ int SGX_CDECL main(int argc, char *argv[])
 
     pthread_join(hotEcall.responderThread, NULL);
     pthread_join(filterThread, NULL);
+    pthread_join(joinThread, NULL);
 
-    printf("Filtered data: %ld item(s)\n", sink.size());
-    for (int i = 0; i < sink.size(); ++i)
-    {
-        MyEvent currentEvent = sink[i];
-        printf("%d. %lf %d %d %d %s\n", i+1, currentEvent.timestamp, currentEvent.sourceId, currentEvent.key, currentEvent.data, currentEvent.message);
-    }
+    printf("Joined data: %ld item(s)\n", sink.size());
+    // for (int i = 0; i < sink.size(); ++i)
+    // {
+    //     MyEvent currentEvent1 = sink[i].event1;
+    //     MyEvent currentEvent2 = sink[i].event2;
+    //     printf(
+    //         "%d. (%lf %d %d %d %s) (%lf %d %d %d %s)\n", i+1, 
+    //         currentEvent1.timestamp, currentEvent1.sourceId, currentEvent1.key, currentEvent1.data, currentEvent1.message,
+    //         currentEvent2.timestamp, currentEvent2.sourceId, currentEvent2.key, currentEvent2.data, currentEvent2.message
+    //     );
+    // }
 
     /* Destroy the enclave */
     sgx_destroy_enclave(globalEnclaveID);

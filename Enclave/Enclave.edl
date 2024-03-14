@@ -11,12 +11,16 @@ enclave {
     public void MyCustomEcall( [user_check] void* data );
 
     public void Filter();
+
+    public void NestedJoin();
   };
 
   untrusted {
     void ocall_print_string([in, string] const char *str);
 
-    void test([in] MyEvent* data);
+    void printEvent(MyEvent event);
+
+    void test([in] JoinResult* data);
 
     //void MyCustomOcall([user_check] void* data);
 
