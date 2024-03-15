@@ -1,3 +1,6 @@
 *.so
 /measurments/*
 /test_hotcalls
+/test
+/test.cpp
+/.vscode/*

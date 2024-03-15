@@ -54,11 +54,13 @@
 #include <stdlib.h>
 #include <assert.h>
 
+#include "../include/data_types.h"
+
 #if defined(__cplusplus)
 extern "C" {
 #endif
 
-void printf(const char *fmt, ...);
+void print(const char *fmt, ...);
 
 #if defined(__cplusplus)
 }

@@ -1,135 +1,21 @@
-// ----------------------------------------
-// HotCalls
-// Copyright 2017 The Regents of the University of Michigan
-// Ofir Weisse, Valeria Bertacco and Todd Austin
-
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-
-//     http://www.apache.org/licenses/LICENSE-2.0
-
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-// ---------------------------------------------
-
-//Author: Ofir Weisse, www.OfirWeisse.com, email: oweisse (at) umich (dot) edu
-//Based on ISCA 2017 "HotCalls" paper. 
-//Link to the paper can be found at http://www.ofirweisse.com/previous_work.html
-//If you make nay use of this code for academic purpose, please cite the paper. 
-
-
-/*
- * Copyright (C) 2011-2016 Intel Corporation. All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
- *
- *   * Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer.
- *   * Redistributions in binary form must reproduce the above copyright
- *     notice, this list of conditions and the following disclaimer in
- *     the documentation and/or other materials provided with the
- *     distribution.
- *   * Neither the name of Intel Corporation nor the names of its
- *     contributors may be used to endorse or promote products derived
- *     from this software without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
- * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
- * OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
- * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
- * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
- * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
- * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
- */
-
-
 #include <stdarg.h>
 #include <stdio.h>      /* vsnprintf */
+#include <stdbool.h>
+#include <unistd.h>
+#include <queue>
 
 #include "Enclave.h"
 #include "Enclave_t.h"  /* print_string */
 
 #include "../include/common.h"
+#include "../include/data_types.h"
 
+// int secret = 0;
+std::queue<MyEvent> sourceQueue;
+std::queue<MyEvent> joinQueue;
+std::queue<MyEvent> reduceQueue;
 
-void MyCustomEcall( void* data )
-{
-	int *counter = (int*)data;
-	*counter += 1;
-}
-
-void EcallStartResponder( HotCall* hotEcall )
-{
-	void (*callbacks[1])(void*);
-    callbacks[0] = MyCustomEcall;
-
-    HotCallTable callTable;
-    callTable.numEntries = 1;
-    callTable.callbacks  = callbacks;
-
-    HotCall_waitForCall( hotEcall, &callTable );
-}
-
-void EcallMeasureHotOcallsPerformance( uint64_t*     performanceCounters, 
-                                       uint64_t      numRepeats,
-                                       HotCall*      hotOcall )
-{
-	printf( "Running %s\n", __func__ );
-
-	int         expectedData = 1;
-	OcallParams *ocallParams = (OcallParams *)hotOcall->data;
-	ocallParams->cyclesCount = &performanceCounters[ 0 ];
-
-	const uint16_t requestedCallID = 0;
-	HotCall_requestCall( hotOcall, requestedCallID, ocallParams ); //Setup startTime to current rdtscp()
-	for( uint64_t i=0; i < numRepeats; ++i ) {
-		ocallParams->cyclesCount = &performanceCounters[ i ];
-		HotCall_requestCall( hotOcall, requestedCallID, ocallParams );
-
-		expectedData++;
-        if( ocallParams->counter != expectedData ){
-            printf( "Error! ocallParams->counter is different than expected: %d != %d\n", ocallParams->counter, expectedData );
-        }
-	}
-}
-
-void EcallMeasureSDKOcallsPerformance( uint64_t*     performanceCounters, 
-                                       uint64_t      numRepeats,
-                                       OcallParams*  ocallParams )
-{
-	printf( "Running %s\n", __func__ );
-
-	int         expectedData = 1;
-	ocallParams->cyclesCount = &performanceCounters[ 0 ];
-
-	const uint16_t requestedCallID = 0;
-	MyCustomOcall( ocallParams ); //Setup startTime to current rdtscp()
-	for( uint64_t i=0; i < numRepeats; ++i ) {
-		ocallParams->cyclesCount = &performanceCounters[ i ];
-		MyCustomOcall( ocallParams );
-
-		expectedData++;
-        if( ocallParams->counter != expectedData ){
-            printf( "Error! ocallParams->counter is different than expected: %d != %d\n", ocallParams->counter, expectedData );
-        }
-	}
-}
-/* 
- * printf: 
- *   Invokes OCALL to display the enclave buffer to the terminal.
- */
-void printf(const char *fmt, ...)
+void print(const char *fmt, ...)
 {
     char buf[BUFSIZ] = {'\0'};
     va_list ap;
@@ -137,4 +23,249 @@ void printf(const char *fmt, ...)
     vsnprintf(buf, BUFSIZ, fmt, ap);
     va_end(ap);
     ocall_print_string(buf);
+}
+
+int nestedLoopJoin
+(
+    MyEvent* eventArr1, 
+    MyEvent* eventArr2, 
+    int n1, int n2, 
+    JoinResult* &results, 
+    bool (*predicate)(MyEvent, MyEvent)
+)
+{
+    if (eventArr1 == NULL || eventArr2 == NULL || predicate == NULL) return NULL;
+    int nItems = 0;
+    for (int i = 0; i < n1; ++i)
+    {
+        for (int j = 0; j < n2; ++j)
+        {
+            if (predicate(eventArr1[i], eventArr2[j]))
+            {
+                results[nItems].event1 = eventArr1[i];
+                results[nItems].event2 = eventArr2[j];
+                nItems++;
+            }
+        }
+    }
+
+    return nItems;
+}
+
+MyEvent* filter(MyEvent* event, bool (*predicate)(MyEvent))
+{
+    if (event == NULL || predicate == NULL) return NULL;
+    if (predicate(*event))
+    {
+        return event;
+    }
+
+    return NULL;
+}
+
+MyEvent* map(MyEvent* event, MyEvent* (*mapRule)(MyEvent*))
+{
+    if (event == NULL || mapRule == NULL) return NULL;
+    return mapRule(event);
+}
+
+int reduce(MyEvent event, int accumulator, int (*reduceFunc)(MyEvent, int))
+{
+    if (reduceFunc == NULL) return accumulator;
+    return reduceFunc(event, accumulator);
+}
+
+void MyCustomEcall( void* data )
+{
+    MyEvent* event = (MyEvent*) data;
+    sourceQueue.push(*event);
+}
+
+void TaskExecutor1()
+{
+    while (true)
+    {
+        if (sourceQueue.empty()) 
+        {
+            __asm __volatile(
+                "pause"
+            );
+            continue;
+        }
+        MyEvent event = sourceQueue.front();
+
+        // sourceId = 0 => event sent by engine to terminate this executor
+        if (event.sourceId == 0)
+        {
+            joinQueue.push(event);
+            reduceQueue.push(event);
+            break;
+        }
+
+        // transformation pipeline 1: filter --> map --> join
+        if (event.sourceId == 1)
+        {
+            MyEvent* newEvent = map
+            (
+                filter
+                (
+                    &event, 
+                    [](MyEvent e) { return e.data > 5; }
+                ),
+
+                [](MyEvent* e) { e->data *= 2; return e; }
+            );
+
+            if (newEvent)
+            {
+                joinQueue.push(*newEvent);
+            }
+        }
+        // transformation pipeline 2: filter --> join
+        //                              |------> map --> reduce
+        else if (event.sourceId == 2)
+        {
+            if (
+                filter(&event, [](MyEvent e) { return e.data > 0; })
+            )
+            {
+                joinQueue.push(event);
+                map(&event, [](MyEvent* e) { e->data += 1; return e; });
+                reduceQueue.push(event);
+            }
+
+        }
+
+        sourceQueue.pop();
+    }
+}
+
+void TaskExecutor2(HotCall* hotOcall)
+{
+    const int MAX_ITEM = 5;
+    int n1 = 0, n2 = 0;
+    MyEvent eventArr1[MAX_ITEM + 5], eventArr2[MAX_ITEM + 5];
+    JoinResult* results = new JoinResult[MAX_ITEM * MAX_ITEM + 5];
+    HotOCallParams* hotOCallParams = (HotOCallParams*) hotOcall->data;
+
+    auto joinPredicate = [](MyEvent e1, MyEvent e2) { return e1.data == e2.data; };
+
+    while (true)
+    {
+        if (joinQueue.empty())
+        {
+            __asm __volatile(
+                "pause"
+            );
+            continue;
+        }
+
+        MyEvent event = joinQueue.front();
+
+        if (event.sourceId == 1)
+        {
+            eventArr1[n1] = event;
+            ++n1;
+        }
+        else if (event.sourceId == 2)
+        {
+            eventArr2[n2] = event;
+            ++n2;
+        }
+        else if (event.sourceId == 0)
+        {
+            break;
+        }
+
+        joinQueue.pop();
+
+        if ((n1 == MAX_ITEM && n2 > 0) || (n2 == MAX_ITEM && n1 > 0))
+        {
+            // Call nestedLoopJoin
+            int joinedItems = nestedLoopJoin(eventArr1, eventArr2, n1, n2, results, joinPredicate);
+            for (int i = 0; i < joinedItems; ++i)
+            {
+                hotOCallParams->joinResult.event1 = results[i].event1;
+                hotOCallParams->joinResult.event2 = results[i].event2;
+                HotCall_requestCall(hotOcall, 0, hotOCallParams);
+                // test(&results[i]);
+            }
+
+            n1 = 0;
+            n2 = 0;
+        }
+    }
+
+    if (n1 > 0 && n2 > 0)
+    {
+        // Call nestedLoopJoin
+        int joinedItems = nestedLoopJoin(eventArr1, eventArr2, n1, n2, results, joinPredicate);
+        for (int i = 0; i < joinedItems; ++i)
+        {
+            hotOCallParams->joinResult.event1 = results[i].event1;
+            hotOCallParams->joinResult.event2 = results[i].event2;
+            HotCall_requestCall(hotOcall, 0, hotOCallParams);
+            // test(&results[i]);
+        }
+    }
+
+    delete[] results;
+}
+
+void TaskExecutor3(HotCall* hotOcall)
+{
+    const int MAX_ITEM = 3;
+    int nItem = 0;
+    int accumulator = 0;
+    HotOCallParams* hotOCallParams = (HotOCallParams*) hotOcall->data;
+
+    while (true)
+    {
+        if (reduceQueue.empty())
+        {
+            __asm __volatile(
+                "pause"
+            );
+            continue;
+        }
+
+        MyEvent event = reduceQueue.front();
+        if (event.sourceId == 0)
+        {
+            break;
+        }
+
+        accumulator = reduce(event, accumulator, [](MyEvent e, int acc) { return e.data + acc; });
+        nItem++;
+        if (nItem >= MAX_ITEM)
+        {
+            // call outside
+            hotOCallParams->reduceResult = accumulator;
+            HotCall_requestCall(hotOcall, 1, hotOCallParams);
+            nItem = 0;
+            accumulator = 0;
+        }
+
+        reduceQueue.pop();
+    }
+
+    if (nItem > 0)
+    {
+        // call outside
+        hotOCallParams->reduceResult = accumulator;
+        HotCall_requestCall(hotOcall, 1, hotOCallParams);
+    }
+}
+
+void EcallStartResponder(HotCall* hotEcall)
+{
+	void (*callbacks[1])(void*);
+    callbacks[0] = MyCustomEcall;
+	// callbacks[1] = EFilter;
+
+    HotCallTable callTable;
+    callTable.numEntries = 1;
+    callTable.callbacks  = callbacks;
+
+    HotCall_waitForCall( hotEcall, &callTable );
 }
