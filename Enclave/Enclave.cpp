@@ -11,13 +11,10 @@
 #include "../include/data_types.h"
 
 // int secret = 0;
-std::queue<MyEvent> queue1;
-std::queue<MyEvent> queue2;
+std::queue<MyEvent> sourceQueue;
+std::queue<MyEvent> joinQueue;
+std::queue<MyEvent> reduceQueue;
 
-/* 
- * print: 
- *   Invokes OCALL to display the enclave buffer to the terminal.
- */
 void print(const char *fmt, ...)
 {
     char buf[BUFSIZ] = {'\0'};
@@ -28,14 +25,22 @@ void print(const char *fmt, ...)
     ocall_print_string(buf);
 }
 
-int nestedLoopJoin(MyEvent* eventArr1, MyEvent* eventArr2, int n1, int n2, JoinResult* &results)
+int nestedLoopJoin
+(
+    MyEvent* eventArr1, 
+    MyEvent* eventArr2, 
+    int n1, int n2, 
+    JoinResult* &results, 
+    bool (*predicate)(MyEvent, MyEvent)
+)
 {
+    if (eventArr1 == NULL || eventArr2 == NULL || predicate == NULL) return NULL;
     int nItems = 0;
     for (int i = 0; i < n1; ++i)
     {
         for (int j = 0; j < n2; ++j)
         {
-            if (eventArr1[i].data == eventArr2[j].data)
+            if (predicate(eventArr1[i], eventArr2[j]))
             {
                 results[nItems].event1 = eventArr1[i];
                 results[nItems].event2 = eventArr2[j];
@@ -47,55 +52,107 @@ int nestedLoopJoin(MyEvent* eventArr1, MyEvent* eventArr2, int n1, int n2, JoinR
     return nItems;
 }
 
+MyEvent* filter(MyEvent* event, bool (*predicate)(MyEvent))
+{
+    if (event == NULL || predicate == NULL) return NULL;
+    if (predicate(*event))
+    {
+        return event;
+    }
+
+    return NULL;
+}
+
+MyEvent* map(MyEvent* event, MyEvent* (*mapRule)(MyEvent*))
+{
+    if (event == NULL || mapRule == NULL) return NULL;
+    return mapRule(event);
+}
+
+int reduce(MyEvent event, int accumulator, int (*reduceFunc)(MyEvent, int))
+{
+    if (reduceFunc == NULL) return accumulator;
+    return reduceFunc(event, accumulator);
+}
+
 void MyCustomEcall( void* data )
 {
     MyEvent* event = (MyEvent*) data;
-    queue1.push(*event);
+    sourceQueue.push(*event);
 }
 
-void Filter()
+void TaskExecutor1()
 {
     while (true)
     {
-        if (queue1.empty()) 
+        if (sourceQueue.empty()) 
         {
             __asm __volatile(
                 "pause"
             );
             continue;
         }
-        MyEvent event = queue1.front();
+        MyEvent event = sourceQueue.front();
+
+        // sourceId = 0 => event sent by engine to terminate this executor
         if (event.sourceId == 0)
         {
-            queue2.push(event);
+            joinQueue.push(event);
+            reduceQueue.push(event);
             break;
         }
 
-        if (event.sourceId == 1 && event.data > 5)
+        // transformation pipeline 1: filter --> map --> join
+        if (event.sourceId == 1)
         {
-            queue2.push(event);
-            // test(&event);
+            MyEvent* newEvent = map
+            (
+                filter
+                (
+                    &event, 
+                    [](MyEvent e) { return e.data > 5; }
+                ),
+
+                [](MyEvent* e) { e->data *= 2; return e; }
+            );
+
+            if (newEvent)
+            {
+                joinQueue.push(*newEvent);
+            }
         }
-        else if (event.sourceId == 2 && event.data > 0)
+        // transformation pipeline 2: filter --> join
+        //                              |------> map --> reduce
+        else if (event.sourceId == 2)
         {
-            queue2.push(event);
-            // test(&event);
+            if (
+                filter(&event, [](MyEvent e) { return e.data > 0; })
+            )
+            {
+                joinQueue.push(event);
+                map(&event, [](MyEvent* e) { e->data += 1; return e; });
+                reduceQueue.push(event);
+            }
+
         }
 
-        queue1.pop();
+        sourceQueue.pop();
     }
 }
 
-void NestedJoin()
+void TaskExecutor2(HotCall* hotOcall)
 {
-    const int MAX_ITEM = 10;
+    const int MAX_ITEM = 5;
     int n1 = 0, n2 = 0;
-    MyEvent eventArr1[MAX_ITEM], eventArr2[MAX_ITEM];
-    JoinResult* results = new JoinResult[MAX_ITEM * MAX_ITEM];
+    MyEvent eventArr1[MAX_ITEM + 5], eventArr2[MAX_ITEM + 5];
+    JoinResult* results = new JoinResult[MAX_ITEM * MAX_ITEM + 5];
+    HotOCallParams* hotOCallParams = (HotOCallParams*) hotOcall->data;
+
+    auto joinPredicate = [](MyEvent e1, MyEvent e2) { return e1.data == e2.data; };
 
     while (true)
     {
-        if (queue2.empty())
+        if (joinQueue.empty())
         {
             __asm __volatile(
                 "pause"
@@ -103,7 +160,7 @@ void NestedJoin()
             continue;
         }
 
-        MyEvent event = queue2.front();
+        MyEvent event = joinQueue.front();
 
         if (event.sourceId == 1)
         {
@@ -120,15 +177,18 @@ void NestedJoin()
             break;
         }
 
-        queue2.pop();
+        joinQueue.pop();
 
         if ((n1 == MAX_ITEM && n2 > 0) || (n2 == MAX_ITEM && n1 > 0))
         {
             // Call nestedLoopJoin
-            int joinedItems = nestedLoopJoin(eventArr1, eventArr2, n1, n2, results);
+            int joinedItems = nestedLoopJoin(eventArr1, eventArr2, n1, n2, results, joinPredicate);
             for (int i = 0; i < joinedItems; ++i)
             {
-                test(&results[i]);
+                hotOCallParams->joinResult.event1 = results[i].event1;
+                hotOCallParams->joinResult.event2 = results[i].event2;
+                HotCall_requestCall(hotOcall, 0, hotOCallParams);
+                // test(&results[i]);
             }
 
             n1 = 0;
@@ -139,17 +199,65 @@ void NestedJoin()
     if (n1 > 0 && n2 > 0)
     {
         // Call nestedLoopJoin
-        int joinedItems = nestedLoopJoin(eventArr1, eventArr2, n1, n2, results);
+        int joinedItems = nestedLoopJoin(eventArr1, eventArr2, n1, n2, results, joinPredicate);
         for (int i = 0; i < joinedItems; ++i)
         {
-            test(&results[i]);
+            hotOCallParams->joinResult.event1 = results[i].event1;
+            hotOCallParams->joinResult.event2 = results[i].event2;
+            HotCall_requestCall(hotOcall, 0, hotOCallParams);
+            // test(&results[i]);
+        }
+    }
+
+    delete[] results;
+}
+
+void TaskExecutor3(HotCall* hotOcall)
+{
+    const int MAX_ITEM = 3;
+    int nItem = 0;
+    int accumulator = 0;
+    HotOCallParams* hotOCallParams = (HotOCallParams*) hotOcall->data;
+
+    while (true)
+    {
+        if (reduceQueue.empty())
+        {
+            __asm __volatile(
+                "pause"
+            );
+            continue;
         }
 
-        delete[] results;
+        MyEvent event = reduceQueue.front();
+        if (event.sourceId == 0)
+        {
+            break;
+        }
+
+        accumulator = reduce(event, accumulator, [](MyEvent e, int acc) { return e.data + acc; });
+        nItem++;
+        if (nItem >= MAX_ITEM)
+        {
+            // call outside
+            hotOCallParams->reduceResult = accumulator;
+            HotCall_requestCall(hotOcall, 1, hotOCallParams);
+            nItem = 0;
+            accumulator = 0;
+        }
+
+        reduceQueue.pop();
+    }
+
+    if (nItem > 0)
+    {
+        // call outside
+        hotOCallParams->reduceResult = accumulator;
+        HotCall_requestCall(hotOcall, 1, hotOCallParams);
     }
 }
 
-void EcallStartResponder( HotCall* hotEcall )
+void EcallStartResponder(HotCall* hotEcall)
 {
 	void (*callbacks[1])(void*);
     callbacks[0] = MyCustomEcall;

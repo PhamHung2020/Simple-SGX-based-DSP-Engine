@@ -168,6 +168,7 @@ static inline void HotCall_waitForCall( HotCall *hotCall, HotCallTable* callTabl
     }
 
 }
+
 static inline void StopResponder( HotCall *hotCall );
 static inline void StopResponder( HotCall *hotCall )
 {
@@ -175,7 +176,5 @@ static inline void StopResponder( HotCall *hotCall )
     hotCall->keepPolling = false;
     sgx_spin_unlock( &hotCall->spinlock );
 }
-
-
 
 #endif

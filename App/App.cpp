@@ -33,7 +33,9 @@ std::vector<JoinResult> sink;
 
 
 HotCall hotEcall = HOTCALL_INITIALIZER;
+HotCall hotOcall = HOTCALL_INITIALIZER;
 const uint16_t requestedCallID = 0;
+int nJoinedMatch = 0;
 
 using namespace std;
 
@@ -242,7 +244,27 @@ void printEvent(MyEvent event)
         event.timestamp, event.sourceId, event.key, event.data, event.message); 
 }
 
-void* EnclaveResponderThread( void* hotEcallAsVoidP )
+void sinkReduceResult(void* rawData)
+{
+    HotOCallParams* hotOCallParams = (HotOCallParams*) rawData;
+    printf("Reduce: %d\n", hotOCallParams->reduceResult);
+}
+
+void sinkJoinResult(void* rawData)
+{
+    HotOCallParams* hotOCallParams = (HotOCallParams*) rawData;
+    JoinResult joinResult = hotOCallParams->joinResult;
+    MyEvent currentEvent1 = joinResult.event1;
+    MyEvent currentEvent2 = joinResult.event2;
+    printf(
+        "Join: (%lf %d %d %d %s) (%lf %d %d %d %s)\n", 
+        currentEvent1.timestamp, currentEvent1.sourceId, currentEvent1.key, currentEvent1.data, currentEvent1.message,
+        currentEvent2.timestamp, currentEvent2.sourceId, currentEvent2.key, currentEvent2.data, currentEvent2.message
+    );
+    nJoinedMatch++;
+}
+
+void* EnclaveResponderThread(void* hotEcallAsVoidP)
 {
     //To be started in a new thread
     HotCall *hotEcall = (HotCall*)hotEcallAsVoidP;
@@ -260,16 +282,31 @@ void* EnclaveResponderThread( void* hotEcallAsVoidP )
     return NULL;
 }
 
-void* EnclaveFilterThread(void*)
+void* UntrsutedResponserThread(void* hotOcallAsVoidP)
 {
-    sgx_status_t filterResult = Filter(globalEnclaveID);
+    void (*callbacks[2])(void*);
+    callbacks[0] = sinkJoinResult;
+    callbacks[1] = sinkReduceResult;
+
+    HotCallTable callTable;
+    callTable.numEntries = 2;
+    callTable.callbacks  = callbacks;
+
+    HotCall_waitForCall((HotCall*)hotOcallAsVoidP, &callTable);
+
+    return NULL;
+}
+
+void* EnclaveTransformationThread(void*)
+{
+    sgx_status_t filterResult = TaskExecutor1(globalEnclaveID);
     if (filterResult == SGX_SUCCESS)
     {
-        printf("Filter Success!\n");
+        printf("Transformation Success!\n");
     }
     else
     {
-        printf("Filter Failed!\n");
+        printf("Transformation Failed!\n");
         print_error_message(filterResult);
     }
 
@@ -278,15 +315,31 @@ void* EnclaveFilterThread(void*)
 
 void* EnclaveJoinThread(void*)
 {
-    sgx_status_t filterResult = NestedJoin(globalEnclaveID);
-    if (filterResult == SGX_SUCCESS)
+    sgx_status_t joinResult = TaskExecutor2(globalEnclaveID, &hotOcall);
+    if (joinResult == SGX_SUCCESS)
     {
         printf("Join Success!\n");
     }
     else
     {
         printf("Join Failed!\n");
-        print_error_message(filterResult);
+        print_error_message(joinResult);
+    }
+
+    return NULL;
+}
+
+void* EnclaveReduceThread(void*)
+{
+    sgx_status_t reduceResult = TaskExecutor3(globalEnclaveID, &hotOcall);
+    if (reduceResult == SGX_SUCCESS)
+    {
+        printf("Reduce Success!\n");
+    }
+    else
+    {
+        printf("Reduce Failed!\n");
+        print_error_message(reduceResult);
     }
 
     return NULL;
@@ -319,49 +372,54 @@ int SGX_CDECL main(int argc, char *argv[])
         return -1; 
     }
 
+    /* ========================= PREPARE =====================*/
     pthread_create(&hotEcall.responderThread, NULL, EnclaveResponderThread, (void*)&hotEcall);
 
-    pthread_t filterThread;
-    pthread_create(&filterThread, NULL, EnclaveFilterThread, NULL);
+    OcallParams ocallParams;
+    hotOcall.data = &ocallParams;
+    pthread_create(&hotOcall.responderThread, NULL, UntrsutedResponserThread, (void*)&hotOcall);
+
+    pthread_t transformationThread;
+    pthread_create(&transformationThread, NULL, EnclaveTransformationThread, NULL);
 
     pthread_t joinThread;
     pthread_create(&joinThread, NULL, EnclaveJoinThread, NULL);
 
+    pthread_t reduceThread;
+    pthread_create(&reduceThread, NULL, EnclaveReduceThread, NULL);
 
-    // MyEvent event = { 1.0, 1, 2, 7, "Message" };
-    // HotCall_requestCall( &hotEcall, requestedCallID, &event);
 
-    // MyEvent event2 = { 1.0, 2, 2, -4, "Message" };
-    // HotCall_requestCall( &hotEcall, requestedCallID, &event2);
-    CsvSource source1(1, "test_data.csv");
-    CsvSource source2(2, "test_data2.csv");
+
+    /* =================== DECLARE AND START SOURCES ====================*/
+    CsvSource source1(1, "test_data.csv", 1);
+    CsvSource source2(2, "test_data2.csv", 1);
 
     pthread_t sourceThread1, sourceThread2;
     pthread_create(&sourceThread1, NULL, startSource, (void*) &source1);
     pthread_create(&sourceThread2, NULL, startSource, (void*) &source2);
+
+    /* ================== WAIT FOR SOURCES ===================*/
+    printf("Start sending events...\n");
     pthread_join(sourceThread1, NULL);
     pthread_join(sourceThread2, NULL);
 
-    MyEvent stopEvent = { 2.0, 0, 0, 0, "Stop" };
+    /* ================== STOP EXECUTORS =================*/
+    printf("Sending STOP event\n");
+    MyEvent stopEvent = { 0.0, 0, 0, 0, "Stop" };
     HotCall_requestCall(&hotEcall, requestedCallID, &stopEvent);
+    printf("STOP event sent\n");
 
-    StopResponder( &hotEcall );
+    StopResponder(&hotEcall);
 
     pthread_join(hotEcall.responderThread, NULL);
-    pthread_join(filterThread, NULL);
+    pthread_join(transformationThread, NULL);
     pthread_join(joinThread, NULL);
+    pthread_join(reduceThread, NULL);
 
-    printf("Joined data: %ld item(s)\n", sink.size());
-    // for (int i = 0; i < sink.size(); ++i)
-    // {
-    //     MyEvent currentEvent1 = sink[i].event1;
-    //     MyEvent currentEvent2 = sink[i].event2;
-    //     printf(
-    //         "%d. (%lf %d %d %d %s) (%lf %d %d %d %s)\n", i+1, 
-    //         currentEvent1.timestamp, currentEvent1.sourceId, currentEvent1.key, currentEvent1.data, currentEvent1.message,
-    //         currentEvent2.timestamp, currentEvent2.sourceId, currentEvent2.key, currentEvent2.data, currentEvent2.message
-    //     );
-    // }
+    StopResponder(&hotOcall);
+    pthread_join(hotOcall.responderThread, NULL);
+
+    printf("Joined data: %d item(s)\n", nJoinedMatch);
 
     /* Destroy the enclave */
     sgx_destroy_enclave(globalEnclaveID);

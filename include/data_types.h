@@ -18,4 +18,16 @@ typedef struct
     MyEvent event2;
 } JoinResult;
 
+enum ActionType
+{
+    REDUCE,
+    JOIN
+};
+
+struct HotOCallParams
+{
+    JoinResult joinResult;
+    int reduceResult;
+};
+
 #endif
