@@ -6,15 +6,7 @@ enclave {
   include "../include/data_types.h"
 
   trusted {
-    public void EcallStartResponder([user_check] HotCall* fastEcall);                                                                                           
-  
-    public void MyCustomEcall( [user_check] void* data );
-
-    public void TaskExecutor1();
-
-    public void TaskExecutor2([user_check] HotCall* fastOcall);
-
-    public void TaskExecutor3([user_check] HotCall* fastOcall);
+    public void EcallStartResponder([user_check] HotCall* fastEcall, [user_check] HotCall* fastOcall);                                                                                           
 
   };
 
@@ -22,9 +14,6 @@ enclave {
     void ocall_print_string([in, string] const char *str);
 
     void printEvent(MyEvent event);
-
-    void test([in] JoinResult* data);
-
   };
 
 };
