@@ -22,10 +22,10 @@
 #include <vector>
 #include <unistd.h>
 
-#include "CsvSource.h"
-#include "../include/hot_calls.h"
-#include "../include/common.h"
-#include "../include/data_types.h"
+#include "../Include/Source/CsvSource.h"
+#include "../Include/hot_calls.h"
+#include "../Include/common.h"
+#include "../Include/data_types.h"
 
 # define MAX_PATH FILENAME_MAX
 
