@@ -81,15 +81,17 @@ void TaskExecutor(void* data)
 
     event->data += 1;
 
-    printEvent(*event);
+    // printEvent(*event);
+
+    hotOCallParams->eventResult = *event;
+    HotCall_requestCall(globalHotOcall, 0, hotOCallParams);
 }
 
 
 void EcallStartResponder(HotCall* hotEcall, HotCall* hotOcall)
 {
     globalHotOcall = hotOcall;
-    hotOCallParams = (HotOCallParams*) hotEcall->data;
-    hotOCallParams->eventResult.data = 5;
+    hotOCallParams = (HotOCallParams*) hotOcall->data;
 
 	void (*callbacks[1])(void*);
     callbacks[0] = TaskExecutor;

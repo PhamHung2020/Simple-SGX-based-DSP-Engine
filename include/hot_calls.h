@@ -123,8 +123,8 @@ static inline int HotCall_requestCall( HotCall* hotCall, uint16_t callID, void *
     return numRetries;
 }
 
-static inline void HotCall_waitForCall( HotCall *hotCall, HotCallTable* callTable )  __attribute__((always_inline));
-static inline void HotCall_waitForCall( HotCall *hotCall, HotCallTable* callTable ) 
+static inline void HotCall_waitForCall(HotCall *hotCall, HotCallTable* callTable)  __attribute__((always_inline));
+static inline void HotCall_waitForCall(HotCall *hotCall, HotCallTable* callTable) 
 {
     static int i;
     // volatile void *data;

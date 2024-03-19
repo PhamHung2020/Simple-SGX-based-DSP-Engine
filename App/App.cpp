@@ -233,7 +233,7 @@ void sinkResult(void* rawData)
     HotOCallParams* hotOCallParams = (HotOCallParams*) rawData;
     MyEvent event = hotOCallParams->eventResult;
     printf(
-        "Result: (%lf %d %d %d %s)\n", 
+        "Sink Result: (%lf %d %d %d %s)\n", 
         event.timestamp, event.sourceId, event.key, event.data, event.message
     );
 }
@@ -278,19 +278,19 @@ void* UntrsutedResponserThread(void* hotOcallAsVoidP)
     return NULL;
 }
 
-// void sendToEngine(MyEvent event)
-// {
-//     printEvent(event);
-//     globalEvent = event;
-//     HotCall_requestCall(&hotEcall, requestedCallID, (void*)&globalEvent);
-// }
+void sendToEngine(MyEvent event)
+{
+    // printEvent(event);
+    globalEvent = event;
+    HotCall_requestCall(&hotEcall, requestedCallID, (void*)&globalEvent);
+}
 
-// void* startSource(void* sourceAsVoid)
-// {
-//     Source* source = (Source*) sourceAsVoid;
-//     source->start(sendToEngine);
-//     return NULL;
-// }
+void* startSource(void* sourceAsVoid)
+{
+    Source* source = (Source*) sourceAsVoid;
+    source->start(sendToEngine);
+    return NULL;
+}
 
 /* Application entry */
 int SGX_CDECL main(int argc, char *argv[])
@@ -305,45 +305,31 @@ int SGX_CDECL main(int argc, char *argv[])
 
     /* ========================= PREPARE & START RESPONDERS =====================*/
     HotCall hotOcall = HOTCALL_INITIALIZER;
+    HotOCallParams ocallParams;
+    hotOcall.data = &ocallParams;
 
     HotCallPair hotCallPair = { &hotEcall, &hotOcall };
     pthread_create(&hotEcall.responderThread, NULL, EnclaveResponderThread, (void*)&hotCallPair);
 
-    // OcallParams ocallParams;
-    // hotOcall.data = &ocallParams;
-    // pthread_create(&hotOcall.responderThread, NULL, UntrsutedResponserThread, (void*)&hotOcall);
+    pthread_create(&hotOcall.responderThread, NULL, UntrsutedResponserThread, (void*)&hotOcall);
 
     /* =================== DECLARE AND START SOURCES ====================*/
     CsvSource source1(1, "test_data.csv", 0);
-    // CsvSource source2(2, "test_data2.csv", 1);
 
     pthread_t sourceThread1;
-    // pthread_t sourceThread2;
-    // pthread_create(&sourceThread2, NULL, startSource, (void*) &source2);
-    // pthread_create(&sourceThread1, NULL, startSource, (void*) &source1);
+    pthread_create(&sourceThread1, NULL, startSource, (void*) &source1);
 
     /* ================== WAIT FOR SOURCES ===================*/
     printf("Start sending events...\n");
 
-    // auto sendToEngine = [&](MyEvent event) { HotCall_requestCall(&hotEcall, requestedCallID, (void*)&event); };
-    // source1.start(sendToEngine);
-    // pthread_join(sourceThread1, NULL);
-    // pthread_join(sourceThread2, NULL);
-
-    MyEvent event = { 5.4, 1, 2, 3, "Abc\0"};
-    for (int i = 0; i < 100; ++i)
-    {
-        printf("%d\n", i);
-        HotCall_requestCall(&hotEcall, requestedCallID, (void*)&event);
-    }
-
+    pthread_join(sourceThread1, NULL);
 
     /* ================== STOP RESPONDERS =================*/
     StopResponder(&hotEcall);
     pthread_join(hotEcall.responderThread, NULL);
 
-    // StopResponder(&hotOcall);
-    // pthread_join(hotOcall.responderThread, NULL);
+    StopResponder(&hotOcall);
+    pthread_join(hotOcall.responderThread, NULL);
 
     /* ================== DESTROY ENCLAVE =================*/
     sgx_destroy_enclave(globalEnclaveID);

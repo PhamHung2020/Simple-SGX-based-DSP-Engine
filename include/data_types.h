@@ -27,7 +27,7 @@ enum ActionType
 struct HotOCallParams
 {
     // JoinResult joinResult;
-    // int reduceResult;
+    int reduceResult;
     MyEvent eventResult;
 };
 
