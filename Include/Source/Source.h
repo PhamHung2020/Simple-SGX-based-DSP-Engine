@@ -5,7 +5,7 @@
 #include <string>
 #include <unistd.h>
 
-#include "../../Include/data_types.h"
+#include "data_types.h"
 
 class Source
 {

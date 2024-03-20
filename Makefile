@@ -92,7 +92,10 @@ else
 	Urts_Library_Name := sgx_urts
 endif
 
-App_Cpp_Files := App/App.cpp $(wildcard App/*.cpp) $(wildcard Lib/Source/*.cpp)
+Lib_Cpp_Files := $(wildcard Lib/Source/*.cpp)
+Lib_Cpp_Objects := $(Lib_Cpp_Files:.cpp=.o)
+
+App_Cpp_Files := App/App.cpp $(wildcard App/*.cpp)
 App_Include_Paths := -IInclude -IApp -I$(SGX_SDK)/include
 
 App_C_Flags := $(SGX_COMMON_CFLAGS) -fPIC -Wno-attributes $(App_Include_Paths)
@@ -118,7 +121,7 @@ else
 	App_Link_Flags += -lsgx_uae_service
 endif
 
-App_Cpp_Objects := $(App_Cpp_Files:.cpp=.o)
+App_Cpp_Objects := $(Lib_Cpp_Objects) $(App_Cpp_Files:.cpp=.o)
 
 App_Name := test_hotcalls
 
@@ -204,6 +207,10 @@ App/Enclave_u.o: App/Enclave_u.c
 App/spinlock.o: App/spinlock.c
 	@$(CC) $(App_C_Flags) -c $< -o $@
 	@echo "CC   <=  $<"
+
+$(Lib_Cpp_Objects): %.o: %.cpp
+	@$(CXX) $(SGX_COMMON_CXXFLAGS) $(App_Cpp_Flags) -c $< -o $@
+	@echo "CXX  <=  $<"
 
 App/%.o: App/%.cpp App/Enclave_u.h
 	@$(CXX) $(SGX_COMMON_CXXFLAGS) $(App_Cpp_Flags) -c $< -o $@
