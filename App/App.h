@@ -9,7 +9,7 @@
 #include "sgx_error.h"       /* sgx_status_t */
 #include "sgx_eid.h"     /* sgx_enclave_id_t */
 
-#include "../Include/data_types.h"
+#include "data_types.h"
 
 #ifndef TRUE
 # define TRUE 1

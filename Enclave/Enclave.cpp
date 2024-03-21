@@ -7,9 +7,9 @@
 #include "Enclave.h"
 #include "Enclave_t.h"  /* print_string */
 
-#include "../Include/hot_calls.h"
-#include "../Include/common.h"
-#include "../Include/data_types.h"
+#include "hot_calls.h"
+#include "common.h"
+#include "data_types.h"
 
 HotCall* globalHotOcall;
 HotOCallParams* hotOCallParams;

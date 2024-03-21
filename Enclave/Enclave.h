@@ -54,7 +54,7 @@
 #include <stdlib.h>
 #include <assert.h>
 
-#include "../Include/data_types.h"
+#include "data_types.h"
 
 #if defined(__cplusplus)
 extern "C" {
