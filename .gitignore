@@ -4,3 +4,12 @@
 /test
 /test.cpp
 /.vscode/*
+
+src/App/*.o
+src/App/Enclave_u.c
+src/App/Enclave_u.h
+
+
+src/Encalve/*.o
+src/Encalve/Enclave_t.c
+src/Encalve/Enclave_t.h
