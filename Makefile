@@ -52,7 +52,7 @@
 SGX_SDK ?= /opt/intel/sgxsdk
 SGX_MODE ?= HW
 SGX_ARCH ?= x64
-SGX_PRERELEASE ?= 1
+SGX_DEBUG ?= 1
 
 ifeq ($(shell getconf LONG_BIT), 32)
 	SGX_ARCH := x86
@@ -92,8 +92,18 @@ else
 	Urts_Library_Name := sgx_urts
 endif
 
-Lib_Cpp_Files := $(wildcard src/Lib/Source/*.cpp)
-Lib_Cpp_Objects := $(Lib_Cpp_Files:.cpp=.o)
+
+ifeq ($(SGX_DEBUG), 1)
+		BUILDDIR := build/debug
+else ifeq ($(SGX_PRERELEASE), 1)
+		BUILDDIR := build/prerelease
+else
+		BUILDDIR := build/release
+endif
+
+SOURCEDIR := src
+Lib_Cpp_Files := $(wildcard $(SOURCEDIR)/Lib/**/*.cpp)
+Lib_Cpp_Objects := $(patsubst $(SOURCEDIR)/%,$(BUILDDIR)/%,$(Lib_Cpp_Files:.cpp=.o))
 
 App_Cpp_Files := src/App/App.cpp $(wildcard src/App/*.cpp)
 App_Include_Paths := -Iinclude -Isrc/App -I$(SGX_SDK)/include
@@ -121,9 +131,10 @@ else
 	App_Link_Flags += -lsgx_uae_service
 endif
 
-App_Cpp_Objects := $(Lib_Cpp_Objects) $(App_Cpp_Files:.cpp=.o)
+App_Cpp_Objects := $(Lib_Cpp_Objects) $(patsubst $(SOURCEDIR)/%,$(BUILDDIR)/%,$(App_Cpp_Files:.cpp=.o))
+# $(App_Cpp_Files:.cpp=.o)
 
-App_Name := test_hotcalls
+App_Name := $(BUILDDIR)/app
 
 ######## Enclave Settings ########
 
@@ -149,10 +160,10 @@ Enclave_Link_Flags := $(SGX_COMMON_CFLAGS) -Wl,--no-undefined -nostdlib -nodefau
 	-Wl,--defsym,__ImageBase=0 \
 	-Wl,--version-script=config/Enclave.lds
 
-Enclave_Cpp_Objects := $(Enclave_Cpp_Files:.cpp=.o)
+Enclave_Cpp_Objects := $(patsubst $(SOURCEDIR)/%,$(BUILDDIR)/%,$(Enclave_Cpp_Files:.cpp=.o))
 
-Enclave_Name := enclave.so
-Signed_Enclave_Name := enclave.signed.so
+Enclave_Name := $(BUILDDIR)/enclave.so
+Signed_Enclave_Name := $(BUILDDIR)/enclave.signed.so
 Enclave_Config_File := config/Enclave.config.xml
 
 ifeq ($(SGX_MODE), HW)
@@ -175,7 +186,7 @@ all: $(App_Name) $(Enclave_Name)
 	@echo "You can also sign the enclave using an external signing tool. See User's Guide for more details."
 	@echo "To build the project in simulation mode set SGX_MODE=SIM. To build the project in prerelease mode set SGX_PRERELEASE=1 and SGX_MODE=HW."
 else
-all: $(App_Name) $(Signed_Enclave_Name)
+all: $(App_Name) $(Signed_Enclave_Name) $(BUILDDIR)
 endif
 
 run: all
@@ -183,6 +194,9 @@ ifneq ($(Build_Mode), HW_RELEASE)
 	@$(CURDIR)/$(App_Name)
 	@echo "RUN  =>  $(App_Name) [$(SGX_MODE)|$(SGX_ARCH), OK]"
 endif
+
+$(BUILDDIR):
+	@mkdir $(BUILDDIR)
 
 ######## App Objects ########
 
@@ -194,48 +208,53 @@ endif
 # 	@$(CC) $(App_C_Flags) -c $< -o $@
 # 	@echo "CC   <=  $<"
 
-App/Enclave_u.h: $(SGX_EDGER8R) config/Enclave.edl
+src/App/Enclave_u.h: $(SGX_EDGER8R) config/Enclave.edl
 	@cd src/App && $(SGX_EDGER8R) --untrusted ../../config/Enclave.edl --search-path ../Enclave --search-path $(SGX_SDK)/include
 	@echo "GEN  =>  $@"
 
-App/Enclave_u.c: App/Enclave_u.h
+src/App/Enclave_u.c: src/App/Enclave_u.h
 
-App/Enclave_u.o: App/Enclave_u.c
+$(BUILDDIR)/App/Enclave_u.o: src/App/Enclave_u.c
 	@$(CC) $(SGX_COMMON_CFLAGS) $(App_C_Flags) -c $< -o $@
 	@echo "CC   <=  $<"
 
-App/spinlock.o: App/spinlock.c
+$(BUILDDIR)/App/spinlock.o: src/App/spinlock.c
 	@$(CC) $(App_C_Flags) -c $< -o $@
 	@echo "CC   <=  $<"
 
-$(Lib_Cpp_Objects): %.o: %.cpp
+# $(Lib_Cpp_Objects): %.o: %.cpp
+$(BUILDDIR)/Lib/%.o: src/Lib/%.cpp
+	@mkdir -p $(dir $@)
 	@$(CXX) $(SGX_COMMON_CXXFLAGS) $(App_Cpp_Flags) -c $< -o $@
 	@echo "CXX  <=  $<"
 
-App/%.o: App/%.cpp App/Enclave_u.h
+$(BUILDDIR)/App/%.o: src/App/%.cpp src/App/Enclave_u.h
+	@mkdir -p $(dir $@)
 	@$(CXX) $(SGX_COMMON_CXXFLAGS) $(App_Cpp_Flags) -c $< -o $@
 	@echo "CXX  <=  $<"
 
-$(App_Name): $(App_Cpp_Objects) App/Enclave_u.o App/spinlock.o
+$(App_Name): $(App_Cpp_Objects) $(BUILDDIR)/App/Enclave_u.o $(BUILDDIR)/App/spinlock.o
+	@mkdir -p $(dir $@)
 	@$(CXX) $^ -o $@ $(App_Link_Flags)
 	@echo "LINK =>  $@"
 
 
 ######## Enclave Objects ########
 
-Enclave/Enclave_t.c: $(SGX_EDGER8R) Enclave/Enclave.edl
+src/Enclave/Enclave_t.c: $(SGX_EDGER8R) config/Enclave.edl
 	@cd src/Enclave && $(SGX_EDGER8R) --trusted ../../config/Enclave.edl --search-path ../Enclave --search-path $(SGX_SDK)/include
 	@echo "GEN  =>  $@"
 
-Enclave/Enclave_t.o: Enclave/Enclave_t.c
+$(BUILDDIR)/Enclave/Enclave_t.o: src/Enclave/Enclave_t.c
+	@mkdir -p $(dir $@)
 	@$(CC) $(Enclave_C_Flags) -c $< -o $@
 	@echo "CC   <=  $<"
 
-Enclave/%.o: Enclave/%.cpp
+$(BUILDDIR)/Enclave/%.o: src/Enclave/%.cpp
 	@$(CXX) $(Enclave_Cpp_Flags) -c $< -o $@
 	@echo "CXX  <=  $<"
 
-$(Enclave_Name): Enclave/Enclave_t.o $(Enclave_Cpp_Objects)
+$(Enclave_Name): $(BUILDDIR)/Enclave/Enclave_t.o $(Enclave_Cpp_Objects)
 	@$(CXX) $^ -o $@ $(Enclave_Link_Flags)
 	@echo "LINK =>  $@"
 
@@ -247,3 +266,4 @@ $(Signed_Enclave_Name): $(Enclave_Name)
 
 clean:
 	@rm -f $(App_Name) $(Enclave_Name) $(Signed_Enclave_Name) $(App_Cpp_Objects) src/App/Enclave_u.* $(Enclave_Cpp_Objects) src/Enclave/Enclave_t.*
+	@rm -r $(BUILDDIR)/* $(BUILDDIR)

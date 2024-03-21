@@ -314,7 +314,7 @@ int SGX_CDECL main(int argc, char *argv[])
     pthread_create(&hotOcall.responderThread, NULL, UntrsutedResponserThread, (void*)&hotOcall);
 
     /* =================== DECLARE AND START SOURCES ====================*/
-    CsvSource source1(1, "test_data.csv", 0);
+    CsvSource source1(1, "../../test_data.csv", 0);
 
     pthread_t sourceThread1;
     pthread_create(&sourceThread1, NULL, startSource, (void*) &source1);

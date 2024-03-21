@@ -10,6 +10,10 @@ src/App/Enclave_u.c
 src/App/Enclave_u.h
 
 
-src/Encalve/*.o
-src/Encalve/Enclave_t.c
-src/Encalve/Enclave_t.h
+src/Enclave/*.o
+src/Enclave/Enclave_t.c
+src/Enclave/Enclave_t.h
+
+src/Lib/**/*.o
+
+build/**
