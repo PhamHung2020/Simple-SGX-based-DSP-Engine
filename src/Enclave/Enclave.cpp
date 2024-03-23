@@ -77,16 +77,10 @@ int reduce(MyEvent event, int accumulator, int (*reduceFunc)(MyEvent, int))
 
 void TaskExecutor(void* data)
 {
-    ocall_print_string("processing\n");
     MyEvent* event = (MyEvent*) data;
-
     event->data += 1;
-    // int a = event->data;
-
+    // FastCall_request(globalFastOCall, event);
     printEvent(*event);
-
-    // hotOCallParams->eventResult = *event;
-    // HotCall_requestCall(globalFastOcall, 0, hotOCallParams);
 }
 
 

@@ -12,9 +12,9 @@
 typedef unsigned long int pthread_t;
 
 typedef struct {
-    pthread_t           responderThread;
-    struct circular_buffer*    data_buffer;
-    bool                keepPolling;
+    pthread_t               responderThread;
+    struct circular_buffer* data_buffer;
+    bool                    keepPolling;
 } FastCallStruct;
 
 typedef struct 
@@ -39,15 +39,17 @@ static inline int FastCall_request(FastCallStruct* fastCallData, MyEvent *data)
     // Request call
     while(true) {
 
-        if (circular_buffer_push(fastCallData->data_buffer, *data) != 0)
+        if (circular_buffer_push(fastCallData->data_buffer, *data) == 0)
         {
-            numRetries++;
-            if(numRetries > MAX_RETRIES)
-                return -1;
-
-            for (i = 0; i<3; ++i)
-                _mm_pause();
+            break;
         }
+
+        numRetries++;
+        if(numRetries > MAX_RETRIES)
+            return -1;
+
+        for (i = 0; i<3; ++i)
+            _mm_pause();
     }
 
     return numRetries;
@@ -65,17 +67,18 @@ static inline void FastCall_wait(FastCallStruct *fastCallData, FastCallTable* ca
 
         MyEvent* data;
         // int result = circular_buffer_pop(fastCallData->data_buffer, data);
-        if (circular_buffer_pop(fastCallData->data_buffer, &data) != 0)
+        if (circular_buffer_pop(fastCallData->data_buffer, &data) == 0)
         {
-            for( i = 0; i<3; ++i)
-                _mm_pause();
+            if (callId < callTable->numEntries)
+            {
+                callTable->callbacks[callId](data);
+            }
+            continue;
         }
-        else if (callId < callTable->numEntries)
-        {
-            callTable->callbacks[callId](data);
-        }
-    }
 
+        for( i = 0; i<3; ++i)
+            _mm_pause();
+    }
 }
 
 static inline void StopResponder(FastCallStruct *fastCallData);

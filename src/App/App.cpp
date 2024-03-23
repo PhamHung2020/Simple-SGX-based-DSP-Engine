@@ -234,11 +234,11 @@ void ocall_print_string(const char *str)
 void sinkResult(void* rawData)
 {
     // HotOCallParams* hotOCallParams = (HotOCallParams*) rawData;
-    // MyEvent event = hotOCallParams->eventResult;
-    // printf(
-    //     "Sink Result: (%lf %d %d %d %s)\n", 
-    //     event.timestamp, event.sourceId, event.key, event.data, event.message
-    // );
+    MyEvent* event = (MyEvent*) rawData;
+    printf(
+        "Sink Result: (%lf %d %d %d %s)\n", 
+        event->timestamp, event->sourceId, event->key, event->data, event->message
+    );
 }
 
 void printEvent(MyEvent event)
@@ -267,27 +267,24 @@ void* EnclaveResponderThread(void* fastCallPairAsVoidP)
     return NULL;
 }
 
-void* UntrsutedResponserThread(void* hotOcallAsVoidP)
+void* UntrsutedResponserThread(void* fastOCallAsVoidP)
 {
-    // void (*callbacks[1])(void*);
-    // callbacks[0] = sinkResult;
+    void (*callbacks[1])(void*);
+    callbacks[0] = sinkResult;
 
-    // HotCallTable callTable;
-    // callTable.numEntries = 1;
-    // callTable.callbacks  = callbacks;
+    FastCallTable callTable;
+    callTable.numEntries = 1;
+    callTable.callbacks  = callbacks;
 
     // HotCall_waitForCall((HotCall*)hotOcallAsVoidP, &callTable);
-
+    FastCall_wait((FastCallStruct*) fastOCallAsVoidP, &callTable, 0);
     return NULL;
 }
 
 void sendToEngine(MyEvent event)
 {
-    // printEvent(event);
     globalEvent = event;
-    // HotCall_requestCall(&hotEcall, requestedCallID, (void*)&globalEvent);
     FastCall_request(&fastECallData, &globalEvent);
-    printf("sent\n");
 }
 
 void* startSource(void* sourceAsVoid)
@@ -318,7 +315,7 @@ int SGX_CDECL main(int argc, char *argv[])
 
     pthread_create(&fastECallData.responderThread, NULL, EnclaveResponderThread, (void*)&fastCallPair);
 
-    pthread_create(&fastOCallData.responderThread, NULL, UntrsutedResponserThread, (void*)&hotOcall);
+    pthread_create(&fastOCallData.responderThread, NULL, UntrsutedResponserThread, (void*)&fastOCallData);
 
 
     /* =================== DECLARE AND START SOURCES ====================*/
@@ -332,12 +329,15 @@ int SGX_CDECL main(int argc, char *argv[])
 
     pthread_join(sourceThread1, NULL);
 
+    printf("Stopped source\n");
+
     /* ================== STOP RESPONDERS =================*/
+    sleep(5);
     StopResponder(&fastECallData);
     pthread_join(fastECallData.responderThread, NULL);
 
-    // StopResponder(&hotOcall);
-    // pthread_join(hotOcall.responderThread, NULL);
+    StopResponder(&fastOCallData);
+    pthread_join(fastOCallData.responderThread, NULL);
 
     /* ================== DESTROY ENCLAVE =================*/
     sgx_destroy_enclave(globalEnclaveID);
