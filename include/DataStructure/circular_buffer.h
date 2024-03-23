@@ -11,7 +11,8 @@ struct circular_buffer
     const int maxlen;
 };
 
-int circular_buffer_push(circular_buffer* cir_buf, MyEvent data);
-int circular_buffer_pop(circular_buffer* cir_buf, MyEvent* data);
+int circular_buffer_push(struct circular_buffer* cir_buf, MyEvent data);
+int circular_buffer_pop(struct circular_buffer* cir_buf, MyEvent** data);
+
 
 #endif

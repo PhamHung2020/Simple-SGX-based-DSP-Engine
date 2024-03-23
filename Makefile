@@ -147,7 +147,7 @@ else
 endif
 Crypto_Library_Name := sgx_tcrypto
 
-Enclave_Cpp_Files := src/Enclave/Enclave.cpp $(wildcard src/Enclave/*.cpp) 
+Enclave_Cpp_Files := src/Lib/DataStructure/circular_buffer.cpp src/Enclave/Enclave.cpp $(wildcard src/Enclave/*.cpp) 
 Enclave_Include_Paths := -Iinclude -Isrc/Enclave -I$(SGX_SDK)/include -I$(SGX_SDK)/include/tlibc -I$(SGX_SDK)/include/libcxx -I$(SGX_SDK)/include/stdc++ -I$(SGX_SDK)/include/stlport
 
 Enclave_C_Flags := $(SGX_COMMON_CFLAGS) -nostdinc -fvisibility=hidden -fpie -fstack-protector $(Enclave_Include_Paths)

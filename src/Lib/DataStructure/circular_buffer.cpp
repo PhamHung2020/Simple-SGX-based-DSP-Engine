@@ -19,7 +19,7 @@ int circular_buffer_push(circular_buffer* cir_buf, MyEvent data)
     return 0;
 }
 
-int circular_buffer_pop(circular_buffer* cir_buf, MyEvent* data)
+int circular_buffer_pop(circular_buffer* cir_buf, MyEvent** data)
 {
     if (cir_buf->head == cir_buf->tail)
     {
@@ -32,7 +32,7 @@ int circular_buffer_pop(circular_buffer* cir_buf, MyEvent* data)
         next = 0;
     }
 
-    *data = cir_buf->buffer[cir_buf->tail];
+    *data = &cir_buf->buffer[cir_buf->tail];
 
     cir_buf->tail = next;
     return 0;

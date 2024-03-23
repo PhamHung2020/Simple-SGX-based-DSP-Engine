@@ -23,8 +23,7 @@
 #include <unistd.h>
 
 #include "Source/CsvSource.h"
-// #include "hot_calls.h"
-#include "fast_call.h"
+#include "hot_calls.h"
 #include "data_types.h"
 
 # define MAX_PATH FILENAME_MAX
@@ -32,18 +31,15 @@
 sgx_enclave_id_t globalEnclaveID;
 
 const uint16_t requestedCallID = 0;
-const int bufferSize = 128;
-MyEvent* bufferECall = new MyEvent[128];
-circular_buffer circular_buffer_ecall = { bufferECall, 0, 0, bufferSize };
-FastCallStruct fastECallData = { 0, &circular_buffer_ecall, true };
+HotCall hotEcall = HOTCALL_INITIALIZER;
 MyEvent globalEvent;
 
 using namespace std;
 
 typedef struct {
-    FastCallStruct* fastECall;
-    FastCallStruct* fastOCall;
-} FastCallPair;
+    HotCall* hotEcall;
+    HotCall* hotOcall;
+} HotCallPair;
 
 typedef struct _sgx_errlist_t {
     sgx_status_t err;
@@ -233,12 +229,12 @@ void ocall_print_string(const char *str)
 
 void sinkResult(void* rawData)
 {
-    // HotOCallParams* hotOCallParams = (HotOCallParams*) rawData;
-    // MyEvent event = hotOCallParams->eventResult;
-    // printf(
-    //     "Sink Result: (%lf %d %d %d %s)\n", 
-    //     event.timestamp, event.sourceId, event.key, event.data, event.message
-    // );
+    HotOCallParams* hotOCallParams = (HotOCallParams*) rawData;
+    MyEvent event = hotOCallParams->eventResult;
+    printf(
+        "Sink Result: (%lf %d %d %d %s)\n", 
+        event.timestamp, event.sourceId, event.key, event.data, event.message
+    );
 }
 
 void printEvent(MyEvent event)
@@ -248,12 +244,12 @@ void printEvent(MyEvent event)
         event.timestamp, event.sourceId, event.key, event.data, event.message); 
 }
 
-void* EnclaveResponderThread(void* fastCallPairAsVoidP)
+void* EnclaveResponderThread(void* hotCallPairAsVoidP)
 {
-    FastCallPair* fastCallPair = (FastCallPair*) fastCallPairAsVoidP;
-    FastCallStruct *fastEcall = fastCallPair->fastECall;
-    FastCallStruct *fastOcall = fastCallPair->fastOCall;
-    sgx_status_t status = EcallStartResponder(globalEnclaveID, fastEcall, fastOcall);
+    HotCallPair* hotCallPair = (HotCallPair*) hotCallPairAsVoidP;
+    HotCall *hotEcall = hotCallPair->hotEcall;
+    HotCall *hotOcall = hotCallPair->hotOcall;
+    sgx_status_t status = EcallStartResponder(globalEnclaveID, hotEcall, hotOcall);
     if (status == SGX_SUCCESS)
     {
         printf("Polling success\n");
@@ -269,14 +265,14 @@ void* EnclaveResponderThread(void* fastCallPairAsVoidP)
 
 void* UntrsutedResponserThread(void* hotOcallAsVoidP)
 {
-    // void (*callbacks[1])(void*);
-    // callbacks[0] = sinkResult;
+    void (*callbacks[1])(void*);
+    callbacks[0] = sinkResult;
 
-    // HotCallTable callTable;
-    // callTable.numEntries = 1;
-    // callTable.callbacks  = callbacks;
+    HotCallTable callTable;
+    callTable.numEntries = 1;
+    callTable.callbacks  = callbacks;
 
-    // HotCall_waitForCall((HotCall*)hotOcallAsVoidP, &callTable);
+    HotCall_waitForCall((HotCall*)hotOcallAsVoidP, &callTable);
 
     return NULL;
 }
@@ -285,9 +281,7 @@ void sendToEngine(MyEvent event)
 {
     // printEvent(event);
     globalEvent = event;
-    // HotCall_requestCall(&hotEcall, requestedCallID, (void*)&globalEvent);
-    FastCall_request(&fastECallData, &globalEvent);
-    printf("sent\n");
+    HotCall_requestCall(&hotEcall, requestedCallID, (void*)&globalEvent);
 }
 
 void* startSource(void* sourceAsVoid)
@@ -309,17 +303,14 @@ int SGX_CDECL main(int argc, char *argv[])
     }
 
     /* ========================= PREPARE & START RESPONDERS =====================*/
+    HotCall hotOcall = HOTCALL_INITIALIZER;
+    HotOCallParams ocallParams;
+    hotOcall.data = &ocallParams;
 
-    MyEvent* bufferOCall = new MyEvent[128];
-    circular_buffer circular_buffer_ocall = { bufferOCall, 0, 0, bufferSize };
-    FastCallStruct fastOCallData = { 0, &circular_buffer_ocall, true };
+    HotCallPair hotCallPair = { &hotEcall, &hotOcall };
+    pthread_create(&hotEcall.responderThread, NULL, EnclaveResponderThread, (void*)&hotCallPair);
 
-    FastCallPair fastCallPair = { &fastECallData, &fastOCallData };
-
-    pthread_create(&fastECallData.responderThread, NULL, EnclaveResponderThread, (void*)&fastCallPair);
-
-    pthread_create(&fastOCallData.responderThread, NULL, UntrsutedResponserThread, (void*)&hotOcall);
-
+    pthread_create(&hotOcall.responderThread, NULL, UntrsutedResponserThread, (void*)&hotOcall);
 
     /* =================== DECLARE AND START SOURCES ====================*/
     CsvSource source1(1, "../../test_data.csv", 0);
@@ -333,17 +324,14 @@ int SGX_CDECL main(int argc, char *argv[])
     pthread_join(sourceThread1, NULL);
 
     /* ================== STOP RESPONDERS =================*/
-    StopResponder(&fastECallData);
-    pthread_join(fastECallData.responderThread, NULL);
+    StopResponder(&hotEcall);
+    pthread_join(hotEcall.responderThread, NULL);
 
-    // StopResponder(&hotOcall);
-    // pthread_join(hotOcall.responderThread, NULL);
+    StopResponder(&hotOcall);
+    pthread_join(hotOcall.responderThread, NULL);
 
     /* ================== DESTROY ENCLAVE =================*/
     sgx_destroy_enclave(globalEnclaveID);
-
-    delete[] bufferECall;
-    delete[] bufferOCall;
     
     printf("Info: SampleEnclave successfully returned.\n");
 

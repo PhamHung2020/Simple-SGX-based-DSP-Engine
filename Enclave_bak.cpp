@@ -6,13 +6,11 @@
 
 #include "Enclave_t.h"  /* print_string */
 
-// #include "hot_calls.h"
-#include "fast_call.h"
+#include "hot_calls.h"
 #include "data_types.h"
-#include "DataStructure/circular_buffer.h"
 
-FastCallStruct* globalFastOCall;
-circular_buffer* fastOCallBuffer;
+HotCall* globalHotOcall;
+HotOCallParams* hotOCallParams;
 
 void print(const char *fmt, ...)
 {
@@ -77,30 +75,28 @@ int reduce(MyEvent event, int accumulator, int (*reduceFunc)(MyEvent, int))
 
 void TaskExecutor(void* data)
 {
-    ocall_print_string("processing\n");
     MyEvent* event = (MyEvent*) data;
 
     event->data += 1;
-    // int a = event->data;
 
-    printEvent(*event);
+    // printEvent(*event);
 
-    // hotOCallParams->eventResult = *event;
-    // HotCall_requestCall(globalFastOcall, 0, hotOCallParams);
+    hotOCallParams->eventResult = *event;
+    HotCall_requestCall(globalHotOcall, 0, hotOCallParams);
 }
 
 
-void EcallStartResponder(FastCallStruct* fastECallData, FastCallStruct* fastOCallData)
+void EcallStartResponder(HotCall* hotEcall, HotCall* hotOcall)
 {
-    globalFastOCall = fastOCallData;
-    fastOCallBuffer = fastOCallData->data_buffer;
+    globalHotOcall = hotOcall;
+    hotOCallParams = (HotOCallParams*) hotOcall->data;
 
 	void (*callbacks[1])(void*);
     callbacks[0] = TaskExecutor;
 
-    FastCallTable callTable;
+    HotCallTable callTable;
     callTable.numEntries = 1;
     callTable.callbacks  = callbacks;
 
-    FastCall_wait(fastECallData, &callTable, 0);
+    HotCall_waitForCall(hotEcall, &callTable);
 }
