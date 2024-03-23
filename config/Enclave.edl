@@ -2,7 +2,6 @@
 
 enclave {
 	include "../include/hot_calls.h"
-  include "../include/common.h"
   include "../include/data_types.h"
 
   trusted {
