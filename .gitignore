@@ -4,6 +4,7 @@
 /test
 /test.cpp
 /.vscode/*
+/.idea/*
 
 src/App/*.o
 src/App/Enclave_u.c

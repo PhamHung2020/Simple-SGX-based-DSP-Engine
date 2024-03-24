@@ -5,7 +5,7 @@ enclave {
   include "../include/data_types.h"
 
   trusted {
-    public void EcallStartResponder([user_check] FastCallStruct* fastEcall, [user_check] FastCallStruct* fastOcall);                                                                                           
+    public void EcallStartResponder([user_check] FastCallStruct* fastEcall, [user_check] FastCallStruct* fastOcall, uint16_t callId);
 
   };
 

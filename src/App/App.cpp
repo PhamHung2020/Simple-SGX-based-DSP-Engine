@@ -1,39 +1,30 @@
 #include <stdio.h>
 #include <string.h>
 #include <assert.h>
-#include <stdbool.h>
 
-# include <unistd.h>
-# include <pwd.h>
+#include <unistd.h>
+#include <pwd.h>
 
 #include "App.h"
 #include "Enclave_u.h"
 
 #include "sgx_urts.h"
-#include <unistd.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <fcntl.h>
-#include <sys/ioctl.h>
 
 #include <iostream>
-#include <sstream>
 #include <fstream>
-#include <vector>
-#include <unistd.h>
 
 #include "Source/CsvSource.h"
 // #include "hot_calls.h"
 #include "fast_call.h"
 #include "data_types.h"
 
-# define MAX_PATH FILENAME_MAX
+#define MAX_PATH FILENAME_MAX
 
 sgx_enclave_id_t globalEnclaveID;
 
-const uint16_t requestedCallID = 0;
-const int bufferSize = 128;
-MyEvent* bufferECall = new MyEvent[128];
+constexpr uint16_t requestedCallID = 0;
+constexpr int bufferSize = 128;
+auto bufferECall = new MyEvent[128];
 circular_buffer circular_buffer_ecall = 
 { 
     .buffer = bufferECall,
@@ -54,19 +45,24 @@ MyEvent globalEvent;
 
 using namespace std;
 
-typedef struct {
+typedef struct
+{
+    sgx_enclave_id_t enclaveId;
     FastCallStruct* fastECall;
     FastCallStruct* fastOCall;
+    uint16_t callId;
 } FastCallPair;
 
-typedef struct _sgx_errlist_t {
+typedef struct _sgx_errlist_t
+{
     sgx_status_t err;
     const char *msg;
     const char *sug; /* Suggestion */
 } sgx_errlist_t;
 
 /* Error code returned by sgx_create_enclave */
-static sgx_errlist_t sgx_errlist[] = {
+static sgx_errlist_t sgx_errlist[] =
+{
     {
         SGX_ERROR_UNEXPECTED,
         "Unexpected error occurred.",
@@ -169,7 +165,7 @@ void print_error_message(sgx_status_t ret)
     *   Step 2: call sgx_create_enclave to initialize an enclave instance
     *   Step 3: save the launch token if it is updated
     */
-int initialize_enclave(sgx_enclave_id_t* globalEnclaveID)
+int initialize_enclave(sgx_enclave_id_t* enclaveID)
 {
     char token_path[MAX_PATH] = {'\0'};
     sgx_launch_token_t token = {0};
@@ -210,7 +206,7 @@ int initialize_enclave(sgx_enclave_id_t* globalEnclaveID)
     
     /* Step 2: call sgx_create_enclave to initialize an enclave instance */
     /* Debug Support: set 2nd parameter to 1 */
-    ret = sgx_create_enclave(ENCLAVE_FILENAME, SGX_DEBUG_FLAG, &token, &updated, globalEnclaveID, NULL);
+    ret = sgx_create_enclave(ENCLAVE_FILENAME, SGX_DEBUG_FLAG, &token, &updated, enclaveID, NULL);
     if (ret != SGX_SUCCESS) {
         printf("sgx_create_enclave returned 0x%x\n", ret);
         print_error_message(ret);
@@ -248,7 +244,7 @@ void ocall_print_string(const char *str)
 void sinkResult(void* rawData)
 {
     // HotOCallParams* hotOCallParams = (HotOCallParams*) rawData;
-    MyEvent* event = (MyEvent*) rawData;
+    auto* event = static_cast<MyEvent *>(rawData);
     printf(
         "Sink Result: (%lf %d %d %d %s)\n", 
         event->timestamp, event->sourceId, event->key, event->data, event->message
@@ -267,7 +263,7 @@ void* EnclaveResponderThread(void* fastCallPairAsVoidP)
     FastCallPair* fastCallPair = (FastCallPair*) fastCallPairAsVoidP;
     FastCallStruct *fastEcall = fastCallPair->fastECall;
     FastCallStruct *fastOcall = fastCallPair->fastOCall;
-    sgx_status_t status = EcallStartResponder(globalEnclaveID, fastEcall, fastOcall);
+    sgx_status_t status = EcallStartResponder(fastCallPair->enclaveId, fastEcall, fastOcall, fastCallPair->callId);
     if (status == SGX_SUCCESS)
     {
         printf("Polling success\n");
@@ -312,16 +308,44 @@ void* startSource(void* sourceAsVoid)
 int SGX_CDECL main(int argc, char *argv[])
 {
     /* Initialize the enclave */
-    if (initialize_enclave(&globalEnclaveID) < 0)
+    sgx_enclave_id_t filterEnclaveId;
+    sgx_enclave_id_t mapEnclaveId;
+
+    if (initialize_enclave(&filterEnclaveId) < 0)
     {
-        printf("Enter a character before exit ...\n");
+        printf("Initialize filter enclave failed...\n");
         getchar();
-        return -1; 
+        return -1;
     }
 
-    /* ========================= PREPARE & START RESPONDERS =====================*/
+    if (initialize_enclave(&mapEnclaveId) < 0)
+    {
+        printf("Initialize map enclave failed...\n");
+        getchar();
+        return -1;
+    }
+    
 
-    MyEvent* bufferOCall = new MyEvent[128];
+    // /* ========================= PREPARE & START RESPONDERS =====================*/
+
+    const auto bufferECall2 = new MyEvent[128];
+    circular_buffer circular_buffer_ecall2 =
+    {
+        .buffer = bufferECall2,
+        .head = 0,
+        .tail = 0,
+        .maxlen = bufferSize,
+        .data_size = sizeof(MyEvent)
+    };
+
+    FastCallStruct fastECallData2 =
+    {
+        .responderThread = 0,
+        .data_buffer = &circular_buffer_ecall2,
+        .keepPolling = true
+    };
+
+    const auto bufferOCall = new MyEvent[128];
     circular_buffer circular_buffer_ocall = 
     { 
         .buffer = bufferOCall,
@@ -340,38 +364,52 @@ int SGX_CDECL main(int argc, char *argv[])
 
     FastCallPair fastCallPair = 
     { 
+        .enclaveId = filterEnclaveId,
         .fastECall = &fastECallData,
-        .fastOCall = &fastOCallData
+        .fastOCall = &fastECallData2,
+        .callId = 0
     };
-
     pthread_create(&fastECallData.responderThread, NULL, EnclaveResponderThread, (void*)&fastCallPair);
+
+    FastCallPair fastCallPair2 =
+    {
+        .enclaveId = mapEnclaveId,
+        .fastECall = &fastECallData2,
+        .fastOCall = &fastOCallData,
+        .callId = 1
+    };
+    pthread_create(&fastECallData2.responderThread, NULL, EnclaveResponderThread, (void*)&fastCallPair2);
 
     pthread_create(&fastOCallData.responderThread, NULL, UntrsutedResponserThread, (void*)&fastOCallData);
 
 
-    /* =================== DECLARE AND START SOURCES ====================*/
+    // /* =================== DECLARE AND START SOURCES ====================*/
     CsvSource source1(1, "../../test_data.csv", 0);
 
     pthread_t sourceThread1;
     pthread_create(&sourceThread1, NULL, startSource, (void*) &source1);
 
-    /* ================== WAIT FOR SOURCES ===================*/
+    // /* ================== WAIT FOR SOURCES ===================*/
     printf("Start sending events...\n");
 
     pthread_join(sourceThread1, NULL);
 
     printf("Stopped source\n");
 
-    /* ================== STOP RESPONDERS =================*/
+    // /* ================== STOP RESPONDERS =================*/
     sleep(5);
     StopResponder(&fastECallData);
     pthread_join(fastECallData.responderThread, NULL);
 
+    StopResponder(&fastECallData2);
+    pthread_join(fastECallData2.responderThread, NULL);
+
     StopResponder(&fastOCallData);
     pthread_join(fastOCallData.responderThread, NULL);
 
-    /* ================== DESTROY ENCLAVE =================*/
-    sgx_destroy_enclave(globalEnclaveID);
+    // /* ================== DESTROY ENCLAVE =================*/
+    sgx_destroy_enclave(filterEnclaveId);
+    sgx_destroy_enclave(mapEnclaveId);
 
     delete[] bufferECall;
     delete[] bufferOCall;

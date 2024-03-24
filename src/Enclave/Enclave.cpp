@@ -78,23 +78,34 @@ int reduce(MyEvent event, int accumulator, int (*reduceFunc)(MyEvent, int))
 void TaskExecutor(void* data)
 {
     MyEvent* event = (MyEvent*) data;
-    event->data += 1;
-    FastCall_request(globalFastOCall, event);
+    event = filter(event, [](MyEvent e) { return e.data > 5; });
+    if (event != NULL)
+        FastCall_request(globalFastOCall, event);
+    // printEvent(*event);
+}
+
+void TaskExecutor2(void* data)
+{
+    MyEvent* event = (MyEvent*) data;
+    event = map(event, [](MyEvent* event) { event->data *= 2; });
+    if (event != NULL)
+        FastCall_request(globalFastOCall, event);
     // printEvent(*event);
 }
 
 
-void EcallStartResponder(FastCallStruct* fastECallData, FastCallStruct* fastOCallData)
+void EcallStartResponder(FastCallStruct* fastECallData, FastCallStruct* fastOCallData, uint16_t callId)
 {
     globalFastOCall = fastOCallData;
     fastOCallBuffer = fastOCallData->data_buffer;
 
-	void (*callbacks[1])(void*);
+	void (*callbacks[2])(void*);
     callbacks[0] = TaskExecutor;
+    callbacks[1] = TaskExecutor2;
 
     FastCallTable callTable;
-    callTable.numEntries = 1;
+    callTable.numEntries = 2;
     callTable.callbacks  = callbacks;
 
-    FastCall_wait(fastECallData, &callTable, 0);
+    FastCall_wait(fastECallData, &callTable, callId);
 }
