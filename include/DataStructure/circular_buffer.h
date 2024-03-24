@@ -1,7 +1,5 @@
-#ifndef __CIRCULAR_BUFFER_
-#define __CIRCULAR_BUFFER_
-
-#include "data_types.h"
+#ifndef CIRCULAR_BUFFER_
+#define CIRCULAR_BUFFER_
 
 struct circular_buffer
 {

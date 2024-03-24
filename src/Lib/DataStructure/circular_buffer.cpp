@@ -15,7 +15,6 @@ int circular_buffer_push(circular_buffer* cir_buf, void* data)
         return -1;
     }
 
-    // cir_buf->buffer[cir_buf->head] = data;
     memcpy((char*) cir_buf->buffer + cir_buf->data_size * cir_buf->head, (char*) data, cir_buf->data_size);
     cir_buf->head = next;
 
@@ -36,7 +35,7 @@ int circular_buffer_pop(circular_buffer* cir_buf, void** data)
     }
 
     // *data = &cir_buf->buffer[cir_buf->tail];
-    *((char**)data) = ((char*) cir_buf->buffer + (cir_buf->data_size * cir_buf->tail));
+    *(char**)data = (char*) cir_buf->buffer + cir_buf->data_size * cir_buf->tail;
 
     cir_buf->tail = next;
     return 0;

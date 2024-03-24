@@ -1,17 +1,18 @@
 #include "Source/Source.h"
 
-Source::Source(int sourceId, std::string sourceUri) : sourceId(sourceId), sourceUri(sourceUri), delay(-1), running(false)
+#include <utility>
+
+Source::Source(const int sourceId, std::string sourceUri) : sourceUri(std::move(sourceUri)), delay(-1), running(false), sourceId(sourceId)
 {
-    srand(time(NULL));
+    srand(time(nullptr));
 };
 
-Source::Source(int sourceId, std::string sourceUri, int delay) : sourceId(sourceId), sourceUri(sourceUri), delay(delay), running(false)
+Source::Source(const int sourceId, std::string sourceUri, const int delay) : sourceUri(std::move(sourceUri)), delay(delay), running(false), sourceId(sourceId)
 {
-    srand(time(NULL));
+    srand(time(nullptr));
 };
 
-int Source::getSourceId()
-{
+int Source::getSourceId() const {
     return this->sourceId;
 }
 
@@ -30,8 +31,7 @@ int Source::getDelay()
     return rand() % 3;
 }
 
-bool Source::isRunning()
-{
+bool Source::isRunning() const {
     return this->running;
 }
 
@@ -40,9 +40,9 @@ int Source::start()
     return 0;
 }
 
-int Source::start(void (*send)(MyEvent))
+int Source::start(void (*emit)(const MyEvent&))
 {
-    MyEvent event = { 0.0, 0, 0, 0, "" };
-    send(event);
+    constexpr MyEvent event = { 0.0, 0, 0, 0, "" };
+    emit(event);
     return 0;
 }

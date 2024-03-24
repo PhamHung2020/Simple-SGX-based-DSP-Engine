@@ -1,7 +1,5 @@
-#ifndef __DATA_TYPES_
-#define __DATA_TYPES_
-
-#include <string.h>
+#ifndef DATA_TYPES_
+#define DATA_TYPES_
 
 typedef struct
 {

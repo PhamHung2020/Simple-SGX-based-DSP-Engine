@@ -1,5 +1,5 @@
-#ifndef __FAST_CALL_
-#define __FAST_CALL_
+#ifndef FAST_CALL_
+#define FAST_CALL_
 
 #include <stdbool.h>
 

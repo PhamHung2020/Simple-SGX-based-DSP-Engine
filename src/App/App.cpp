@@ -1,6 +1,5 @@
-#include <stdio.h>
-#include <string.h>
-#include <assert.h>
+#include <cstdio>
+#include <cstring>
 
 #include <unistd.h>
 #include <pwd.h>
@@ -10,11 +9,9 @@
 
 #include "sgx_urts.h"
 
-#include <iostream>
 #include <fstream>
 
 #include "Source/CsvSource.h"
-// #include "hot_calls.h"
 #include "fast_call.h"
 #include "data_types.h"
 
@@ -53,7 +50,7 @@ typedef struct
     uint16_t callId;
 } FastCallPair;
 
-typedef struct _sgx_errlist_t
+typedef struct sgx_errlist_t
 {
     sgx_status_t err;
     const char *msg;
@@ -66,17 +63,17 @@ static sgx_errlist_t sgx_errlist[] =
     {
         SGX_ERROR_UNEXPECTED,
         "Unexpected error occurred.",
-        NULL
+        nullptr
     },
     {
         SGX_ERROR_INVALID_PARAMETER,
         "Invalid parameter.",
-        NULL
+        nullptr
     },
     {
         SGX_ERROR_OUT_OF_MEMORY,
         "Out of memory.",
-        NULL
+        nullptr
     },
     {
         SGX_ERROR_ENCLAVE_LOST,
@@ -86,22 +83,22 @@ static sgx_errlist_t sgx_errlist[] =
     {
         SGX_ERROR_INVALID_ENCLAVE,
         "Invalid enclave image.",
-        NULL
+        nullptr
     },
     {
         SGX_ERROR_INVALID_ENCLAVE_ID,
         "Invalid enclave identification.",
-        NULL
+        nullptr
     },
     {
         SGX_ERROR_INVALID_SIGNATURE,
         "Invalid enclave signature.",
-        NULL
+        nullptr
     },
     {
         SGX_ERROR_OUT_OF_EPC,
         "Out of EPC memory.",
-        NULL
+        nullptr
     },
     {
         SGX_ERROR_NO_DEVICE,
@@ -111,44 +108,44 @@ static sgx_errlist_t sgx_errlist[] =
     {
         SGX_ERROR_MEMORY_MAP_CONFLICT,
         "Memory map conflicted.",
-        NULL
+        nullptr
     },
     {
         SGX_ERROR_INVALID_METADATA,
         "Invalid enclave metadata.",
-        NULL
+        nullptr
     },
     {
         SGX_ERROR_DEVICE_BUSY,
         "SGX device was busy.",
-        NULL
+        nullptr
     },
     {
         SGX_ERROR_INVALID_VERSION,
         "Enclave version was invalid.",
-        NULL
+        nullptr
     },
     {
         SGX_ERROR_INVALID_ATTRIBUTE,
         "Enclave was not authorized.",
-        NULL
+        nullptr
     },
     {
         SGX_ERROR_ENCLAVE_FILE_ACCESS,
         "Can't open enclave file.",
-        NULL
+        nullptr
     },
 };
 
 /* Check error conditions for loading enclave */
-void print_error_message(sgx_status_t ret)
+void print_error_message(const sgx_status_t ret)
 {
-    size_t idx = 0;
-    size_t ttl = sizeof sgx_errlist/sizeof sgx_errlist[0];
+    size_t idx;
+    constexpr size_t ttl = sizeof sgx_errlist/sizeof sgx_errlist[0];
 
     for (idx = 0; idx < ttl; idx++) {
         if(ret == sgx_errlist[idx].err) {
-            if(NULL != sgx_errlist[idx].sug)
+            if(nullptr != sgx_errlist[idx].sug)
                 printf("Info: %s\n", sgx_errlist[idx].sug);
             printf("Error: %s\n", sgx_errlist[idx].msg);
             break;
@@ -169,7 +166,6 @@ int initialize_enclave(sgx_enclave_id_t* enclaveID)
 {
     char token_path[MAX_PATH] = {'\0'};
     sgx_launch_token_t token = {0};
-    sgx_status_t ret = SGX_ERROR_UNEXPECTED;
     int updated = 0;
     
     /* Step 1: try to retrieve the launch token saved by last transaction 
@@ -178,7 +174,7 @@ int initialize_enclave(sgx_enclave_id_t* enclaveID)
     /* try to get the token saved in $HOME */
     const char *home_dir = getpwuid(getuid())->pw_dir;
     
-    if (home_dir != NULL && 
+    if (home_dir != nullptr &&
         (strlen(home_dir)+strlen("/")+sizeof(TOKEN_FILENAME)+1) <= MAX_PATH) {
         /* compose the token path */
         strncpy(token_path, home_dir, strlen(home_dir));
@@ -190,13 +186,13 @@ int initialize_enclave(sgx_enclave_id_t* enclaveID)
     }
     
     FILE *fp = fopen(token_path, "rb");
-    if (fp == NULL && (fp = fopen(token_path, "wb")) == NULL) {
+    if (fp == nullptr && (fp = fopen(token_path, "wb")) == nullptr) {
         printf("Warning: Failed to create/open the launch token file \"%s\".\n", token_path);
     }
     
-    if (fp != NULL) {
+    if (fp != nullptr) {
         /* read the token from saved file */
-        size_t read_num = fread(token, 1, sizeof(sgx_launch_token_t), fp);
+        const size_t read_num = fread(token, 1, sizeof(sgx_launch_token_t), fp);
         if (read_num != 0 && read_num != sizeof(sgx_launch_token_t)) {
             /* if token is invalid, clear the buffer */
             memset(&token, 0x0, sizeof(sgx_launch_token_t));
@@ -206,25 +202,25 @@ int initialize_enclave(sgx_enclave_id_t* enclaveID)
     
     /* Step 2: call sgx_create_enclave to initialize an enclave instance */
     /* Debug Support: set 2nd parameter to 1 */
-    ret = sgx_create_enclave(ENCLAVE_FILENAME, SGX_DEBUG_FLAG, &token, &updated, enclaveID, NULL);
+    const sgx_status_t ret = sgx_create_enclave(ENCLAVE_FILENAME, SGX_DEBUG_FLAG, &token, &updated, enclaveID, nullptr);
     if (ret != SGX_SUCCESS) {
         printf("sgx_create_enclave returned 0x%x\n", ret);
         print_error_message(ret);
-        if (fp != NULL) fclose(fp);
+        if (fp != nullptr) fclose(fp);
         return -1;
     }
     
     /* Step 3: save the launch token if it is updated */
-    if (updated == FALSE || fp == NULL) {
+    if (updated == FALSE || fp == nullptr) {
         /* if the token is not updated, or file handler is invalid, do not perform saving */
-        if (fp != NULL) fclose(fp);
+        if (fp != nullptr) fclose(fp);
         return 0;
     }
     
     /* reopen the file with write capablity */
     fp = freopen(token_path, "wb", fp);
-    if (fp == NULL) return 0;
-    size_t write_num = fwrite(token, 1, sizeof(sgx_launch_token_t), fp);
+    if (fp == nullptr) return 0;
+    const size_t write_num = fwrite(token, 1, sizeof(sgx_launch_token_t), fp);
     if (write_num != sizeof(sgx_launch_token_t))
         printf("Warning: Failed to save launch token to \"%s\".\n", token_path);
     fclose(fp);
@@ -260,10 +256,10 @@ void printEvent(MyEvent event)
 
 void* EnclaveResponderThread(void* fastCallPairAsVoidP)
 {
-    FastCallPair* fastCallPair = (FastCallPair*) fastCallPairAsVoidP;
+    const auto* fastCallPair = static_cast<FastCallPair *>(fastCallPairAsVoidP);
     FastCallStruct *fastEcall = fastCallPair->fastECall;
     FastCallStruct *fastOcall = fastCallPair->fastOCall;
-    sgx_status_t status = EcallStartResponder(fastCallPair->enclaveId, fastEcall, fastOcall, fastCallPair->callId);
+    const sgx_status_t status = EcallStartResponder(fastCallPair->enclaveId, fastEcall, fastOcall, fastCallPair->callId);
     if (status == SGX_SUCCESS)
     {
         printf("Polling success\n");
@@ -274,7 +270,7 @@ void* EnclaveResponderThread(void* fastCallPairAsVoidP)
         print_error_message(status);
     }
 
-    return NULL;
+    return nullptr;
 }
 
 void* UntrsutedResponserThread(void* fastOCallAsVoidP)
@@ -286,12 +282,11 @@ void* UntrsutedResponserThread(void* fastOCallAsVoidP)
     callTable.numEntries = 1;
     callTable.callbacks  = callbacks;
 
-    // HotCall_waitForCall((HotCall*)hotOcallAsVoidP, &callTable);
-    FastCall_wait((FastCallStruct*) fastOCallAsVoidP, &callTable, 0);
-    return NULL;
+    FastCall_wait(static_cast<FastCallStruct *>(fastOCallAsVoidP), &callTable, 0);
+    return nullptr;
 }
 
-void sendToEngine(MyEvent event)
+void sendToEngine(const MyEvent &event)
 {
     globalEvent = event;
     FastCall_request(&fastECallData, &globalEvent);
@@ -299,9 +294,9 @@ void sendToEngine(MyEvent event)
 
 void* startSource(void* sourceAsVoid)
 {
-    Source* source = (Source*) sourceAsVoid;
+    const auto source = static_cast<Source *>(sourceAsVoid);
     source->start(sendToEngine);
-    return NULL;
+    return nullptr;
 }
 
 /* Application entry */
@@ -369,7 +364,7 @@ int SGX_CDECL main(int argc, char *argv[])
         .fastOCall = &fastECallData2,
         .callId = 0
     };
-    pthread_create(&fastECallData.responderThread, NULL, EnclaveResponderThread, (void*)&fastCallPair);
+    pthread_create(&fastECallData.responderThread, nullptr, EnclaveResponderThread, (void*)&fastCallPair);
 
     FastCallPair fastCallPair2 =
     {
@@ -378,34 +373,34 @@ int SGX_CDECL main(int argc, char *argv[])
         .fastOCall = &fastOCallData,
         .callId = 1
     };
-    pthread_create(&fastECallData2.responderThread, NULL, EnclaveResponderThread, (void*)&fastCallPair2);
+    pthread_create(&fastECallData2.responderThread, nullptr, EnclaveResponderThread, (void*)&fastCallPair2);
 
-    pthread_create(&fastOCallData.responderThread, NULL, UntrsutedResponserThread, (void*)&fastOCallData);
+    pthread_create(&fastOCallData.responderThread, nullptr, UntrsutedResponserThread, (void*)&fastOCallData);
 
 
     // /* =================== DECLARE AND START SOURCES ====================*/
     CsvSource source1(1, "../../test_data.csv", 0);
 
     pthread_t sourceThread1;
-    pthread_create(&sourceThread1, NULL, startSource, (void*) &source1);
+    pthread_create(&sourceThread1, nullptr, startSource, (void*) &source1);
 
     // /* ================== WAIT FOR SOURCES ===================*/
     printf("Start sending events...\n");
 
-    pthread_join(sourceThread1, NULL);
+    pthread_join(sourceThread1, nullptr);
 
     printf("Stopped source\n");
 
     // /* ================== STOP RESPONDERS =================*/
     sleep(5);
     StopResponder(&fastECallData);
-    pthread_join(fastECallData.responderThread, NULL);
+    pthread_join(fastECallData.responderThread, nullptr);
 
     StopResponder(&fastECallData2);
-    pthread_join(fastECallData2.responderThread, NULL);
+    pthread_join(fastECallData2.responderThread, nullptr);
 
     StopResponder(&fastOCallData);
-    pthread_join(fastOCallData.responderThread, NULL);
+    pthread_join(fastOCallData.responderThread, nullptr);
 
     // /* ================== DESTROY ENCLAVE =================*/
     sgx_destroy_enclave(filterEnclaveId);

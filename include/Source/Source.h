@@ -1,5 +1,5 @@
-#ifndef __SOURCE_
-#define __SOURCE_
+#ifndef SOURCE_
+#define SOURCE_
 
 #include<cstdlib>
 #include <string>
@@ -16,16 +16,18 @@ protected:
     int sourceId;
 
 public:
+    virtual ~Source() = default;
+
     Source(int sourceId, std::string sourceUri);
     Source(int sourceId, std::string sourceUri, int delay);
 
-    int getSourceId();
+    int getSourceId() const;
     std::string getSourceUri();
     virtual int getDelay();
-    bool isRunning();
+    bool isRunning() const;
 
     virtual int start();
-    virtual int start(void (*send)(MyEvent));
+    virtual int start(void (*emit)(const MyEvent&));
 };
 
 #endif

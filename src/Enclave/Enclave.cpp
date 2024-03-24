@@ -2,11 +2,9 @@
 #include <stdio.h>      /* vsnprintf */
 #include <stdbool.h>
 #include <unistd.h>
-#include <queue>
 
 #include "Enclave_t.h"  /* print_string */
 
-// #include "hot_calls.h"
 #include "fast_call.h"
 #include "data_types.h"
 #include "DataStructure/circular_buffer.h"
@@ -16,7 +14,7 @@ circular_buffer* fastOCallBuffer;
 
 void print(const char *fmt, ...)
 {
-    char buf[BUFSIZ] = {'\0'};
+    char buf[BUFSIZ] = {};
     va_list ap;
     va_start(ap, fmt);
     vsnprintf(buf, BUFSIZ, fmt, ap);
@@ -26,14 +24,14 @@ void print(const char *fmt, ...)
 
 int nestedLoopJoin
 (
-    MyEvent* eventArr1, 
-    MyEvent* eventArr2, 
-    int n1, int n2, 
+    const MyEvent* eventArr1,
+    const MyEvent* eventArr2,
+    const int n1, const int n2,
     JoinResult* &results, 
     bool (*predicate)(MyEvent, MyEvent)
 )
 {
-    if (eventArr1 == NULL || eventArr2 == NULL || predicate == NULL) return NULL;
+    if (eventArr1 == nullptr || eventArr2 == nullptr || predicate == nullptr) return NULL;
     int nItems = 0;
     for (int i = 0; i < n1; ++i)
     {
@@ -51,50 +49,50 @@ int nestedLoopJoin
     return nItems;
 }
 
-MyEvent* filter(MyEvent* event, bool (*predicate)(MyEvent))
+MyEvent* filter(MyEvent* event, bool (*predicate)(const MyEvent&))
 {
-    if (event == NULL || predicate == NULL) return NULL;
+    if (event == nullptr || predicate == nullptr) return nullptr;
     if (predicate(*event))
     {
         return event;
     }
 
-    return NULL;
+    return nullptr;
 }
 
 MyEvent* map(MyEvent* event, void (*mapRule)(MyEvent*))
 {
-    if (event == NULL || mapRule == NULL) return NULL;
+    if (event == nullptr || mapRule == nullptr) return nullptr;
     mapRule(event);
     return event;
 }
 
-int reduce(MyEvent event, int accumulator, int (*reduceFunc)(MyEvent, int))
+int reduce(const MyEvent &event, const int accumulator, int (*reduceFunc)(MyEvent, int))
 {
-    if (reduceFunc == NULL) return accumulator;
+    if (reduceFunc == nullptr) return accumulator;
     return reduceFunc(event, accumulator);
 }
 
 void TaskExecutor(void* data)
 {
-    MyEvent* event = (MyEvent*) data;
-    event = filter(event, [](MyEvent e) { return e.data > 5; });
-    if (event != NULL)
+    auto* event = static_cast<MyEvent *>(data);
+    event = filter(event, [](const MyEvent &e) { return e.data > 5; });
+    if (event != nullptr)
         FastCall_request(globalFastOCall, event);
     // printEvent(*event);
 }
 
 void TaskExecutor2(void* data)
 {
-    MyEvent* event = (MyEvent*) data;
-    event = map(event, [](MyEvent* event) { event->data *= 2; });
-    if (event != NULL)
+    auto* event = static_cast<MyEvent *>(data);
+    event = map(event, [](MyEvent* e) { e->data *= 2; });
+    if (event != nullptr)
         FastCall_request(globalFastOCall, event);
     // printEvent(*event);
 }
 
 
-void EcallStartResponder(FastCallStruct* fastECallData, FastCallStruct* fastOCallData, uint16_t callId)
+void EcallStartResponder(FastCallStruct* fastECallData, FastCallStruct* fastOCallData, const uint16_t callId)
 {
     globalFastOCall = fastOCallData;
     fastOCallBuffer = fastOCallData->data_buffer;

@@ -1,11 +1,11 @@
 /* Enclave.edl - Top EDL file. */
 
 enclave {
-	include "../include/fast_call.h"
+  include "../include/fast_call.h"
   include "../include/data_types.h"
 
   trusted {
-    public void EcallStartResponder([user_check] FastCallStruct* fastEcall, [user_check] FastCallStruct* fastOcall, uint16_t callId);
+    public void EcallStartResponder([user_check] FastCallStruct* fastECallData, [user_check] FastCallStruct* fastOCallData, uint16_t callId);
 
   };
 

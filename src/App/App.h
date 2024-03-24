@@ -1,15 +1,7 @@
 #ifndef _APP_H_
 #define _APP_H_
 
-#include <assert.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <stdarg.h>
-
-#include "sgx_error.h"       /* sgx_status_t */
 #include "sgx_eid.h"     /* sgx_enclave_id_t */
-
-#include "data_types.h"
 
 #ifndef TRUE
 # define TRUE 1

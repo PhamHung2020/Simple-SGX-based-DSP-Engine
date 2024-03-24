@@ -1,12 +1,13 @@
 #include "Source/CsvSource.h"
+#include <cstring>
 #include <fstream>
 #include <iostream>
 #include <vector>
 #include <sstream>
 
-CsvSource::CsvSource(int sourceId, std::string filename) : Source(sourceId, filename) {}
+CsvSource::CsvSource(const int sourceId, const std::string &filename) : Source(sourceId, filename) {}
 
-CsvSource::CsvSource(int sourceId, std::string filename, int delay) : Source(sourceId, filename, delay) {}
+CsvSource::CsvSource(const int sourceId, const std::string &filename, const int delay) : Source(sourceId, filename, delay) {}
 
 int CsvSource::start()
 {
@@ -61,7 +62,7 @@ int CsvSource::start()
 
             std::cout << timestamp << " " << key << " " << data << " " << words[3] << std::endl;
         }
-        catch(const std::invalid_argument& e)
+        catch(const std::invalid_argument&)
         {
             std::cout << "Invalid argument" << std::endl;
             continue;
@@ -77,7 +78,7 @@ int CsvSource::start()
     return 0;
 }
 
-int CsvSource::start(void (*send)(MyEvent))
+int CsvSource::start(void (*emit)(const MyEvent&))
 {
     running = true;
 
@@ -127,14 +128,13 @@ int CsvSource::start(void (*send)(MyEvent))
             double timestamp = std::stod(words[0]);
             int key = std::stoi(words[1]);
             int data = std::stoi(words[2]);
-            char message[32];
             MyEvent event = { timestamp, this->sourceId, key, data};
             strncpy(event.message, words[3].c_str(), 32);
             event.message[31] = '\0';
 
-            send(event);
+            emit(event);
         }
-        catch(const std::invalid_argument& e)
+        catch(const std::invalid_argument&)
         {
             std::cout << "Invalid argument" << std::endl;
             continue;
