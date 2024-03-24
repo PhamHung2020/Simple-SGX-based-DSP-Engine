@@ -34,8 +34,22 @@ sgx_enclave_id_t globalEnclaveID;
 const uint16_t requestedCallID = 0;
 const int bufferSize = 128;
 MyEvent* bufferECall = new MyEvent[128];
-circular_buffer circular_buffer_ecall = { bufferECall, 0, 0, bufferSize };
-FastCallStruct fastECallData = { 0, &circular_buffer_ecall, true };
+circular_buffer circular_buffer_ecall = 
+{ 
+    .buffer = bufferECall,
+    .head = 0, 
+    .tail = 0,
+    .maxlen = bufferSize,
+    .data_size = sizeof(MyEvent)
+};
+
+FastCallStruct fastECallData = 
+{ 
+    .responderThread = 0, 
+    .data_buffer = &circular_buffer_ecall, 
+    .keepPolling = true 
+};
+
 MyEvent globalEvent;
 
 using namespace std;
@@ -308,10 +322,27 @@ int SGX_CDECL main(int argc, char *argv[])
     /* ========================= PREPARE & START RESPONDERS =====================*/
 
     MyEvent* bufferOCall = new MyEvent[128];
-    circular_buffer circular_buffer_ocall = { bufferOCall, 0, 0, bufferSize };
-    FastCallStruct fastOCallData = { 0, &circular_buffer_ocall, true };
+    circular_buffer circular_buffer_ocall = 
+    { 
+        .buffer = bufferOCall,
+        .head = 0,
+        .tail = 0,
+        .maxlen = bufferSize,
+        .data_size = sizeof(MyEvent)
+    };
 
-    FastCallPair fastCallPair = { &fastECallData, &fastOCallData };
+    FastCallStruct fastOCallData = 
+    { 
+        .responderThread = 0,
+        .data_buffer = &circular_buffer_ocall,
+        .keepPolling = true 
+    };
+
+    FastCallPair fastCallPair = 
+    { 
+        .fastECall = &fastECallData,
+        .fastOCall = &fastOCallData
+    };
 
     pthread_create(&fastECallData.responderThread, NULL, EnclaveResponderThread, (void*)&fastCallPair);
 

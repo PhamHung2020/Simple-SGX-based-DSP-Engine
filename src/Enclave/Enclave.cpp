@@ -79,8 +79,8 @@ void TaskExecutor(void* data)
 {
     MyEvent* event = (MyEvent*) data;
     event->data += 1;
-    // FastCall_request(globalFastOCall, event);
-    printEvent(*event);
+    FastCall_request(globalFastOCall, event);
+    // printEvent(*event);
 }
 
 

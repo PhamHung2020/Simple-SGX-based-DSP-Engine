@@ -5,14 +5,15 @@
 
 struct circular_buffer
 {
-    MyEvent* const buffer;
+    void* const buffer;
     volatile int head;
     volatile int tail;
     const int maxlen;
+    const int data_size;
 };
 
-int circular_buffer_push(struct circular_buffer* cir_buf, MyEvent data);
-int circular_buffer_pop(struct circular_buffer* cir_buf, MyEvent** data);
+int circular_buffer_push(struct circular_buffer* cir_buf, void* data);
+int circular_buffer_pop(struct circular_buffer* cir_buf, void** data);
 
 
 #endif

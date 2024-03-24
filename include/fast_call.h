@@ -39,7 +39,7 @@ static inline int FastCall_request(FastCallStruct* fastCallData, MyEvent *data)
     // Request call
     while(true) {
 
-        if (circular_buffer_push(fastCallData->data_buffer, *data) == 0)
+        if (circular_buffer_push(fastCallData->data_buffer, data) == 0)
         {
             break;
         }
@@ -65,9 +65,10 @@ static inline void FastCall_wait(FastCallStruct *fastCallData, FastCallTable* ca
             break;
         }
 
-        MyEvent* data;
+        // MyEvent* data;
+        char* data;
         // int result = circular_buffer_pop(fastCallData->data_buffer, data);
-        if (circular_buffer_pop(fastCallData->data_buffer, &data) == 0)
+        if (circular_buffer_pop(fastCallData->data_buffer, (void**)&data) == 0)
         {
             if (callId < callTable->numEntries)
             {
