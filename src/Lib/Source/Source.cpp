@@ -2,15 +2,22 @@
 
 #include <utility>
 
+Source::Source()
+{
+    sourceUri = "";
+    delay = 0;
+    sourceId = 0;
+}
+
 Source::Source(const int sourceId, std::string sourceUri) : sourceUri(std::move(sourceUri)), delay(-1), running(false), sourceId(sourceId)
 {
     srand(time(nullptr));
-};
+}
 
 Source::Source(const int sourceId, std::string sourceUri, const int delay) : sourceUri(std::move(sourceUri)), delay(delay), running(false), sourceId(sourceId)
 {
     srand(time(nullptr));
-};
+}
 
 int Source::getSourceId() const {
     return this->sourceId;
@@ -40,9 +47,9 @@ int Source::start()
     return 0;
 }
 
-int Source::start(void (*emit)(const MyEvent&))
+int Source::start(Emitter &emitter)
 {
-    constexpr MyEvent event = { 0.0, 0, 0, 0, "" };
-    emit(event);
+    MyEvent event = { 0.0, 0, 0, 0, "" };
+    emitter.emit(&event);
     return 0;
 }

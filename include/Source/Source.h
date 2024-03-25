@@ -6,18 +6,20 @@
 #include <unistd.h>
 
 #include "data_types.h"
+#include "Source/Emitter.h"
 
 class Source
 {
 protected:
     std::string sourceUri;
-    int delay;
-    bool running;
-    int sourceId;
+    int delay{};
+    bool running{};
+    int sourceId{};
 
 public:
     virtual ~Source() = default;
 
+    Source();
     Source(int sourceId, std::string sourceUri);
     Source(int sourceId, std::string sourceUri, int delay);
 
@@ -27,7 +29,7 @@ public:
     bool isRunning() const;
 
     virtual int start();
-    virtual int start(void (*emit)(const MyEvent&));
+    virtual int start(Emitter &emitter);
 };
 
 #endif

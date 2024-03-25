@@ -78,7 +78,7 @@ int CsvSource::start()
     return 0;
 }
 
-int CsvSource::start(void (*emit)(const MyEvent&))
+int CsvSource::start(Emitter &emitter)
 {
     running = true;
 
@@ -132,7 +132,7 @@ int CsvSource::start(void (*emit)(const MyEvent&))
             strncpy(event.message, words[3].c_str(), 32);
             event.message[31] = '\0';
 
-            emit(event);
+            emitter.emit(&event);
         }
         catch(const std::invalid_argument&)
         {

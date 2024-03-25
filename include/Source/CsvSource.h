@@ -3,13 +3,13 @@
 
 #include "Source/Source.h"
 
-class CsvSource final : Source
+class CsvSource final : public Source
 {
 public:
     CsvSource(int sourceId, const std::string &filename);
     CsvSource(int sourceId, const std::string &filename, int delay);
     int start() override;
-    int start(void (*emit)(const MyEvent&)) override;
+    int start(Emitter &emitter) override;
 };
 
 #endif
