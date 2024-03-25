@@ -22,20 +22,36 @@ private:
     void (*sink_) (void*) = nullptr;
 
     pthread_t sourceThread_;
+    std::vector<sgx_enclave_id_t> enclaveIds_;
     std::vector<pthread_t> enclaveThreads_;
     std::vector<circular_buffer> buffers_;
+    // circular_buffer buffers_[10];
     std::vector<FastCallStruct> fastCallDatas_;
+    std::vector<FastCallPair> fastCallPairs_;
     FastCallEmitter emitter_;
 
-    void* startSource_(void* sourceAsVoid);
+    static void* startSource_(void* sourceEmitterPairAsVoid);
+    static void* enclaveResponderThread_(void* fastCallPairAsVoidP);
+    static void* appResponserThread_(void* fastOCallAsVoidP);
+    int initializeEnclaves();
+    int destroyEnclaves();
 public:
     SimpleEngine();
     void setSource(Source &source);
     void addOperator(uint16_t callId);
     void setSink(void (*sink) (void*));
     int start();
+
+    typedef struct {
+        Source* source;
+        Emitter* emitter;
+    } SourceEmitterPair;
+
+    typedef struct
+    {
+        FastCallStruct* fastOCallData;
+        void (*sinkFunc) (void* data);
+    } FastOCallStruct;
 };
-
-
 
 #endif //SIMPLEENGINE_H

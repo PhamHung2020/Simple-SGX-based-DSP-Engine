@@ -4,19 +4,15 @@
 #include "Source/FastCallEmitter.h"
 #include <cstdio>
 
-void FastCallEmitter::setFastCallData(const FastCallStruct &fastCallData)
+void FastCallEmitter::setFastCallData(FastCallStruct* fastCallData)
 {
-    this->fastCallData_ = fastCallData;
+    this->fastCallDataP_ = fastCallData;
 }
 
 void FastCallEmitter::emit(void *data)
 {
-    // if (this->fastCallData_.responderThread != 0 && this->fastCallData_.data_buffer != nullptr)
-    //     FastCall_request(&this->fastCallData_, static_cast<MyEvent *>(data));
-    //
-    auto* event = static_cast<MyEvent *>(data);
-    printf(
-        "Sink Result: (%lf %d %d %d %s)\n",
-        event->timestamp, event->sourceId, event->key, event->data, event->message
-    );
+    if (this->fastCallDataP_->responderThread != 0 && this->fastCallDataP_->data_buffer != nullptr) {
+        this->event_ = *static_cast<MyEvent *>(data);
+        FastCall_request(this->fastCallDataP_, &this->event_);
+    }
 }

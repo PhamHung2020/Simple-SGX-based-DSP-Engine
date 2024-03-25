@@ -223,7 +223,7 @@ $(BUILDDIR)/App/spinlock.o: src/App/spinlock.c
 	@echo "CC   <=  $<"
 
 # $(Lib_Cpp_Objects): %.o: %.cpp
-$(BUILDDIR)/Lib/%.o: src/Lib/%.cpp
+$(BUILDDIR)/Lib/%.o: src/Lib/%.cpp src/App/Enclave_u.h
 	@mkdir -p $(dir $@)
 	@$(CXX) $(SGX_COMMON_CXXFLAGS) $(App_Cpp_Flags) -c $< -o $@
 	@echo "CXX  <=  $<"
