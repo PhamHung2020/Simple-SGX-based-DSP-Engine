@@ -102,7 +102,7 @@ else
 endif
 
 SOURCEDIR := src
-Lib_Cpp_Files := $(wildcard $(SOURCEDIR)/Lib/**/*.cpp)
+Lib_Cpp_Files := $(wildcard $(SOURCEDIR)/Lib/**/*.cpp) $(wildcard $(SOURCEDIR)/Lib/*.cpp)
 Lib_Cpp_Objects := $(patsubst $(SOURCEDIR)/%,$(BUILDDIR)/%,$(Lib_Cpp_Files:.cpp=.o))
 
 App_Cpp_Files := src/App/App.cpp $(wildcard src/App/*.cpp)

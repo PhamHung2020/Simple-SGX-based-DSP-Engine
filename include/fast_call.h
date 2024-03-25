@@ -6,6 +6,7 @@
 #include "DataStructure/circular_buffer.h"
 #include "data_types.h"
 #include "inttypes.h"
+#include "sgx_eid.h"     /* sgx_enclave_id_t */
 
 #pragma GCC diagnostic ignored "-Wunused-function"
 
@@ -16,6 +17,14 @@ typedef struct {
     struct circular_buffer* data_buffer;
     bool                    keepPolling;
 } FastCallStruct;
+
+typedef struct
+{
+    sgx_enclave_id_t enclaveId;
+    FastCallStruct* fastECall;
+    FastCallStruct* fastOCall;
+    uint16_t callId;
+} FastCallPair;
 
 typedef struct 
 {
