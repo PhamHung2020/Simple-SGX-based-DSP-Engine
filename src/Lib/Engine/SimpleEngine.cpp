@@ -107,7 +107,13 @@ int SimpleEngine::start()
 
     printf("Start\n");
 
-    this->buffers_.reserve(this->callIdVector_.size() + 1);
+    const int nEnclave = static_cast<int>(this->callIdVector_.size());
+    this->buffers_.reserve(nEnclave + 1);
+    this->enclaveIds_.reserve(nEnclave);
+    this->enclaveThreads_.reserve(nEnclave);
+    this->fastCallDatas_.reserve(nEnclave + 1);
+    this->fastCallPairs_.reserve(nEnclave);
+
     for (size_t i = 0; i < this->callIdVector_.size(); ++i)
     {
         this->enclaveIds_.push_back(0);

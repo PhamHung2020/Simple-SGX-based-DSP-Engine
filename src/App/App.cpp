@@ -1,5 +1,6 @@
 #include <cstdio>
 #include <fstream>
+#include <sgx_defs.h>
 
 #include "Enclave_u.h"
 #include "Source/CsvSource.h"
@@ -29,6 +30,7 @@ int SGX_CDECL main(int argc, char *argv[])
     engine.setSource(source1);
     engine.setSink(sinkResult);
     engine.addOperator(0);
+    engine.addOperator(1);
     engine.start();
     
     printf("Info: Engine successfully returned.\n");
