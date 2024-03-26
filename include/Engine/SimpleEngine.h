@@ -26,10 +26,9 @@ private:
     std::vector<sgx_enclave_id_t> enclaveIds_;
     std::vector<pthread_t> enclaveThreads_;
     std::vector<circular_buffer> buffers_;
-    // circular_buffer buffers_[10];
     std::vector<FastCallStruct> fastCallDatas_;
     std::vector<FastCallPair> fastCallPairs_;
-    FastCallEmitter emitter_;
+    FastCallEmitter* emitter_;
 
     static void* startSource_(void* sourceEmitterPairAsVoid);
     static void* enclaveResponderThread_(void* fastCallPairAsVoidP);
@@ -39,6 +38,7 @@ private:
 public:
     SimpleEngine();
     void setSource(Source &source);
+    void setEmitter(FastCallEmitter &emitter);
     void addTask(uint16_t callId, uint16_t inputDataSize);
     void setSink(void (*sink) (void*), uint16_t outputDataSize);
     int start();

@@ -11,7 +11,7 @@
 typedef unsigned long int pthread_t;
 
 typedef struct {
-    // sgx_spinlock_t          spinlock;
+    sgx_spinlock_t          spinlock;
     pthread_t               responderThread;
     struct circular_buffer* data_buffer;
     bool                    keepPolling;
@@ -60,8 +60,8 @@ static inline int FastCall_request(FastCallStruct* fastCallData, void *data)
         if(numRetries > MAX_RETRIES)
             return -1;
 
-        for (i = 0; i<3; ++i)
-            _mm_pause();
+        // for (i = 0; i<3; ++i)
+        //     _mm_pause();
     }
 
     return numRetries;
@@ -90,8 +90,8 @@ static inline void FastCall_wait(FastCallStruct *fastCallData, FastCallTable* ca
         }
         // sgx_spin_unlock((&fastCallData->spinlock));
 
-        for( i = 0; i<3; ++i)
-            _mm_pause();
+        // for( i = 0; i<3; ++i)
+        //     _mm_pause();
     }
 }
 
@@ -100,5 +100,7 @@ static inline void StopResponder(FastCallStruct *fastCallData)
 {
     fastCallData->keepPolling = false;
 }
+
+
 
 #endif

@@ -110,38 +110,38 @@ int CsvSource::start(Emitter &emitter)
     std::string line, word, temp;
     while (getline(fin, line))
     {
-        // words.clear();
-        // std::stringstream s(line);
-        //
-        // while (getline(s, word, ','))
-        // {
-        //     words.push_back(word);
-        // }
-        //
-        // if (words.size() != 4)
-        // {
-        //     continue;
-        // }
-        //
-        // try
-        // {
-        //     double timestamp = std::stod(words[0]);
-        //     int key = std::stoi(words[1]);
-        //     int data = std::stoi(words[2]);
-        //     MyEvent event = { timestamp, this->sourceId, key, data};
-        //     strncpy(event.message, words[3].c_str(), 32);
-        //     event.message[31] = '\0';
-        //
-        //     emitter.emit(&event);
-        // }
-        // catch(const std::invalid_argument&)
-        // {
-        //     std::cout << "Invalid argument" << std::endl;
-        //     continue;
-        // }
-        char content[32];
-        strncpy(content, line.c_str(), 32);
-        emitter.emit(content);
+        words.clear();
+        std::stringstream s(line);
+
+        while (getline(s, word, ','))
+        {
+            words.push_back(word);
+        }
+
+        if (words.size() != 4)
+        {
+            continue;
+        }
+
+        try
+        {
+            double timestamp = std::stod(words[0]);
+            int key = std::stoi(words[1]);
+            int data = std::stoi(words[2]);
+            MyEvent event = { timestamp, this->sourceId, key, data};
+            strncpy(event.message, words[3].c_str(), 32);
+            event.message[31] = '\0';
+
+            emitter.emit(&event);
+        }
+        catch(const std::invalid_argument&)
+        {
+            std::cout << "Invalid argument" << std::endl;
+            continue;
+        }
+        // char content[32];
+        // strncpy(content, line.c_str(), 32);
+        // emitter.emit(content);
         
         if (delay != 0)
         {

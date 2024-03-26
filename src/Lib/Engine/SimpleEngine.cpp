@@ -90,6 +90,11 @@ void SimpleEngine::setSource(Source &source)
     this->source_ = &source;
 }
 
+void SimpleEngine::setEmitter(FastCallEmitter &emitter)
+{
+    this->emitter_ = &emitter;
+}
+
 void SimpleEngine::addTask(const uint16_t callId, const uint16_t inputDataSize)
 {
     this->callIdVector_.push_back(callId);
@@ -105,7 +110,7 @@ void SimpleEngine::setSink(void (*sink)(void *), const uint16_t outputDataSize)
 int SimpleEngine::start()
 {
     // validate before starting
-    if (this->source_ == nullptr || this->callIdVector_.empty() || this->sink_ == nullptr)
+    if (this->source_ == nullptr || this->callIdVector_.empty() || this->sink_ == nullptr || this->emitter_ == nullptr)
         return -1;
 
     printf("Start\n");
@@ -130,6 +135,7 @@ int SimpleEngine::start()
             this->dataSizeVector_[i]
         });
         this->fastCallDatas_.push_back({
+            .spinlock = SGX_SPINLOCK_INITIALIZER,
             .responderThread = 0,
             .data_buffer = &this->buffers_[i],
             .keepPolling = true
@@ -169,8 +175,8 @@ int SimpleEngine::start()
             pthread_create(&this->fastCallDatas_[i].responderThread, nullptr, enclaveResponderThread_, &fastCallPairs_[i]);
         }
 
-        emitter_.setFastCallData(&this->fastCallDatas_[0]);
-        SourceEmitterPair sourceEmitterPair = { this->source_, &this->emitter_ };
+        emitter_->setFastCallData(&this->fastCallDatas_[0]);
+        SourceEmitterPair sourceEmitterPair = { this->source_, this->emitter_ };
 
         pthread_create(&this->sourceThread_, nullptr, startSource_, &sourceEmitterPair);
         printf("Start source...\n");

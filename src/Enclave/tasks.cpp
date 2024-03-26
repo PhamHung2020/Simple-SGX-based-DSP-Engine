@@ -10,6 +10,8 @@
 
 #include <cstring>
 #include <string>
+#include <chrono>
+#include <ctime>
 
 FastCallStruct* globalFastOCall;
 circular_buffer* fastOCallBuffer;
@@ -63,7 +65,7 @@ void MapCsvRowToEvent(void* data)
 void TaskExecutor(void* data)
 {
     auto* event = static_cast<MyEvent *>(data);
-    event = filter(event, [](const MyEvent &e) { return e.data > 5; });
+    event = filter(event, [](const MyEvent &e) { return e.data > 0; });
     if (event != nullptr)
     {
         MyEvent newEvent = {

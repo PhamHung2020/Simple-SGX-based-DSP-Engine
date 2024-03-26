@@ -1,3 +1,4 @@
+#include <iostream>
 #include <cstdio>
 #include <fstream>
 #include <sgx_defs.h>
@@ -7,11 +8,18 @@
 #include "data_types.h"
 
 #include "Engine/SimpleEngine.h"
+#include "Source/FastCallPerformanceEmitter.h"
 
 using namespace std;
 
+std::chrono::_V2::system_clock::time_point endTimesList[1000];
+int countEndTime = 0;
+
 void sinkResult(void* rawData)
 {
+    endTimesList[countEndTime] = std::chrono::high_resolution_clock::now();
+    countEndTime++;
+
     auto* event = static_cast<MyEvent *>(rawData);
     printf(
         "Sink Result: (%lf %d %d %d %s)\n",
@@ -27,15 +35,22 @@ int SGX_CDECL main(int argc, char *argv[])
 {
 
     /* =================== DECLARE AND START SOURCES ====================*/
+    FastCallPerformanceEmitter emitter;
     CsvSource source1(1, "../../test_data.csv", 0);
     SimpleEngine engine;
     engine.setSource(source1);
+    engine.setEmitter(emitter);
     engine.setSink(sinkResult, sizeof(MyEvent));
-    engine.addTask(3, 32);
+    // engine.addTask(3, 32);
     engine.addTask(0, sizeof(MyEvent));
-    engine.addTask(1, sizeof(MyEvent));
+    // engine.addTask(1, sizeof(MyEvent));
     engine.start();
-    
+
+    if (countEndTime == emitter.getCount()) {
+        for (int i = 0; i < countEndTime; ++i) {
+            std::cout << std::chrono::duration_cast<std::chrono::nanoseconds>(endTimesList[i] - emitter.getStartTime(i)).count() << "ns\n";
+        }
+    }
     printf("Info: Engine successfully returned.\n");
 
     return 0;
