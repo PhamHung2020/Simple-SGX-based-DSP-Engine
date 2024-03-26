@@ -14,12 +14,13 @@ void EcallStartResponder(FastCallStruct* fastECallData, FastCallStruct* fastOCal
     globalFastOCall = fastOCallData;
     fastOCallBuffer = fastOCallData->data_buffer;
 
-	void (*callbacks[2])(void*);
+	void (*callbacks[3])(void*);
     callbacks[0] = TaskExecutor;
     callbacks[1] = TaskExecutor2;
+    callbacks[2] = TaskExecutor3;
 
     FastCallTable callTable;
-    callTable.numEntries = 2;
+    callTable.numEntries = 3;
     callTable.callbacks  = callbacks;
 
     FastCall_wait(fastECallData, &callTable, callId);

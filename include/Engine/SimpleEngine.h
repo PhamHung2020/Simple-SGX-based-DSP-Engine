@@ -19,6 +19,7 @@ class SimpleEngine {
 private:
     Source* source_ = nullptr;
     std::vector<uint16_t> callIdVector_;
+    std::vector<uint16_t> dataSizeVector_;
     void (*sink_) (void*) = nullptr;
 
     pthread_t sourceThread_;
@@ -38,8 +39,8 @@ private:
 public:
     SimpleEngine();
     void setSource(Source &source);
-    void addOperator(uint16_t callId);
-    void setSink(void (*sink) (void*));
+    void addTask(uint16_t callId, uint16_t inputDataSize);
+    void setSink(void (*sink) (void*), uint16_t outputDataSize);
     int start();
 
     typedef struct {

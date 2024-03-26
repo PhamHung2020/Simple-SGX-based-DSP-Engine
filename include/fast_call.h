@@ -40,7 +40,7 @@ static inline void _mm_pause(void)
     );
 }
 
-static inline int FastCall_request(FastCallStruct* fastCallData, MyEvent *data)
+static inline int FastCall_request(FastCallStruct* fastCallData, void *data)
 {
     int i = 0;
     const uint32_t MAX_RETRIES = 100;

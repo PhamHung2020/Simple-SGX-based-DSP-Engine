@@ -90,23 +90,27 @@ void SimpleEngine::setSource(Source &source)
     this->source_ = &source;
 }
 
-void SimpleEngine::addOperator(const uint16_t callId)
+void SimpleEngine::addTask(const uint16_t callId, const uint16_t inputDataSize)
 {
     this->callIdVector_.push_back(callId);
+    this->dataSizeVector_.push_back(inputDataSize);
 }
 
-void SimpleEngine::setSink(void (*sink)(void *))
+void SimpleEngine::setSink(void (*sink)(void *), const uint16_t outputDataSize)
 {
     this->sink_ = sink;
+    this->dataSizeVector_.push_back(outputDataSize);
 }
 
 int SimpleEngine::start()
 {
+    // validate before starting
     if (this->source_ == nullptr || this->callIdVector_.empty() || this->sink_ == nullptr)
         return -1;
 
     printf("Start\n");
 
+    // initialize necessary data structure: circular buffer, fast call struct
     const int nEnclave = static_cast<int>(this->callIdVector_.size());
     this->buffers_.reserve(nEnclave + 1);
     this->enclaveIds_.reserve(nEnclave);
@@ -119,11 +123,11 @@ int SimpleEngine::start()
         this->enclaveIds_.push_back(0);
         this->enclaveThreads_.push_back(0);
         this->buffers_.push_back({
-            new MyEvent[MAX_BUFFER_SIZE],
+            new char[MAX_BUFFER_SIZE * this->dataSizeVector_[i]],
             0,
             0,
             MAX_BUFFER_SIZE,
-            sizeof(MyEvent)
+            this->dataSizeVector_[i]
         });
         this->fastCallDatas_.push_back({
             .responderThread = 0,
@@ -202,6 +206,6 @@ int SimpleEngine::start()
         delete[] static_cast<MyEvent *>(buffer.buffer);
     }
 
-    printf("DONE");
+    printf("DONE\n");
     return 0;
 }
