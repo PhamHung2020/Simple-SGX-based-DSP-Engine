@@ -2,10 +2,8 @@
 #define FAST_CALL_
 
 #include <stdbool.h>
-
+#include <sgx_spinlock.h>
 #include "DataStructure/circular_buffer.h"
-#include "data_types.h"
-#include "inttypes.h"
 #include "sgx_eid.h"     /* sgx_enclave_id_t */
 
 #pragma GCC diagnostic ignored "-Wunused-function"
@@ -13,6 +11,7 @@
 typedef unsigned long int pthread_t;
 
 typedef struct {
+    // sgx_spinlock_t          spinlock;
     pthread_t               responderThread;
     struct circular_buffer* data_buffer;
     bool                    keepPolling;
@@ -46,12 +45,16 @@ static inline int FastCall_request(FastCallStruct* fastCallData, void *data)
     const uint32_t MAX_RETRIES = 100;
     uint32_t numRetries = 0;
     // Request call
-    while(true) {
+    while(true)
+    {
+        // sgx_spin_lock(&fastCallData->spinlock);
 
         if (circular_buffer_push(fastCallData->data_buffer, data) == 0)
         {
+            // sgx_spin_unlock(&fastCallData->spinlock);
             break;
         }
+        // sgx_spin_unlock(&fastCallData->spinlock);
 
         numRetries++;
         if(numRetries > MAX_RETRIES)
@@ -74,17 +77,18 @@ static inline void FastCall_wait(FastCallStruct *fastCallData, FastCallTable* ca
             break;
         }
 
-        // MyEvent* data;
         char* data;
-        // int result = circular_buffer_pop(fastCallData->data_buffer, data);
+        // sgx_spin_lock((&fastCallData->spinlock));
         if (circular_buffer_pop(fastCallData->data_buffer, (void**)&data) == 0)
         {
+            // sgx_spin_unlock((&fastCallData->spinlock));
             if (callId < callTable->numEntries)
             {
                 callTable->callbacks[callId](data);
             }
             continue;
         }
+        // sgx_spin_unlock((&fastCallData->spinlock));
 
         for( i = 0; i<3; ++i)
             _mm_pause();

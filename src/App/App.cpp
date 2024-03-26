@@ -12,13 +12,13 @@ using namespace std;
 
 void sinkResult(void* rawData)
 {
-    // auto* event = static_cast<MyEvent *>(rawData);
-    // printf(
-    //     "Sink Result: (%lf %d %d %d %s)\n",
-    //     event->timestamp, event->sourceId, event->key, event->data, event->message
-    // );
-    auto* data = static_cast<int*> (rawData);
-    printf("Sink result: %d\n", *data);
+    auto* event = static_cast<MyEvent *>(rawData);
+    printf(
+        "Sink Result: (%lf %d %d %d %s)\n",
+        event->timestamp, event->sourceId, event->key, event->data, event->message
+    );
+    // auto* data = static_cast<int*> (rawData);
+    // printf("Sink result: %d\n", *data);
 }
 
 
@@ -31,9 +31,9 @@ int SGX_CDECL main(int argc, char *argv[])
     SimpleEngine engine;
     engine.setSource(source1);
     engine.setSink(sinkResult, sizeof(MyEvent));
+    engine.addTask(3, 32);
     engine.addTask(0, sizeof(MyEvent));
     engine.addTask(1, sizeof(MyEvent));
-    engine.addTask(2, sizeof(int));
     engine.start();
     
     printf("Info: Engine successfully returned.\n");

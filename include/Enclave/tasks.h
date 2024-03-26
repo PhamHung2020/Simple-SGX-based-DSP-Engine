@@ -15,7 +15,7 @@ extern "C" {
 }
 #endif
 
-
+void MapCsvRowToEvent(void* data);
 void TaskExecutor(void* data);
 void TaskExecutor2(void* data);
 void TaskExecutor3(void* data);
