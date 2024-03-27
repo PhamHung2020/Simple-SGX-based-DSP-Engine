@@ -12,13 +12,13 @@
 
 using namespace std;
 
-std::chrono::_V2::system_clock::time_point endTimesList[1000];
-int countEndTime = 0;
+// std::chrono::_V2::system_clock::time_point endTimesList[1000];
+// int countEndTime = 0;
 
 void sinkResult(void* rawData)
 {
-    endTimesList[countEndTime] = std::chrono::high_resolution_clock::now();
-    countEndTime++;
+    // endTimesList[countEndTime] = std::chrono::high_resolution_clock::now();
+    // countEndTime++;
 
     auto* event = static_cast<MyEvent *>(rawData);
     printf(
@@ -35,7 +35,7 @@ int SGX_CDECL main(int argc, char *argv[])
 {
 
     /* =================== DECLARE AND START SOURCES ====================*/
-    FastCallPerformanceEmitter emitter;
+    FastCallEmitter emitter;
     CsvSource source1(1, "../../test_data.csv", 0);
     SimpleEngine engine;
     engine.setSource(source1);
@@ -43,14 +43,23 @@ int SGX_CDECL main(int argc, char *argv[])
     engine.setSink(sinkResult, sizeof(MyEvent));
     // engine.addTask(3, 32);
     engine.addTask(0, sizeof(MyEvent));
-    // engine.addTask(1, sizeof(MyEvent));
+    engine.addTask(1, sizeof(MyEvent));
     engine.start();
 
-    if (countEndTime == emitter.getCount()) {
-        for (int i = 0; i < countEndTime; ++i) {
-            std::cout << std::chrono::duration_cast<std::chrono::nanoseconds>(endTimesList[i] - emitter.getStartTime(i)).count() << "ns\n";
+    const auto hotCallPerformances = engine.getHotCallPerformanceParams();
+    for (size_t i = 0; i < hotCallPerformances.size(); ++i) {
+        printf("Enclave %lu\n", i);
+        std::cout << "Enclave " << i << ":\n";
+        for (size_t j = 0; j < hotCallPerformances[i].endTimes.size(); ++j) {
+            std::cout << std::chrono::duration_cast<std::chrono::nanoseconds>(hotCallPerformances[i].endTimes[j] - hotCallPerformances[i].startTimes[j]).count() << "ns\n";
         }
     }
+
+    // if (countEndTime == emitter.getCount()) {
+    //     for (int i = 0; i < countEndTime; ++i) {
+    //         std::cout << std::chrono::duration_cast<std::chrono::nanoseconds>(endTimesList[i] - emitter.getStartTime(i)).count() << "ns\n";
+    //     }
+    // }
     printf("Info: Engine successfully returned.\n");
 
     return 0;

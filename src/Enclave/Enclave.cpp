@@ -6,7 +6,7 @@
 #include "Enclave/Enclave.h"
 #include "Enclave/tasks.h"
 
-void EcallStartResponder(FastCallStruct* fastECallData, FastCallStruct* fastOCallData, const uint16_t callId)
+void EcallStartResponder(FastCallStruct* fastECallData, FastCallStruct* fastOCallData, const uint16_t callId, HotCall* hotCall)
 {
     globalFastOCall = fastOCallData;
     fastOCallBuffer = fastOCallData->data_buffer;
@@ -21,5 +21,6 @@ void EcallStartResponder(FastCallStruct* fastECallData, FastCallStruct* fastOCal
     callTable.numEntries = 4;
     callTable.callbacks  = callbacks;
 
-    FastCall_wait(fastECallData, &callTable, callId);
+    // FastCall_wait(fastECallData, &callTable, callId);
+    FastCall_wait_hotcall(fastECallData, &callTable, callId, hotCall);
 }

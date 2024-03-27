@@ -10,8 +10,11 @@
 #include <cstdio>
 #include <unistd.h>
 
+#include "hot_call_perormance.h"
+
 SimpleEngine::SimpleEngine() {
     this->sourceThread_ = 0;
+    this->emitter_ = nullptr;
 }
 
 void* SimpleEngine::startSource_(void* sourceEmitterPairAsVoid) {
@@ -27,7 +30,8 @@ void *SimpleEngine::enclaveResponderThread_(void *fastCallPairAsVoidP)
     const auto* fastCallPair = static_cast<FastCallPair *>(fastCallPairAsVoidP);
     FastCallStruct *fastEcall = fastCallPair->fastECall;
     FastCallStruct *fastOcall = fastCallPair->fastOCall;
-    const sgx_status_t status = EcallStartResponder(fastCallPair->enclaveId, fastEcall, fastOcall, fastCallPair->callId);
+    HotCall* hotCall = fastCallPair->hotCall;
+    const sgx_status_t status = EcallStartResponder(fastCallPair->enclaveId, fastEcall, fastOcall, fastCallPair->callId, hotCall);
     if (status == SGX_SUCCESS)
     {
         printf("Polling success\n");
@@ -56,6 +60,30 @@ void* SimpleEngine::appResponserThread_(void* fastOCallAsVoidP)
     return nullptr;
 }
 
+void SimpleEngine::addStartTime_(void *hotCallPerformanceAsVoidP) {
+    const auto hotCallPerformance = static_cast<HotOCallPerformanceParams*> (hotCallPerformanceAsVoidP);
+    hotCallPerformance->startTimes.push_back(std::chrono::high_resolution_clock::now());
+}
+
+void SimpleEngine::addEndTime_(void *hotCallPerformanceAsVoidP) {
+    const auto hotCallPerformance = static_cast<HotOCallPerformanceParams*> (hotCallPerformanceAsVoidP);
+    hotCallPerformance->endTimes.push_back(std::chrono::high_resolution_clock::now());
+}
+
+void * SimpleEngine::appPerformanceThread_(void *hotCallAsVoidP) {
+    void (*callbacks[2])(void*);
+
+    callbacks[0] = addStartTime_;
+    callbacks[1] = addEndTime_;
+
+    HotCallTable callTable;
+    callTable.numEntries = 2;
+    callTable.callbacks = callbacks;
+
+    HotCall_waitForCall(static_cast<HotCall*> (hotCallAsVoidP), &callTable);
+    return nullptr;
+}
+
 int SimpleEngine::initializeEnclaves()
 {
     int initializationSuccessCount = 0;
@@ -70,8 +98,7 @@ int SimpleEngine::initializeEnclaves()
     return initializationSuccessCount;
 }
 
-int SimpleEngine::destroyEnclaves()
-{
+int SimpleEngine::destroyEnclaves() const {
     int destructionEnclaveSuccess = 0;
     for (size_t i = 0; i < this->callIdVector_.size(); ++i) {
         if (sgx_destroy_enclave(this->enclaveIds_[i]) == SGX_SUCCESS) {
@@ -84,6 +111,59 @@ int SimpleEngine::destroyEnclaves()
     return destructionEnclaveSuccess;
 }
 
+int SimpleEngine::initializeDataStructures() {
+    // initialize necessary data structure: circular buffer, fast call struct
+    const int nEnclave = static_cast<int>(this->callIdVector_.size());
+    this->buffers_.reserve(nEnclave + 1);
+    this->enclaveIds_.reserve(nEnclave);
+    this->enclaveThreads_.reserve(nEnclave);
+    this->fastCallDatas_.reserve(nEnclave + 1);
+    this->fastCallPairs_.reserve(nEnclave);
+    this->hotCallPerformances_.reserve(nEnclave);
+    this->hotCalls_.reserve(nEnclave);
+
+    for (size_t i = 0; i < this->callIdVector_.size(); ++i)
+    {
+        this->enclaveIds_.push_back(0);
+        this->enclaveThreads_.push_back(0);
+        this->buffers_.push_back({
+            new char[MAX_BUFFER_SIZE * this->dataSizeVector_[i]],
+            0,
+            0,
+            MAX_BUFFER_SIZE,
+            this->dataSizeVector_[i]
+        });
+        this->fastCallDatas_.push_back({
+            .spinlock = SGX_SPINLOCK_INITIALIZER,
+            .responderThread = 0,
+            .data_buffer = &this->buffers_[i],
+            .keepPolling = true
+        });
+
+        this->hotCallPerformances_.push_back({
+            .startTimes = std::vector<std::chrono::_V2::system_clock::time_point>(),
+            .endTimes = std::vector<std::chrono::_V2::system_clock::time_point>()
+        });
+
+        this->hotCalls_.push_back(HOTCALL_INITIALIZER);
+    }
+
+    this->buffers_.push_back({
+        new MyEvent[MAX_BUFFER_SIZE],
+        0,
+        0,
+        MAX_BUFFER_SIZE,
+        sizeof(MyEvent)
+    });
+
+    this->fastCallDatas_.push_back({
+        .responderThread = 0,
+        .data_buffer = &this->buffers_[this->callIdVector_.size()],
+        .keepPolling = true
+    });
+
+    return nEnclave;
+}
 
 void SimpleEngine::setSource(Source &source)
 {
@@ -107,6 +187,10 @@ void SimpleEngine::setSink(void (*sink)(void *), const uint16_t outputDataSize)
     this->dataSizeVector_.push_back(outputDataSize);
 }
 
+std::vector<HotOCallPerformanceParams> & SimpleEngine::getHotCallPerformanceParams() {
+    return this->hotCallPerformances_;
+}
+
 int SimpleEngine::start()
 {
     // validate before starting
@@ -115,64 +199,28 @@ int SimpleEngine::start()
 
     printf("Start\n");
 
-    // initialize necessary data structure: circular buffer, fast call struct
-    const int nEnclave = static_cast<int>(this->callIdVector_.size());
-    this->buffers_.reserve(nEnclave + 1);
-    this->enclaveIds_.reserve(nEnclave);
-    this->enclaveThreads_.reserve(nEnclave);
-    this->fastCallDatas_.reserve(nEnclave + 1);
-    this->fastCallPairs_.reserve(nEnclave);
-
-    for (size_t i = 0; i < this->callIdVector_.size(); ++i)
-    {
-        this->enclaveIds_.push_back(0);
-        this->enclaveThreads_.push_back(0);
-        this->buffers_.push_back({
-            new char[MAX_BUFFER_SIZE * this->dataSizeVector_[i]],
-            0,
-            0,
-            MAX_BUFFER_SIZE,
-            this->dataSizeVector_[i]
-        });
-        this->fastCallDatas_.push_back({
-            .spinlock = SGX_SPINLOCK_INITIALIZER,
-            .responderThread = 0,
-            .data_buffer = &this->buffers_[i],
-            .keepPolling = true
-        });
-    }
-
-    this->buffers_.push_back({
-        new MyEvent[MAX_BUFFER_SIZE],
-        0,
-        0,
-        MAX_BUFFER_SIZE,
-        sizeof(MyEvent)
-    });
-
-    this->fastCallDatas_.push_back({
-        .responderThread = 0,
-        .data_buffer = &this->buffers_[this->callIdVector_.size()],
-        .keepPolling = true
-    });
-
-    printf("Initialized %lu datas\n", this->enclaveIds_.size());
+    this->initializeDataStructures();
+    printf("Initialized %lu data structures\n", this->enclaveIds_.size());
 
     const int initializationResult = initializeEnclaves();
-
     printf("Initialized %d enclaves\n", initializationResult);
 
     if (initializationResult == this->enclaveIds_.size())
     {
         for (size_t i = 0; i < this->enclaveIds_.size(); ++i)
         {
+            this->hotCalls_[i].data = &this->hotCallPerformances_[i];
+
             fastCallPairs_.push_back({
                 this->enclaveIds_[i],
                 &this->fastCallDatas_[i],
                 &this->fastCallDatas_[i+1],
                 this->callIdVector_[i],
+                &this->hotCalls_[i]
             });
             pthread_create(&this->fastCallDatas_[i].responderThread, nullptr, enclaveResponderThread_, &fastCallPairs_[i]);
+
+            pthread_create(&this->hotCalls_[i].responderThread, nullptr, appPerformanceThread_, &this->hotCalls_[i]);
         }
 
         emitter_->setFastCallData(&this->fastCallDatas_[0]);
@@ -186,20 +234,21 @@ int SimpleEngine::start()
             .sinkFunc = this->sink_
         };
         pthread_create(&this->fastCallDatas_.back().responderThread, nullptr, appResponserThread_, &fastOCallStruct);
-
         printf("Start sink...\n");
 
         if (this->sourceThread_ != 0)
             pthread_join(this->sourceThread_, nullptr);
-
         printf("Ended source\n");
 
         sleep(5);
         for (size_t i = 0; i < this->enclaveIds_.size(); ++i)
         {
             printf("Wait for enclave %lu end\n", i);
-            StopResponder(&this->fastCallDatas_[i]);
+            StopFastCallResponder(&this->fastCallDatas_[i]);
             pthread_join(this->fastCallDatas_[i].responderThread, nullptr);
+
+            StopResponder(&this->hotCalls_[i]);
+            pthread_join(this->hotCalls_[i].responderThread, nullptr);
         }
 
     }

@@ -30,6 +30,7 @@
 // #include <stdlib.h>
 #include <sgx_spinlock.h>
 #include <stdbool.h>
+#include <stddef.h>
 // #include "utils.h"
 
 
@@ -60,7 +61,7 @@ static void HotCall_init( HotCall* hotCall )
 {
     hotCall->responderThread    = 0;
     hotCall->spinlock           = SGX_SPINLOCK_INITIALIZER;
-    hotCall->data               = NULL; 
+    hotCall->data               = NULL;
     hotCall->callID             = 0;
     hotCall->keepPolling        = true;
     hotCall->runFunction        = false;

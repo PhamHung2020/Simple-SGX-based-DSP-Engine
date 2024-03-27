@@ -5,6 +5,7 @@
 #include <sgx_spinlock.h>
 #include "DataStructure/circular_buffer.h"
 #include "sgx_eid.h"     /* sgx_enclave_id_t */
+#include "hot_calls.h"
 
 #pragma GCC diagnostic ignored "-Wunused-function"
 
@@ -23,6 +24,7 @@ typedef struct
     FastCallStruct* fastECall;
     FastCallStruct* fastOCall;
     uint16_t callId;
+    HotCall* hotCall;
 } FastCallPair;
 
 typedef struct 
@@ -31,8 +33,8 @@ typedef struct
     void (**callbacks)(void*);
 } FastCallTable;
 
-static inline void _mm_pause(void) __attribute__((always_inline));
-static inline void _mm_pause(void)
+static inline void _fastcall_mm_pause(void) __attribute__((always_inline));
+static inline void _fastcall_mm_pause(void)
 {
     __asm __volatile(
         "pause"
@@ -68,9 +70,9 @@ static inline int FastCall_request(FastCallStruct* fastCallData, void *data)
 }
 
 static inline void FastCall_wait(FastCallStruct *fastCallData, FastCallTable* callTable, uint16_t callId)  __attribute__((always_inline));
-static inline void FastCall_wait(FastCallStruct *fastCallData, FastCallTable* callTable, uint16_t callId) 
+static inline void FastCall_wait(FastCallStruct *fastCallData, FastCallTable* callTable, uint16_t callId)
 {
-    static int i;
+    static int i = 0;
     while(true)
     {
         if (fastCallData->keepPolling != true) {
@@ -95,8 +97,38 @@ static inline void FastCall_wait(FastCallStruct *fastCallData, FastCallTable* ca
     }
 }
 
-static inline void StopResponder(FastCallStruct *fastCallData);
-static inline void StopResponder(FastCallStruct *fastCallData)
+static inline void FastCall_wait_hotcall(FastCallStruct *fastCallData, FastCallTable* callTable, uint16_t callId, HotCall* hotCall)  __attribute__((always_inline));
+static inline void FastCall_wait_hotcall(FastCallStruct *fastCallData, FastCallTable* callTable, uint16_t callId, HotCall* hotCall)
+{
+    static int i = 0;
+    while(true)
+    {
+        if (fastCallData->keepPolling != true) {
+            break;
+        }
+
+        char* data;
+        // sgx_spin_lock((&fastCallData->spinlock));
+        if (circular_buffer_pop(fastCallData->data_buffer, (void**)&data) == 0)
+        {
+            // sgx_spin_unlock((&fastCallData->spinlock));
+            if (callId < callTable->numEntries)
+            {
+                HotCall_requestCall(hotCall, 0, hotCall->data);
+                callTable->callbacks[callId](data);
+                HotCall_requestCall(hotCall, 1, hotCall->data);
+            }
+            continue;
+        }
+        // sgx_spin_unlock((&fastCallData->spinlock));
+
+        // for( i = 0; i<3; ++i)
+        //     _mm_pause();
+    }
+}
+
+static inline void StopFastCallResponder(FastCallStruct *fastCallData);
+static inline void StopFastCallResponder(FastCallStruct *fastCallData)
 {
     fastCallData->keepPolling = false;
 }
