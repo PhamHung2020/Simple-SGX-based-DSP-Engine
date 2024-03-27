@@ -31,7 +31,7 @@ void *SimpleEngine::enclaveResponderThread_(void *fastCallPairAsVoidP)
     FastCallStruct *fastEcall = fastCallPair->fastECall;
     FastCallStruct *fastOcall = fastCallPair->fastOCall;
     HotCall* hotCall = fastCallPair->hotCall;
-    const sgx_status_t status = EcallStartResponder(fastCallPair->enclaveId, fastEcall, fastOcall, fastCallPair->callId, hotCall);
+    const sgx_status_t status = EcallStartResponder(fastCallPair->enclaveId, fastEcall, fastOcall, fastCallPair->callId);
     if (status == SGX_SUCCESS)
     {
         printf("Polling success\n");
@@ -57,30 +57,6 @@ void* SimpleEngine::appResponserThread_(void* fastOCallAsVoidP)
     callTable.callbacks  = callbacks;
 
     FastCall_wait(fastOCallStruct->fastOCallData, &callTable, 0);
-    return nullptr;
-}
-
-void SimpleEngine::addStartTime_(void *hotCallPerformanceAsVoidP) {
-    const auto hotCallPerformance = static_cast<HotOCallPerformanceParams*> (hotCallPerformanceAsVoidP);
-    hotCallPerformance->startTimes.push_back(std::chrono::high_resolution_clock::now());
-}
-
-void SimpleEngine::addEndTime_(void *hotCallPerformanceAsVoidP) {
-    const auto hotCallPerformance = static_cast<HotOCallPerformanceParams*> (hotCallPerformanceAsVoidP);
-    hotCallPerformance->endTimes.push_back(std::chrono::high_resolution_clock::now());
-}
-
-void * SimpleEngine::appPerformanceThread_(void *hotCallAsVoidP) {
-    void (*callbacks[2])(void*);
-
-    callbacks[0] = addStartTime_;
-    callbacks[1] = addEndTime_;
-
-    HotCallTable callTable;
-    callTable.numEntries = 2;
-    callTable.callbacks = callbacks;
-
-    HotCall_waitForCall(static_cast<HotCall*> (hotCallAsVoidP), &callTable);
     return nullptr;
 }
 
@@ -119,8 +95,6 @@ int SimpleEngine::initializeDataStructures() {
     this->enclaveThreads_.reserve(nEnclave);
     this->fastCallDatas_.reserve(nEnclave + 1);
     this->fastCallPairs_.reserve(nEnclave);
-    this->hotCallPerformances_.reserve(nEnclave);
-    this->hotCalls_.reserve(nEnclave);
 
     for (size_t i = 0; i < this->callIdVector_.size(); ++i)
     {
@@ -139,13 +113,6 @@ int SimpleEngine::initializeDataStructures() {
             .data_buffer = &this->buffers_[i],
             .keepPolling = true
         });
-
-        this->hotCallPerformances_.push_back({
-            .startTimes = std::vector<std::chrono::_V2::system_clock::time_point>(),
-            .endTimes = std::vector<std::chrono::_V2::system_clock::time_point>()
-        });
-
-        this->hotCalls_.push_back(HOTCALL_INITIALIZER);
     }
 
     this->buffers_.push_back({
@@ -187,10 +154,6 @@ void SimpleEngine::setSink(void (*sink)(void *), const uint16_t outputDataSize)
     this->dataSizeVector_.push_back(outputDataSize);
 }
 
-std::vector<HotOCallPerformanceParams> & SimpleEngine::getHotCallPerformanceParams() {
-    return this->hotCallPerformances_;
-}
-
 int SimpleEngine::start()
 {
     // validate before starting
@@ -209,18 +172,14 @@ int SimpleEngine::start()
     {
         for (size_t i = 0; i < this->enclaveIds_.size(); ++i)
         {
-            this->hotCalls_[i].data = &this->hotCallPerformances_[i];
-
             fastCallPairs_.push_back({
                 this->enclaveIds_[i],
                 &this->fastCallDatas_[i],
                 &this->fastCallDatas_[i+1],
                 this->callIdVector_[i],
-                &this->hotCalls_[i]
+                nullptr
             });
             pthread_create(&this->fastCallDatas_[i].responderThread, nullptr, enclaveResponderThread_, &fastCallPairs_[i]);
-
-            pthread_create(&this->hotCalls_[i].responderThread, nullptr, appPerformanceThread_, &this->hotCalls_[i]);
         }
 
         emitter_->setFastCallData(&this->fastCallDatas_[0]);
@@ -246,10 +205,6 @@ int SimpleEngine::start()
             printf("Wait for enclave %lu end\n", i);
             StopFastCallResponder(&this->fastCallDatas_[i]);
             pthread_join(this->fastCallDatas_[i].responderThread, nullptr);
-
-            StopResponder(&this->hotCalls_[i]);
-            pthread_join(this->hotCalls_[i].responderThread, nullptr);
-
             sleep(2);
         }
 

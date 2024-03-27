@@ -8,7 +8,6 @@
 #include <vector>
 
 #include "fast_call.h"
-#include "hot_call_perormance.h"
 #include "Source/Source.h"
 #include "Source/FastCallEmitter.h"
 #include "DataStructure/circular_buffer.h"
@@ -17,7 +16,7 @@
 
 class SimpleEngine {
 
-private:
+protected:
     Source* source_ = nullptr;
     std::vector<uint16_t> callIdVector_;
     std::vector<uint16_t> dataSizeVector_;
@@ -30,29 +29,24 @@ private:
     std::vector<circular_buffer> buffers_;
     std::vector<FastCallStruct> fastCallDatas_;
     std::vector<FastCallPair> fastCallPairs_;
-    std::vector<HotOCallPerformanceParams> hotCallPerformances_;
-    std::vector<HotCall> hotCalls_;
 
     static void* startSource_(void* sourceEmitterPairAsVoid);
     static void* enclaveResponderThread_(void* fastCallPairAsVoidP);
     static void* appResponserThread_(void* fastOCallAsVoidP);
-    static void  addStartTime_(void* hotCallPerformanceAsVoidP);
-    static void  addEndTime_(void* hotCallPerformanceAsVoidP);
-    static void* appPerformanceThread_(void* hotCallAsVoidP);
 
-    int initializeEnclaves();
-    int destroyEnclaves() const;
-    int initializeDataStructures();
+    virtual int initializeEnclaves();
+    virtual int destroyEnclaves() const;
+    virtual int initializeDataStructures();
 public:
+    virtual ~SimpleEngine() = default;
+
     SimpleEngine();
-    void setSource(Source &source);
-    void setEmitter(FastCallEmitter &emitter);
-    void addTask(uint16_t callId, uint16_t inputDataSize);
-    void setSink(void (*sink) (void*), uint16_t outputDataSize);
+    virtual void setSource(Source &source);
+    virtual void setEmitter(FastCallEmitter &emitter);
+    virtual void addTask(uint16_t callId, uint16_t inputDataSize);
+    virtual void setSink(void (*sink) (void*), uint16_t outputDataSize);
 
-    std::vector<HotOCallPerformanceParams>& getHotCallPerformanceParams();
-
-    int start();
+    virtual int start();
 
     typedef struct {
         Source* source;

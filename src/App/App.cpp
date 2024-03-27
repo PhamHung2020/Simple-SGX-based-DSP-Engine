@@ -8,6 +8,7 @@
 #include "data_types.h"
 
 #include "Engine/SimpleEngine.h"
+#include "Engine/EngineWithHotCallPerformance.h"
 #include "Source/FastCallPerformanceEmitter.h"
 
 using namespace std;
@@ -50,7 +51,7 @@ int SGX_CDECL main(int argc, char *argv[])
     // CsvSource source1(1, "../../test_data.csv", 0);
     CsvSource source1(1, "../../dataset/secure-sgx-dataset/2005.csv", 0);
 
-    SimpleEngine engine;
+    EngineWithHotCallPerformance engine;
     engine.setSource(source1);
     engine.setEmitter(emitter);
 
