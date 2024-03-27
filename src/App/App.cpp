@@ -50,7 +50,7 @@ int SGX_CDECL main(int argc, char *argv[])
     /* =================== DECLARE AND START SOURCES ====================*/
     FastCallEmitter emitter;
     // CsvSource source1(1, "../../test_data.csv", 0);
-    CsvSource source1(1, "../../dataset/secure-sgx-dataset/2005.csv", 0);
+    CsvSource source1(1, "../../dataset/secure-sgx-dataset/2005.csv", 0, true, 200);
 
     EngineWithBufferObserver engine;
     engine.setSource(source1);

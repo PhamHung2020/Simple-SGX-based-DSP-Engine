@@ -2,12 +2,16 @@
 #include <cstring>
 #include <fstream>
 #include <iostream>
-#include <vector>
-#include <sstream>
 
-CsvSource::CsvSource(const int sourceId, const std::string &filename) : Source(sourceId, filename) {}
+CsvSource::CsvSource(const int sourceId, const std::string &filename, const bool hasHeader=false, const uint64_t count=-1) : Source(sourceId, filename) {
+    this->hasHeader_ = hasHeader;
+    this->count_ = count;
+}
 
-CsvSource::CsvSource(const int sourceId, const std::string &filename, const int delay) : Source(sourceId, filename, delay) {}
+CsvSource::CsvSource(const int sourceId, const std::string &filename, const int delay, const bool hasHeader=false, const uint64_t count=-1) : Source(sourceId, filename, delay) {
+    this->hasHeader_ = hasHeader;
+    this->count_ = count;
+}
 
 int CsvSource::start()
 {
@@ -37,36 +41,25 @@ int CsvSource::start()
         return -1;
     }
 
-    std::vector<std::string> words;
-    std::string line, word, temp;
+    std::string line;
+    uint64_t lineCount = 0;
+    if (this->count_ == 0) {
+        this->running = false;
+        return 0;
+    }
+
     while (getline(fin, line))
     {
-        words.clear();
-        std::stringstream s(line);
+        if (this->count_ > 0 && lineCount == this->count_)
+            break;
 
-        while (getline(s, word, ','))
-        {
-            words.push_back(word);
-        }
-
-        if (words.size() != 4)
-        {
+        if (lineCount == 0 && this->hasHeader_) {
+            lineCount++;
             continue;
         }
 
-        try
-        {
-            double timestamp = std::stod(words[0]);
-            int key = std::stoi(words[1]);
-            int data = std::stoi(words[2]);
-
-            std::cout << timestamp << " " << key << " " << data << " " << words[3] << std::endl;
-        }
-        catch(const std::invalid_argument&)
-        {
-            std::cout << "Invalid argument" << std::endl;
-            continue;
-        }
+        lineCount++;
+        std::cout << line << std::endl;
         
         if (delay != 0)
         {
@@ -87,7 +80,7 @@ int CsvSource::start(Emitter &emitter)
     if (fin.fail())
     {
         // Get the error code
-        std::ios_base::iostate state = fin.rdstate();
+        const std::ios_base::iostate state = fin.rdstate();
 
         // Check for specific error bits
         if (state & std::ios_base::eofbit)
@@ -106,23 +99,29 @@ int CsvSource::start(Emitter &emitter)
         return -1;
     }
 
-    std::vector<std::string> words;
-    std::string line, word, temp;
-    int count = 0;
+    std::string line;
+    if (this->count_ == 0) {
+        this->running = false;
+        return 0;
+    }
+
+    uint64_t lineCount = 0;
     while (getline(fin, line))
     {
-        if (count == 0) {
-            count++;
+        if (this->count_ > 0 && lineCount == this->count_)
+            break;
+
+        if (lineCount == 0 && this->hasHeader_) {
+            lineCount++;
             continue;
         }
+
+        lineCount++;
 
         char content[200];
         strncpy(content, line.c_str(), 200);
         emitter.emit(content);
-        count++;
-        if (count > 200)
-            break;
-        
+
         if (delay != 0)
         {
             sleep(this->getDelay());
