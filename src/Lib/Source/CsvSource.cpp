@@ -108,40 +108,20 @@ int CsvSource::start(Emitter &emitter)
 
     std::vector<std::string> words;
     std::string line, word, temp;
+    int count = 0;
     while (getline(fin, line))
     {
-        words.clear();
-        std::stringstream s(line);
-
-        while (getline(s, word, ','))
-        {
-            words.push_back(word);
-        }
-
-        if (words.size() != 4)
-        {
+        if (count == 0) {
+            count++;
             continue;
         }
 
-        try
-        {
-            double timestamp = std::stod(words[0]);
-            int key = std::stoi(words[1]);
-            int data = std::stoi(words[2]);
-            MyEvent event = { timestamp, this->sourceId, key, data};
-            strncpy(event.message, words[3].c_str(), 32);
-            event.message[31] = '\0';
-
-            emitter.emit(&event);
-        }
-        catch(const std::invalid_argument&)
-        {
-            std::cout << "Invalid argument" << std::endl;
-            continue;
-        }
-        // char content[32];
-        // strncpy(content, line.c_str(), 32);
-        // emitter.emit(content);
+        char content[200];
+        strncpy(content, line.c_str(), 200);
+        emitter.emit(content);
+        count++;
+        if (count > 200)
+            break;
         
         if (delay != 0)
         {

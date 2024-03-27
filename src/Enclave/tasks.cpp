@@ -10,8 +10,7 @@
 
 #include <cstring>
 #include <string>
-#include <chrono>
-#include <ctime>
+#include <vector>
 
 FastCallStruct* globalFastOCall;
 circular_buffer* fastOCallBuffer;
@@ -99,5 +98,109 @@ void TaskExecutor3(void *data) {
     if (task3Count == task3WindowLength) {
         task3Count = 0;
         FastCall_request(globalFastOCall, &task3Result);
+    }
+}
+
+
+void MapCsvRowToFlight(void* data) {
+    if (data == nullptr) {
+        return;
+    }
+
+    const auto row = static_cast<char *>(data);
+    std::string rowStr = row;
+    FlightData flightData{};
+
+    try {
+        std::vector<std::string> words;
+        std::size_t previousPos = 0;
+        std::size_t pos = rowStr.find(',');
+        while (pos != std::string::npos)
+        {
+            std::string word = rowStr.substr(previousPos, pos - previousPos);
+            words.push_back(word);
+
+            previousPos = pos + 1;
+            pos = rowStr.find(',', previousPos);
+        }
+
+        const std::string word = rowStr.substr(pos + 1);
+        words.push_back(word);
+
+        flightData.arrDelay = static_cast<int>(words.size());
+        if (!words[0].empty()) {
+            strncpy(flightData.uniqueCarrier, words[8].c_str(), 10);
+        } else {
+            strncpy(flightData.uniqueCarrier, "UNKNOW", 10);
+        }
+        if (!words[14].empty() && words[14] != "NA") {
+            flightData.arrDelay = std::stoi(words[14]);
+        } else {
+            flightData.arrDelay = 0;
+        }
+    }
+    catch(const std::invalid_argument&)
+    {
+        return;
+    }
+
+    FastCall_request(globalFastOCall, &flightData);
+}
+
+void FilterFlight(void* data) {
+    if (data == nullptr) {
+        return;
+    }
+
+    const auto flightData = static_cast<FlightData*> (data);
+
+    if (flightData->arrDelay > 0) {
+        FastCall_request(globalFastOCall, flightData);
+    }
+}
+
+uint16_t reduceWindow = 20;
+uint16_t reduceCount = 0;
+std::vector<ReducedFlightData> reducedDatas;
+void ReduceFlight(void* data) {
+    if (data == nullptr) {
+        for (auto &reduceFlightData: reducedDatas) {
+            FastCall_request(globalFastOCall, &reduceFlightData);
+        }
+        return;
+    }
+
+    const auto flightData = static_cast<FlightData*> (data);
+
+    char uniqueCarrier[10];
+    strncpy(uniqueCarrier, flightData->uniqueCarrier, 10);
+
+    const int arrDelay = flightData->arrDelay;
+
+    bool found = false;
+    for (auto &reduceFlightData: reducedDatas) {
+        if (strcmp(uniqueCarrier, reduceFlightData.uniqueCarrier) == 0) {
+            reduceFlightData.count += 1;
+            reduceFlightData.total += arrDelay;
+
+            found = true;
+            break;
+        }
+    }
+
+    if (!found) {
+        ReducedFlightData reducedFlightData{};
+        strncpy(reducedFlightData.uniqueCarrier, uniqueCarrier, 10);
+        reducedFlightData.count = 1;
+        reducedFlightData.total = arrDelay;
+        reducedDatas.push_back(reducedFlightData);
+    }
+
+    reduceCount++;
+    if (reduceCount == reduceWindow) {
+        for (auto &reduceFlightData: reducedDatas) {
+            FastCall_request(globalFastOCall, &reduceFlightData);
+        }
+        reduceCount = 0;
     }
 }

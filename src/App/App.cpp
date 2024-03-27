@@ -20,13 +20,24 @@ void sinkResult(void* rawData)
     // endTimesList[countEndTime] = std::chrono::high_resolution_clock::now();
     // countEndTime++;
 
-    auto* event = static_cast<MyEvent *>(rawData);
-    printf(
-        "Sink Result: (%lf %d %d %d %s)\n",
-        event->timestamp, event->sourceId, event->key, event->data, event->message
-    );
+    // auto* event = static_cast<MyEvent *>(rawData);
+    // printf(
+    //     "Sink Result: (%lf %d %d %d %s)\n",
+    //     event->timestamp, event->sourceId, event->key, event->data, event->message
+    // );
     // auto* data = static_cast<int*> (rawData);
     // printf("Sink result: %d\n", *data);
+
+    // const auto flight = static_cast<FlightData*> (rawData);
+    // printf("Sink result: (%s %d)\n", flight->uniqueCarrier, flight->arrDelay);
+
+    const auto reducedFlight = static_cast<ReducedFlightData*> (rawData);
+    printf(
+        "Sink result:\n\t- Unique carrier: %s\n\t- Count: %d\n\t- Total: %d\n\n",
+        reducedFlight->uniqueCarrier,
+        reducedFlight->count,
+        reducedFlight->total
+        );
 }
 
 
@@ -36,24 +47,28 @@ int SGX_CDECL main(int argc, char *argv[])
 
     /* =================== DECLARE AND START SOURCES ====================*/
     FastCallEmitter emitter;
-    CsvSource source1(1, "../../test_data.csv", 0);
+    // CsvSource source1(1, "../../test_data.csv", 0);
+    CsvSource source1(1, "../../dataset/secure-sgx-dataset/2005.csv", 0);
+
     SimpleEngine engine;
     engine.setSource(source1);
     engine.setEmitter(emitter);
-    engine.setSink(sinkResult, sizeof(MyEvent));
-    // engine.addTask(3, 32);
-    engine.addTask(0, sizeof(MyEvent));
-    engine.addTask(1, sizeof(MyEvent));
+
+    engine.addTask(4, 200);
+    engine.addTask(5, sizeof(FlightData));
+    engine.addTask(6, sizeof(ReducedFlightData));
+
+    engine.setSink(sinkResult, sizeof(FlightData));
     engine.start();
 
-    const auto hotCallPerformances = engine.getHotCallPerformanceParams();
-    for (size_t i = 0; i < hotCallPerformances.size(); ++i) {
-        printf("Enclave %lu\n", i);
-        std::cout << "Enclave " << i << ":\n";
-        for (size_t j = 0; j < hotCallPerformances[i].endTimes.size(); ++j) {
-            std::cout << std::chrono::duration_cast<std::chrono::nanoseconds>(hotCallPerformances[i].endTimes[j] - hotCallPerformances[i].startTimes[j]).count() << "ns\n";
-        }
-    }
+    // const auto hotCallPerformances = engine.getHotCallPerformanceParams();
+    // for (size_t i = 0; i < hotCallPerformances.size(); ++i) {
+    //     printf("Enclave %lu\n", i);
+    //     std::cout << "Enclave " << i << ":\n";
+    //     for (size_t j = 0; j < hotCallPerformances[i].endTimes.size(); ++j) {
+    //         std::cout << std::chrono::duration_cast<std::chrono::nanoseconds>(hotCallPerformances[i].endTimes[j] - hotCallPerformances[i].startTimes[j]).count() << "ns\n";
+    //     }
+    // }
 
     // if (countEndTime == emitter.getCount()) {
     //     for (int i = 0; i < countEndTime; ++i) {

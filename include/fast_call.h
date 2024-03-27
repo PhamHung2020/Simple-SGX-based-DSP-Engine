@@ -44,7 +44,7 @@ static inline void _fastcall_mm_pause(void)
 static inline int FastCall_request(FastCallStruct* fastCallData, void *data)
 {
     int i = 0;
-    const uint32_t MAX_RETRIES = 100;
+    const uint32_t MAX_RETRIES = 10000;
     uint32_t numRetries = 0;
     // Request call
     while(true)
@@ -62,8 +62,8 @@ static inline int FastCall_request(FastCallStruct* fastCallData, void *data)
         if(numRetries > MAX_RETRIES)
             return -1;
 
-        // for (i = 0; i<3; ++i)
-        //     _mm_pause();
+        for (i = 0; i<3; ++i)
+            _mm_pause();
     }
 
     return numRetries;
@@ -94,6 +94,11 @@ static inline void FastCall_wait(FastCallStruct *fastCallData, FastCallTable* ca
 
         // for( i = 0; i<3; ++i)
         //     _mm_pause();
+    }
+
+    if (callId < callTable->numEntries)
+    {
+        callTable->callbacks[callId](nullptr);
     }
 }
 

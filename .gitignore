@@ -18,3 +18,4 @@ src/Enclave/Enclave_t.h
 src/Lib/**/*.o
 
 build/**
+dataset/**
