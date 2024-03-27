@@ -9,6 +9,7 @@
 
 #include "Engine/SimpleEngine.h"
 #include "Engine/EngineWithHotCallPerformance.h"
+#include "Engine/EngineWithBufferObserver.h"
 #include "Source/FastCallPerformanceEmitter.h"
 
 using namespace std;
@@ -29,16 +30,16 @@ void sinkResult(void* rawData)
     // auto* data = static_cast<int*> (rawData);
     // printf("Sink result: %d\n", *data);
 
-    // const auto flight = static_cast<FlightData*> (rawData);
-    // printf("Sink result: (%s %d)\n", flight->uniqueCarrier, flight->arrDelay);
+    const auto flight = static_cast<FlightData*> (rawData);
+    printf("Sink result: (%s %d)\n", flight->uniqueCarrier, flight->arrDelay);
 
-    const auto reducedFlight = static_cast<ReducedFlightData*> (rawData);
-    printf(
-        "Sink result:\n\t- Unique carrier: %s\n\t- Count: %d\n\t- Total: %d\n\n",
-        reducedFlight->uniqueCarrier,
-        reducedFlight->count,
-        reducedFlight->total
-        );
+    // const auto reducedFlight = static_cast<ReducedFlightData*> (rawData);
+    // printf(
+    //     "Sink result:\n\t- Unique carrier: %s\n\t- Count: %d\n\t- Total: %d\n\n",
+    //     reducedFlight->uniqueCarrier,
+    //     reducedFlight->count,
+    //     reducedFlight->total
+    //     );
 }
 
 
@@ -51,16 +52,25 @@ int SGX_CDECL main(int argc, char *argv[])
     // CsvSource source1(1, "../../test_data.csv", 0);
     CsvSource source1(1, "../../dataset/secure-sgx-dataset/2005.csv", 0);
 
-    EngineWithHotCallPerformance engine;
+    EngineWithBufferObserver engine;
     engine.setSource(source1);
     engine.setEmitter(emitter);
 
     engine.addTask(4, 200);
     engine.addTask(5, sizeof(FlightData));
-    engine.addTask(6, sizeof(ReducedFlightData));
+    // engine.addTask(6, sizeof(ReducedFlightData));
 
     engine.setSink(sinkResult, sizeof(FlightData));
     engine.start();
+
+    const EngineWithBufferObserver::ObservedData observedData = engine.getTailObservedData(1);
+    printf("Count: %d\n", observedData.count);
+    for (int i = 0; i < observedData.count; ++i) {
+        if (i == 0)
+            printf("%d %ld\n", observedData.noItem[i], std::chrono::duration_cast<std::chrono::nanoseconds>(observedData.timePoints[i] - observedData.startTime).count());
+        else
+            printf("%d %ld\n", observedData.noItem[i], std::chrono::duration_cast<std::chrono::nanoseconds>(observedData.timePoints[i] - observedData.timePoints[i-1]).count());
+    }
 
     // const auto hotCallPerformances = engine.getHotCallPerformanceParams();
     // for (size_t i = 0; i < hotCallPerformances.size(); ++i) {

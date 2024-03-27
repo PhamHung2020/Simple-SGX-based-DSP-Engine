@@ -30,7 +30,6 @@ void *SimpleEngine::enclaveResponderThread_(void *fastCallPairAsVoidP)
     const auto* fastCallPair = static_cast<FastCallPair *>(fastCallPairAsVoidP);
     FastCallStruct *fastEcall = fastCallPair->fastECall;
     FastCallStruct *fastOcall = fastCallPair->fastOCall;
-    HotCall* hotCall = fastCallPair->hotCall;
     const sgx_status_t status = EcallStartResponder(fastCallPair->enclaveId, fastEcall, fastOcall, fastCallPair->callId);
     if (status == SGX_SUCCESS)
     {
