@@ -98,7 +98,7 @@ static inline void FastCall_wait(FastCallStruct *fastCallData, FastCallTable* ca
 
     if (callId < callTable->numEntries)
     {
-        callTable->callbacks[callId](nullptr);
+        callTable->callbacks[callId](NULL);
     }
 }
 
@@ -129,6 +129,11 @@ static inline void FastCall_wait_hotcall(FastCallStruct *fastCallData, FastCallT
 
         // for( i = 0; i<3; ++i)
         //     _mm_pause();
+    }
+
+    if (callId < callTable->numEntries)
+    {
+        callTable->callbacks[callId](NULL);
     }
 }
 

@@ -103,7 +103,7 @@ void TaskExecutor3(void *data) {
 
 
 void MapCsvRowToFlight(void* data) {
-    if (data == nullptr) {
+    if (data == NULL) {
         return;
     }
 
@@ -148,7 +148,7 @@ void MapCsvRowToFlight(void* data) {
 }
 
 void FilterFlight(void* data) {
-    if (data == nullptr) {
+    if (data == NULL) {
         return;
     }
 
@@ -163,7 +163,7 @@ uint16_t reduceWindow = 20;
 uint16_t reduceCount = 0;
 std::vector<ReducedFlightData> reducedDatas;
 void ReduceFlight(void* data) {
-    if (data == nullptr) {
+    if (data == NULL) {
         for (auto &reduceFlightData: reducedDatas) {
             FastCall_request(globalFastOCall, &reduceFlightData);
         }

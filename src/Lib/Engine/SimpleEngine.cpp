@@ -249,6 +249,8 @@ int SimpleEngine::start()
 
             StopResponder(&this->hotCalls_[i]);
             pthread_join(this->hotCalls_[i].responderThread, nullptr);
+
+            sleep(2);
         }
 
     }
