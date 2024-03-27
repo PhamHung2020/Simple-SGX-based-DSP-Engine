@@ -8,8 +8,8 @@
 #include "data_types.h"
 
 #include "Engine/SimpleEngine.h"
-#include "Engine/EngineWithHotCallPerformance.h"
 #include "Engine/EngineWithBufferObserver.h"
+#include "Engine/EngineWithMultipleSources.h"
 #include "Source/FastCallPerformanceEmitter.h"
 
 using namespace std;
