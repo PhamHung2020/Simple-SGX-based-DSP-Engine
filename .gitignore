@@ -1,5 +1,5 @@
 *.so
-/measurments/**
+/measurements/**
 /test_hotcalls
 /test
 /test.cpp
