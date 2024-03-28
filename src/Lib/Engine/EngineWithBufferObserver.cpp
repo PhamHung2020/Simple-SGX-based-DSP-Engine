@@ -23,6 +23,10 @@ EngineWithBufferObserver::ObservedData & EngineWithBufferObserver::getTailObserv
     return this->tailOservedDatas_[index];
 }
 
+size_t EngineWithBufferObserver::getBufferCount() const {
+    return this->buffers_.size();
+}
+
 void * EngineWithBufferObserver::observationThread_(void *observedDataAsVoidP) {
     const auto observedData = static_cast<ObservedData*>(observedDataAsVoidP);
 
@@ -117,8 +121,11 @@ int EngineWithBufferObserver::start() {
                 nullptr
             });
             pthread_create(&this->fastCallDatas_[i].responderThread, nullptr, enclaveResponderThread_, &fastCallPairs_[i]);
-            pthread_create(&this->headOservedDatas_[i].observedThread, nullptr, observationThread_, &this->headOservedDatas_[i]);
-            pthread_create(&this->tailOservedDatas_[i].observedThread, nullptr, observationThread_, &this->tailOservedDatas_[i]);
+
+            if (this->shouldObserved_[i]) {
+                pthread_create(&this->tailOservedDatas_[i].observedThread, nullptr, observationThread_, &this->tailOservedDatas_[i]);
+                pthread_create(&this->headOservedDatas_[i+1].observedThread, nullptr, observationThread_, &this->headOservedDatas_[i+1]);
+            }
         }
 
         emitter_->setFastCallData(&this->fastCallDatas_[0]);
@@ -169,4 +176,22 @@ int EngineWithBufferObserver::start() {
 
     printf("DONE\n");
     return 0;
+}
+
+void EngineWithBufferObserver::addTask(const uint16_t callId, const uint16_t inputDataSize, const bool shouldObserved) {
+    this->shouldObserved_.push_back(shouldObserved);
+    SimpleEngine::addTask(callId, inputDataSize);
+}
+
+void EngineWithBufferObserver::addTask(const uint16_t callId, const uint16_t inputDataSize) {
+    this->shouldObserved_.push_back(true);
+    SimpleEngine::addTask(callId, inputDataSize);
+}
+
+bool EngineWithBufferObserver::isObserved(const int index) {
+    if (index < 0 || index > this->shouldObserved_.size()) {
+        throw std::out_of_range("Index out of range");
+    }
+
+    return this->shouldObserved_[index];
 }

@@ -29,12 +29,18 @@ public:
 
     ObservedData& getHeadObservedData(int index);
     ObservedData& getTailObservedData(int index);
+    size_t getBufferCount() const;
 
     int start() override;
+
+    void addTask(uint16_t callId, uint16_t inputDataSize, bool shouldObserved);
+    void addTask(uint16_t callId, uint16_t inputDataSize) override;
+    bool isObserved(int index);
 
 protected:
     std::vector<ObservedData> headOservedDatas_;
     std::vector<ObservedData> tailOservedDatas_;
+    std::vector<bool> shouldObserved_;
 
     static void* observationThread_(void* observedDataAsVoidP);
     int initializeDataStructures() override;
