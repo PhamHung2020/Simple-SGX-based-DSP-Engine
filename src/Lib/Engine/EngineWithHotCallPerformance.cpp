@@ -3,12 +3,34 @@
 //
 
 #include "Engine/EngineWithHotCallPerformance.h"
+
+#include <stdexcept>
+
 #include "sgx_lib.h"
 #include "sgx_urts.h"
 #include "Enclave_u.h"
 
 void *EngineWithHotCallPerformance::enclaveResponderThread_(void *fastCallPairAsVoidP)
 {
+    const auto* fastCallPair = static_cast<FastCallPair *>(fastCallPairAsVoidP);
+    FastCallStruct *fastEcall = fastCallPair->fastECall;
+    FastCallStruct *fastOcall = fastCallPair->fastOCall;
+    // HotCall* hotCall = fastCallPair->hotCall;
+    const sgx_status_t status = EcallStartResponder(fastCallPair->enclaveId, fastEcall, fastOcall, fastCallPair->callId);
+    if (status == SGX_SUCCESS)
+    {
+        printf("Polling success\n");
+    }
+    else
+    {
+        printf("Polling failed\n");
+        print_error_message(status);
+    }
+
+    return nullptr;
+}
+
+void * EngineWithHotCallPerformance::enclaveResponderThreadWitHotCall_(void *fastCallPairAsVoidP) {
     const auto* fastCallPair = static_cast<FastCallPair *>(fastCallPairAsVoidP);
     FastCallStruct *fastEcall = fastCallPair->fastECall;
     FastCallStruct *fastOcall = fastCallPair->fastOCall;
@@ -71,8 +93,26 @@ int EngineWithHotCallPerformance::initializeDataStructures() {
     return nEnclave;
 }
 
+void EngineWithHotCallPerformance::addTask(const uint16_t callId, const uint16_t inputDataSize) {
+    this->withHotCall_.push_back(true);
+    SimpleEngine::addTask(callId, inputDataSize);
+}
+
+void EngineWithHotCallPerformance::addTask(const uint16_t callId, const uint16_t inputDataSize, const bool withHotCall) {
+    this->withHotCall_.push_back(withHotCall);
+    SimpleEngine::addTask(callId, inputDataSize);
+}
+
 std::vector<HotOCallPerformanceParams> & EngineWithHotCallPerformance::getHotCallPerformanceParams() {
     return this->hotCallPerformances_;
+}
+
+bool EngineWithHotCallPerformance::isWithHotCall(const int index) {
+    if (index < 0 || index > this->withHotCall_.size()) {
+        throw std::out_of_range("Index out of range");
+    }
+
+    return this->withHotCall_[index];
 }
 
 int EngineWithHotCallPerformance::start()
@@ -102,9 +142,13 @@ int EngineWithHotCallPerformance::start()
                 this->callIdVector_[i],
                 &this->hotCalls_[i]
             });
-            pthread_create(&this->fastCallDatas_[i].responderThread, nullptr, enclaveResponderThread_, &fastCallPairs_[i]);
 
-            pthread_create(&this->hotCalls_[i].responderThread, nullptr, appPerformanceThread_, &this->hotCalls_[i]);
+            if (this->withHotCall_[i]) {
+                pthread_create(&this->fastCallDatas_[i].responderThread, nullptr, enclaveResponderThreadWitHotCall_, &fastCallPairs_[i]);
+                pthread_create(&this->hotCalls_[i].responderThread, nullptr, appPerformanceThread_, &this->hotCalls_[i]);
+            } else {
+                pthread_create(&this->fastCallDatas_[i].responderThread, nullptr, enclaveResponderThread_, &fastCallPairs_[i]);
+            }
         }
 
         emitter_->setFastCallData(&this->fastCallDatas_[0]);

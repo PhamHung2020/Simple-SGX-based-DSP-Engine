@@ -30,8 +30,8 @@ int SGX_CDECL main(int argc, char *argv[])
     // }
     // printf("Info: Engine successfully returned.\n");
 
-    // testHotCallPerformance();
-    testObserverPerformance();
+    testHotCallPerformance();
+    // testObserverPerformance();
 
     return 0;
 }

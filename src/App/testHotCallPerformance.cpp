@@ -38,9 +38,9 @@ void testHotCallPerformance() {
     engine.setSource(source1);
     engine.setEmitter(emitter);
 
-    engine.addTask(4, 200);
-    engine.addTask(5, sizeof(FlightData));
-    engine.addTask(6, sizeof(ReducedFlightData));
+    engine.addTask(4, 200, false);
+    engine.addTask(5, sizeof(FlightData), false);
+    engine.addTask(6, sizeof(ReducedFlightData), true);
 
     engine.setSink(testHotCallPerformance_sinkResult, sizeof(FlightData));
     engine.start();
@@ -48,6 +48,10 @@ void testHotCallPerformance() {
     const auto hotCallPerformances = engine.getHotCallPerformanceParams();
     std::string measurementDirName = createMeasurementsDirectory("../../measurements/testHotCallPerformance");
     for (size_t i = 0; i < hotCallPerformances.size(); ++i) {
+        if (!engine.isWithHotCall(static_cast<int>(i))) {
+            continue;
+        }
+
         std::string filename = "Enclave_" + std::to_string(i);
         std::string fileFullPath = measurementDirName;
         fileFullPath.append("/").append(filename);
