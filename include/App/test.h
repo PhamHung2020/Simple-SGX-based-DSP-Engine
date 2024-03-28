@@ -5,6 +5,7 @@
 #ifndef TEST_H
 #define TEST_H
 
+void testSimpleEngine();
 void testHotCallPerformance();
 void testObserverPerformance();
 

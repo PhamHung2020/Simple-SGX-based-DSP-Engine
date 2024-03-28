@@ -114,6 +114,7 @@ int EngineWithBufferObserver::start() {
         for (size_t i = 0; i < this->enclaveIds_.size(); ++i)
         {
             fastCallPairs_.push_back({
+                static_cast<uint8_t>(i),
                 this->enclaveIds_[i],
                 &this->fastCallDatas_[i],
                 &this->fastCallDatas_[i+1],
@@ -145,14 +146,14 @@ int EngineWithBufferObserver::start() {
             pthread_join(this->sourceThread_, nullptr);
         printf("Ended source\n");
 
-        sleep(5);
         for (size_t i = 0; i < this->enclaveIds_.size(); ++i)
         {
             printf("Wait for enclave %lu end\n", i);
             StopFastCallResponder(&this->fastCallDatas_[i]);
             pthread_join(this->fastCallDatas_[i].responderThread, nullptr);
-            sleep(2);
         }
+        StopFastCallResponder(&this->fastCallDatas_.back());
+        pthread_join(this->fastCallDatas_.back().responderThread, nullptr);
 
         for (size_t i = 0; i < this->buffers_.size(); ++i) {
             printf("Wait for head observer %lu end\n", i);

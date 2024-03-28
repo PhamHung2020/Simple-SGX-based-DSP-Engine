@@ -20,6 +20,7 @@ typedef struct {
 
 typedef struct
 {
+    uint8_t no;
     sgx_enclave_id_t enclaveId;
     FastCallStruct* fastECall;
     FastCallStruct* fastOCall;
@@ -75,9 +76,9 @@ static inline void FastCall_wait(FastCallStruct *fastCallData, FastCallTable* ca
     static int i = 0;
     while(true)
     {
-        if (fastCallData->keepPolling != true) {
-            break;
-        }
+        // if (!fastCallData->keepPolling) {
+        //     break;
+        // }
 
         char* data;
         // sgx_spin_lock((&fastCallData->spinlock));
@@ -89,6 +90,10 @@ static inline void FastCall_wait(FastCallStruct *fastCallData, FastCallTable* ca
                 callTable->callbacks[callId](data);
             }
             continue;
+        }
+
+        if (!fastCallData->keepPolling) {
+            break;
         }
         // sgx_spin_unlock((&fastCallData->spinlock));
 
@@ -108,9 +113,9 @@ static inline void FastCall_wait_hotcall(FastCallStruct *fastCallData, FastCallT
     static int i = 0;
     while(true)
     {
-        if (fastCallData->keepPolling != true) {
-            break;
-        }
+        // if (!fastCallData->keepPolling) {
+        //     break;
+        // }
 
         char* data;
         // sgx_spin_lock((&fastCallData->spinlock));
@@ -124,6 +129,10 @@ static inline void FastCall_wait_hotcall(FastCallStruct *fastCallData, FastCallT
                 HotCall_requestCall(hotCall, 1, hotCall->data);
             }
             continue;
+        }
+
+        if (!fastCallData->keepPolling) {
+            break;
         }
         // sgx_spin_unlock((&fastCallData->spinlock));
 
