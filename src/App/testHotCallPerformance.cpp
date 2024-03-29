@@ -17,6 +17,9 @@
 
 void testHotCallPerformance_sinkResult(void* rawData)
 {
+    if (rawData == NULL) {
+        return;
+    }
     // const auto flight = static_cast<FlightData*> (rawData);
     // printf("Sink result: (%s %d)\n", flight->uniqueCarrier, flight->arrDelay);
 

@@ -16,6 +16,9 @@
 
 void testObserverPerformance_sinkResult(void* rawData)
 {
+    if (rawData == NULL) {
+        return;
+    }
     // const auto flight = static_cast<FlightData*> (rawData);
     // printf("Sink result: (%s %d)\n", flight->uniqueCarrier, flight->arrDelay);
 
@@ -45,7 +48,7 @@ void writeBufferObserverMeasurementToFile(const std::string& pathToFile, const E
 
 void testObserverPerformance() {
     FastCallEmitter emitter;
-    CsvSource source1(1, "../../dataset/secure-sgx-dataset/2005.csv", 0, true, 200);
+    CsvSource source1(1, "../../dataset/secure-sgx-dataset/2005.csv", 0, true, 1000);
 
     EngineWithBufferObserver engine;
     engine.setSource(source1);

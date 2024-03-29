@@ -10,9 +10,9 @@ using namespace std;
 /* Application entry */
 int SGX_CDECL main(int argc, char *argv[])
 {
-    testSimpleEngine();
+    // testSimpleEngine();
     // testHotCallPerformance();
-    // testObserverPerformance();
+    testObserverPerformance();
 
     return 0;
 }
