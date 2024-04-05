@@ -135,6 +135,7 @@ int CsvSource::start(Emitter &emitter)
         }
     }
 
+    fin.close();
     running = false;
     return 0;
 }

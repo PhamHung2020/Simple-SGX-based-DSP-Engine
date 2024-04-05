@@ -8,6 +8,7 @@
 #include <cstdio>
 #include <chrono>
 #include <cstring>
+#include <fstream>
 
 #include "Source/CsvSource.h"
 #include "data_types.h"
@@ -55,8 +56,6 @@ public:
         {
             return nullptr;
         }
-        printf("Parser log: %s %d\n", this->pFlightData_->uniqueCarrier, this->pFlightData_->arrDelay);
-
 
         return this->pFlightData_;
     }
@@ -66,14 +65,19 @@ public:
     }
 };
 
+
+std::string sinkFilePath = "result.csv";
+std::ofstream fout;
+
 void testSimpleEngine_sinkResult(void* rawData)
 {
     if (rawData == NULL) {
         return;
     }
 
-     const auto flightData = static_cast<FlightData*>(rawData);
-     printf("Sink result:\n\t- Unique carrier: %s\n\t- Delay: %d\n\n", flightData->uniqueCarrier, flightData->arrDelay);
+    const auto flightData = static_cast<FlightData*>(rawData);
+    fout << flightData->uniqueCarrier << "," << flightData->arrDelay << std::endl;
+//    printf("Sink result:\n\t- Unique carrier: %s\n\t- Delay: %d\n\n", flightData->uniqueCarrier, flightData->arrDelay);
 
     // const auto reducedFlight = static_cast<ReducedFlightData*> (rawData);
     // printf(
@@ -115,10 +119,19 @@ void testSimpleEngine() {
 //    engine.addTask(7, sizeof(FlightData));
 
     engine.setSink(testSimpleEngine_sinkResult, sizeof(FlightData));
+
+    fout.open(sinkFilePath, std::ios::out);
+    if (fout.fail()) {
+        std::cout << "Open out file failed.\n";
+        return;
+    }
+
     engine.start();
 
+    fout.close();
+
     std::cout << "Source time: " << std::chrono::duration_cast<std::chrono::microseconds>(SimpleEngine::getEndSourceTime() - SimpleEngine::getStartSourceTime()).count() << std::endl;
-    // std::cout << "Pipline time: " << std::chrono::duration_cast<std::chrono::nanoseconds>(SimpleEngine::getEndPipelineTime() - SimpleEngine::getStartSourceTime()).count() << std::endl;
+     std::cout << "Pipline time: " << std::chrono::duration_cast<std::chrono::microseconds>(SimpleEngine::getEndPipelineTime() - SimpleEngine::getStartSourceTime()).count() << std::endl;
 
     const int nTask = engine.getNumberOfTask();
     for (int i = 0; i < nTask; ++i) {
