@@ -8,7 +8,7 @@
 #include <vector>
 #include "data_types.h"
 
-#define TASK_COUNT 7
+#define TASK_COUNT 8
 
 void MapCsvRowToEvent(void* data);
 void TaskExecutor(void* data);
@@ -18,6 +18,7 @@ void TaskExecutor3(void* data);
 void MapCsvRowToFlight(void* data);
 void FilterFlight(void* data);
 void ReduceFlight(void* data);
+void JoinFlight(void* data);
 
 static void (*callbacks[TASK_COUNT])(void*) = {
     MapCsvRowToEvent,
@@ -26,7 +27,8 @@ static void (*callbacks[TASK_COUNT])(void*) = {
     TaskExecutor3,
     MapCsvRowToFlight,
     FilterFlight,
-    ReduceFlight
+    ReduceFlight,
+    JoinFlight,
 };
 
 #if defined(__cplusplus)

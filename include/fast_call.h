@@ -74,12 +74,12 @@ static inline void FastCall_wait(FastCallStruct *fastCallData, FastCallTable* ca
 static inline void FastCall_wait(FastCallStruct *fastCallData, FastCallTable* callTable, uint16_t callId)
 {
     static int i = 0;
+    // char* data = new char[fastCallData->data_buffer->data_size];
     while(true)
     {
         // if (!fastCallData->keepPolling) {
         //     break;
         // }
-
         char* data;
         // sgx_spin_lock((&fastCallData->spinlock));
         if (circular_buffer_pop(fastCallData->data_buffer, (void**)&data) == 0)
@@ -105,6 +105,8 @@ static inline void FastCall_wait(FastCallStruct *fastCallData, FastCallTable* ca
     {
         callTable->callbacks[callId](NULL);
     }
+
+    // delete[] data;
 }
 
 static inline void FastCall_wait_hotcall(FastCallStruct *fastCallData, FastCallTable* callTable, uint16_t callId, HotCall* hotCall)  __attribute__((always_inline));

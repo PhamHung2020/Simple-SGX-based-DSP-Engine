@@ -11,8 +11,8 @@ using namespace std;
 int SGX_CDECL main(int argc, char *argv[])
 {
     // testSimpleEngine();
-    // testHotCallPerformance();
-    testObserverPerformance();
+    testHotCallPerformance();
+    // testObserverPerformance();
 
     return 0;
 }

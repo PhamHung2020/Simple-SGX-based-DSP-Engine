@@ -35,4 +35,10 @@ struct ReducedFlightData {
     int total;
 };
 
+struct JoinedFlightData {
+    char uniqueCarrier1[10];
+    char uniqueCarrier2[10];
+    int arrDelay;
+};
+
 #endif

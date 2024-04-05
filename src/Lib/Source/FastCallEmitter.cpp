@@ -12,8 +12,8 @@ void FastCallEmitter::setFastCallData(FastCallStruct* fastCallData)
 void FastCallEmitter::emit(void *data)
 {
     if (this->fastCallDataP_->responderThread != 0 && this->fastCallDataP_->data_buffer != nullptr) {
-        const auto row = static_cast<char *>(data);
-        printf("%s\n", row);
+        // const auto row = static_cast<char *>(data);
+        // printf("%s\n", row);
         FastCall_request(this->fastCallDataP_, data);
     }
 }

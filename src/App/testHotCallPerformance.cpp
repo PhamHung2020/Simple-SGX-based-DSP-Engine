@@ -34,15 +34,15 @@ void testHotCallPerformance_sinkResult(void* rawData)
 
 void testHotCallPerformance() {
 
-    CsvSource source1(1, "../../dataset/secure-sgx-dataset/2005.csv", 0, true, 200);
+    CsvSource source1(1, "../../dataset/secure-sgx-dataset/2005.csv", 0, true, 1000);
     FastCallEmitter emitter;
 
     EngineWithHotCallPerformance engine;
     engine.setSource(source1);
     engine.setEmitter(emitter);
 
-    engine.addTask(4, 200, false);
-    engine.addTask(5, sizeof(FlightData), false);
+    engine.addTask(4, 200, true);
+    engine.addTask(5, sizeof(FlightData), true);
     engine.addTask(6, sizeof(ReducedFlightData), true);
 
     engine.setSink(testHotCallPerformance_sinkResult, sizeof(FlightData));

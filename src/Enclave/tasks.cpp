@@ -159,7 +159,7 @@ void FilterFlight(void* data) {
     }
 }
 
-uint16_t reduceWindow = 20;
+uint16_t reduceWindow = 100;
 uint16_t reduceCount = 0;
 std::vector<ReducedFlightData> reducedDatas;
 void ReduceFlight(void* data) {
@@ -202,5 +202,57 @@ void ReduceFlight(void* data) {
             FastCall_request(globalFastOCall, &reduceFlightData);
         }
         reduceCount = 0;
+    }
+}
+
+constexpr int joinWindow = 10;
+FlightData buffer1[joinWindow];
+FlightData buffer2[joinWindow];
+JoinedFlightData joinedData[joinWindow * joinWindow + 5];
+int n1 = 0, n2 = 0, nJoin = 0;
+void JoinFlight(void *data) {
+    if (data == NULL) {
+        return;
+    }
+
+    const auto flightData = static_cast<FlightData*> (data);
+    // FastCall_request(globalFastOCall, flightData);
+    if (n1 < joinWindow) {
+        strncpy(buffer1[n1].uniqueCarrier, flightData->uniqueCarrier, 10);
+        buffer1[n1].arrDelay = flightData->arrDelay;
+        n1++;
+    } else if (n2 < joinWindow) {
+        strncpy(buffer2[n2].uniqueCarrier, flightData->uniqueCarrier, 10);
+        buffer2[n2].arrDelay = flightData->arrDelay;
+        n2++;
+    }
+
+    if (n1 == joinWindow && n2 == joinWindow) {
+        for (int i = 0; i < joinWindow; ++i) {
+            for (int j = 0; j < joinWindow; ++j) {
+                // if (true) {
+                if (strcmp(buffer1[i].uniqueCarrier, buffer2[j].uniqueCarrier) == 0) {
+                // if (buffer1[i].arrDelay == buffer2[j].arrDelay) {
+                    strncpy(joinedData[nJoin].uniqueCarrier1, buffer1[i].uniqueCarrier, 10);
+                    strncpy(joinedData[nJoin].uniqueCarrier2, buffer2[j].uniqueCarrier, 10);
+                    joinedData[nJoin].arrDelay = buffer1[i].arrDelay;
+                    nJoin++;
+                }
+            }
+        }
+
+        if (nJoin > 0) {
+            for (int i = 0; i < nJoin; ++i) {
+                FastCall_request(globalFastOCall, &joinedData[i]);
+            }
+            nJoin = 0;
+
+            for (int i = 0; i < joinWindow; ++i) {
+                strncpy(buffer2[i].uniqueCarrier, buffer1[i].uniqueCarrier, 10);
+                buffer2[i].arrDelay = buffer1[i].arrDelay;
+            }
+            n1 = 0;
+            n2 = joinWindow;
+        }
     }
 }
