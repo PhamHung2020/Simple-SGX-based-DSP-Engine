@@ -18,6 +18,8 @@ std::chrono::_V2::system_clock::time_point SimpleEngine::endSourceTime_;
 std::chrono::_V2::system_clock::time_point SimpleEngine::endPipelineTime_;
 std::vector<std::chrono::_V2::system_clock::time_point> SimpleEngine::startEnclaveTimes_;
 std::vector<std::chrono::_V2::system_clock::time_point> SimpleEngine::endEnclaveTimes_;
+std::vector<int> SimpleEngine::tails;
+std::vector<std::chrono::_V2::system_clock::time_point> SimpleEngine::timePoints;
 
 SimpleEngine::SimpleEngine() {
     this->sourceThread_ = 0;
@@ -135,7 +137,9 @@ int SimpleEngine::initializeDataStructures() {
             0,
             0,
             MAX_BUFFER_SIZE,
-            this->dataSizeVector_[i]
+            this->dataSizeVector_[i],
+            popCallback,
+            nullptr
         });
         this->fastCallDatas_.push_back({
             .spinlock = SGX_SPINLOCK_INITIALIZER,
@@ -285,4 +289,8 @@ std::chrono::_V2::system_clock::time_point SimpleEngine::getEndEnclaveTime(const
     return endEnclaveTimes_[index];
 }
 
-
+void SimpleEngine::popCallback(void *data) {
+//    auto* tail = static_cast<int*>(data);
+//    SimpleEngine::tails.push_back(*tail);
+    SimpleEngine::timePoints.push_back(std::chrono::high_resolution_clock::now());
+}
