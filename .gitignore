@@ -19,3 +19,4 @@ src/Lib/**/*.o
 
 build/**
 dataset/**
+results/**

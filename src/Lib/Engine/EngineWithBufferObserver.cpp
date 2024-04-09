@@ -139,7 +139,7 @@ int EngineWithBufferObserver::start() {
             .fastOCallData = &this->fastCallDatas_.back(),
             .sinkFunc = this->sink_
         };
-        pthread_create(&this->fastCallDatas_.back().responderThread, nullptr, appResponserThread_, &fastOCallStruct);
+        pthread_create(&this->fastCallDatas_.back().responderThread, nullptr, appResponderThread_, &fastOCallStruct);
         printf("Start sink...\n");
 
         if (this->sourceThread_ != 0)

@@ -58,7 +58,7 @@ void *SimpleEngine::enclaveResponderThread_(void *fastCallPairAsVoidP)
     return nullptr;
 }
 
-void* SimpleEngine::appResponserThread_(void* fastOCallAsVoidP)
+void* SimpleEngine::appResponderThread_(void* fastOCallAsVoidP)
 {
     const auto fastOCallStruct = static_cast<FastOCallStruct *>(fastOCallAsVoidP);
 
@@ -223,7 +223,7 @@ int SimpleEngine::start()
             .fastOCallData = &this->fastCallDatas_.back(),
             .sinkFunc = this->sink_
         };
-        pthread_create(&this->fastCallDatas_.back().responderThread, nullptr, appResponserThread_, &fastOCallStruct);
+        pthread_create(&this->fastCallDatas_.back().responderThread, nullptr, appResponderThread_, &fastOCallStruct);
         printf("Start sink...\n");
 
         emitter_->setFastCallData(&this->fastCallDatas_[0]);
@@ -284,5 +284,3 @@ std::chrono::_V2::system_clock::time_point SimpleEngine::getEndEnclaveTime(const
 
     return endEnclaveTimes_[index];
 }
-
-

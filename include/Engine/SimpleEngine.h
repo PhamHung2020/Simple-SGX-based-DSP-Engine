@@ -39,7 +39,7 @@ protected:
 
     static void* startSource_(void* sourceEmitterPairAsVoid);
     static void* enclaveResponderThread_(void* fastCallPairAsVoidP);
-    static void* appResponserThread_(void* fastOCallAsVoidP);
+    static void* appResponderThread_(void* fastOCallAsVoidP);
     static void clearTime();
 
     virtual int initializeEnclaves();

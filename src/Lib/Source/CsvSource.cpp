@@ -6,11 +6,13 @@
 CsvSource::CsvSource(const int sourceId, const std::string &filename, const bool hasHeader=false, const uint64_t count=-1) : Source(sourceId, filename) {
     this->hasHeader_ = hasHeader;
     this->count_ = count;
+    this->parser_ = nullptr;
 }
 
 CsvSource::CsvSource(const int sourceId, const std::string &filename, const int delay, const bool hasHeader=false, const uint64_t count=-1) : Source(sourceId, filename, delay) {
     this->hasHeader_ = hasHeader;
     this->count_ = count;
+    this->parser_ = nullptr;
 }
 
 int CsvSource::start()
@@ -118,9 +120,16 @@ int CsvSource::start(Emitter &emitter)
 
         lineCount++;
 
-        char content[200];
-        strncpy(content, line.c_str(), 200);
-        emitter.emit(content);
+        if (parser_ != nullptr) {
+            void* parsedData = this->parser_->parseFromString(line);
+            if (parsedData != nullptr) {
+                emitter.emit(parsedData);
+            }
+        } else {
+            char content[MAX_CHARACTERS_PER_ROW + 1];
+            strncpy(content, line.c_str(), MAX_CHARACTERS_PER_ROW);
+            emitter.emit(content);
+        }
 
         if (delay != 0)
         {
@@ -128,6 +137,11 @@ int CsvSource::start(Emitter &emitter)
         }
     }
 
+    fin.close();
     running = false;
     return 0;
+}
+
+void CsvSource::setParser(Parser *parser) {
+    this->parser_ = parser;
 }
