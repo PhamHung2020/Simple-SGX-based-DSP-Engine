@@ -16,14 +16,22 @@
 
 std::ofstream testObserverPerformance_sinkFileStream;
 
-void testObserverPerformance_sinkResult(void* rawData)
+void testObserverPerformance_sinkResult_map_filter(void* rawData)
 {
     if (rawData == NULL) {
         return;
     }
 
-//    const auto flightData = static_cast<FlightData*>(rawData);
-//    testObserverPerformance_sinkFileStream << flightData->uniqueCarrier << "," << flightData->arrDelay << std::endl;
+    const auto flightData = static_cast<FlightData*>(rawData);
+    testObserverPerformance_sinkFileStream << flightData->uniqueCarrier << "," << flightData->arrDelay << std::endl;
+}
+
+
+void testObserverPerformance_sinkResult_reduce(void* rawData)
+{
+    if (rawData == NULL) {
+        return;
+    }
 
     const auto reducedFlight = static_cast<ReducedFlightData*> (rawData);
     testObserverPerformance_sinkFileStream << reducedFlight->uniqueCarrier << "," << reducedFlight->count << "," << reducedFlight->total << std::endl;
@@ -49,10 +57,12 @@ void testObserverPerformance() {
     std::string resultDirName = "../../results/testBufferObserver/2024-04-09_10-03-43";
     std::string sinkFileName = "reduce.csv";
     std::string sourceFileName = "../../results/testBufferObserver/2024-04-09_10-03-43/filter.csv";
+//    std::string sourceFileName = "../../dataset/secure-sgx-dataset/2005.csv";
     std::string measurementDirName = "../../measurements/testBufferObserver/2024-04-09_10-03-46";
 
     // ================ Set up engine ====================
-    CsvSource source1(1, sourceFileName, 0, false, 10000);
+//    CsvSource source1(1, sourceFileName, 0, true, 100000);
+    CsvSource source1(1, sourceFileName, 0, false, -1);
     FlightDataIntermediateParser parser;
     source1.setParser(&parser);
 
@@ -66,7 +76,7 @@ void testObserverPerformance() {
 //    engine.addTask(5, sizeof(FlightData), true);
     engine.addTask(6, sizeof(ReducedFlightData), true);
 
-    engine.setSink(testObserverPerformance_sinkResult, sizeof(ReducedFlightData));
+    engine.setSink(testObserverPerformance_sinkResult_reduce, sizeof(ReducedFlightData));
 
     // =================== Create directory and file to store processed results =========================
     std::string fileFullPath;
@@ -86,27 +96,47 @@ void testObserverPerformance() {
     // ======================= Start engine ==========================
     engine.start();
 
-    // ====================== Write measurements ==============================
-    std::string createdMeasurementDirName;
-    if (measurementDirName == "../../measurements/testBufferObserver") {
-        createdMeasurementDirName = createMeasurementsDirectory(measurementDirName);
-    } else {
-        createdMeasurementDirName = measurementDirName;
-    }
-    const size_t nBuffer = engine.getBufferCount();
+    testObserverPerformance_sinkFileStream.close();
 
-    for (size_t i = 0; i < nBuffer; ++i) {
-        if (!engine.isObserved(static_cast<int>(i))) {
-            continue;
-        }
+    // ======================= Get throughout =======================
+    std::cout << "THROUGHOUT\n";
+    std::cout << "Number of records: " << EngineWithBufferObserver::processedCountIndex << std::endl;
+    for (int i = 0; i < EngineWithBufferObserver::processedCountIndex; ++i) {
+        std::cout << EngineWithBufferObserver::processedPerSecond[i] << std::endl;
+    }
+
+    // ==================== Processing Time =======================
+    std::cout << "Source time: " << std::chrono::duration_cast<std::chrono::microseconds>(SimpleEngine::getEndSourceTime() - SimpleEngine::getStartSourceTime()).count() << std::endl;
+    std::cout << "Pipeline time: " << std::chrono::duration_cast<std::chrono::microseconds>(SimpleEngine::getEndPipelineTime() - SimpleEngine::getStartSourceTime()).count() << std::endl;
+
+    const int nTask = engine.getNumberOfTask();
+    for (int i = 0; i < nTask; ++i) {
+        std::cout << "Enclave " << i << " time: " << std::chrono::duration_cast<std::chrono::microseconds>(SimpleEngine::getEndEnclaveTime(i) - SimpleEngine::getStartEnclaveTime(i)).count() << std::endl;
+    }
+
+    std::cout << "Processing time: " << std::chrono::duration_cast<std::chrono::microseconds>(SimpleEngine::getEndEnclaveTime(nTask - 1) - SimpleEngine::getStartSourceTime()).count() << std::endl;
+
+    // ====================== Write measurements ==============================
+//    std::string createdMeasurementDirName;
+//    if (measurementDirName == "../../measurements/testBufferObserver") {
+//        createdMeasurementDirName = createMeasurementsDirectory(measurementDirName);
+//    } else {
+//        createdMeasurementDirName = measurementDirName;
+//    }
+//    const size_t nBuffer = engine.getBufferCount();
+//
+//    for (size_t i = 0; i < nBuffer; ++i) {
+//        if (!engine.isObserved(static_cast<int>(i))) {
+//            continue;
+//        }
 
 //        std::string tailFilename = "Tail_Buffer_" + std::to_string(i);
-        std::string tailFilename = "Tail_Reduce";
-        std::string tailFileFullPath = createdMeasurementDirName;
-        tailFileFullPath.append("/").append(tailFilename);
-
-        std::cout << "Writing measurements for tail buffer " << i << std::endl;
-        writeBufferObserverMeasurementToFile(tailFileFullPath, engine.getTailObservedData(static_cast<int>(i)));
+//        std::string tailFilename = "Tail_Map";
+//        std::string tailFileFullPath = createdMeasurementDirName;
+//        tailFileFullPath.append("/").append(tailFilename);
+//
+//        std::cout << "Writing measurements for tail buffer " << i << std::endl;
+//        writeBufferObserverMeasurementToFile(tailFileFullPath, engine.getTailObservedData(static_cast<int>(i)));
 
 //        std::string headFilename = "Head_Buffer_" + std::to_string(i+1);
 //        std::string headFilename = "Head_Map";
@@ -115,7 +145,7 @@ void testObserverPerformance() {
 //
 //        std::cout << "Writing measurements for head buffer " << i+1 << std::endl;
 //        writeBufferObserverMeasurementToFile(headFileFullPath, engine.getHeadObservedData(static_cast<int>(i+1)));
-    }
+//    }
 
     printf("Info: Engine successfully returned.\n");
 }

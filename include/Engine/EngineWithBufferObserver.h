@@ -10,7 +10,7 @@
 #include <chrono>
 #include <vector>
 
-#define MAX_ITEM 10000
+#define MAX_ITEM 1000
 
 class EngineWithBufferObserver : public SimpleEngine {
 public:
@@ -37,12 +37,19 @@ public:
     void addTask(uint16_t callId, uint16_t inputDataSize) override;
     bool isObserved(int index);
 
+    static uint64_t processedPerSecond[100];
+    static int processedCountIndex;
+
 protected:
     std::vector<ObservedData> headOservedDatas_;
     std::vector<ObservedData> tailOservedDatas_;
     std::vector<bool> shouldObserved_;
+    pthread_t processedCountThreadId_;
+    static bool shouldContinue_;
 
     static void* observationThread_(void* observedDataAsVoidP);
+    static void* processedCountThread_(void* circularBufferAsVoidP);
+
     int initializeDataStructures() override;
 };
 

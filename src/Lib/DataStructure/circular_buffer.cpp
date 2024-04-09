@@ -17,9 +17,6 @@ int circular_buffer_push(circular_buffer* cir_buf, void* data)
 
     memcpy((char*) cir_buf->buffer + cir_buf->data_size * cir_buf->head, (char*) data, cir_buf->data_size);
     cir_buf->head = next;
-//    if (cir_buf->pushCallback != nullptr) {
-//        cir_buf->pushCallback((void *) &cir_buf->head);
-//    }
 
     return 0;
 }
@@ -42,9 +39,9 @@ int circular_buffer_pop(circular_buffer* cir_buf, void** data)
     *(char**)data = (char*) cir_buf->buffer + cir_buf->data_size * cir_buf->tail;
 
     cir_buf->tail = next;
-//    if (cir_buf->popCallback != nullptr) {
-//        cir_buf->popCallback((void *) &cir_buf->tail);
-//    }
+    sgx_spin_lock(&cir_buf->lock_count);
+    cir_buf->popped_count += 1;
+    sgx_spin_unlock(&cir_buf->lock_count);
 
     return 0;
 }
