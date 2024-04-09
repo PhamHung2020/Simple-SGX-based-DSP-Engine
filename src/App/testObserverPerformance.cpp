@@ -37,6 +37,15 @@ void testObserverPerformance_sinkResult_reduce(void* rawData)
     testObserverPerformance_sinkFileStream << reducedFlight->uniqueCarrier << "," << reducedFlight->count << "," << reducedFlight->total << std::endl;
 }
 
+void testObserverPerformance_sinkResult_join(void* rawData) {
+    if (rawData == NULL) {
+        return;
+    }
+
+    const auto joinedFlightData = static_cast<JoinedFlightData*>(rawData);
+    testObserverPerformance_sinkFileStream << joinedFlightData->uniqueCarrier1 << "," << joinedFlightData->uniqueCarrier2 << "," << joinedFlightData->arrDelay << std::endl;
+}
+
 void writeBufferObserverMeasurementToFile(const std::string& pathToFile, const EngineWithBufferObserver::ObservedData& observedData) {
     std::ofstream measurementFile;
     measurementFile.open(pathToFile, std::ios::app);
@@ -55,7 +64,7 @@ void writeBufferObserverMeasurementToFile(const std::string& pathToFile, const E
 void testObserverPerformance() {
     //  =============== Define variables =================
     std::string resultDirName = "../../results/testBufferObserver/2024-04-09_10-03-43";
-    std::string sinkFileName = "reduce.csv";
+    std::string sinkFileName = "join.csv";
     std::string sourceFileName = "../../results/testBufferObserver/2024-04-09_10-03-43/filter.csv";
 //    std::string sourceFileName = "../../dataset/secure-sgx-dataset/2005.csv";
     std::string measurementDirName = "../../measurements/testBufferObserver/2024-04-09_10-03-46";
@@ -74,9 +83,10 @@ void testObserverPerformance() {
 
 //    engine.addTask(4, 200, true);
 //    engine.addTask(5, sizeof(FlightData), true);
-    engine.addTask(6, sizeof(ReducedFlightData), true);
+//    engine.addTask(6, sizeof(ReducedFlightData), true);
+    engine.addTask(7, sizeof(FlightData), true);
 
-    engine.setSink(testObserverPerformance_sinkResult_reduce, sizeof(ReducedFlightData));
+    engine.setSink(testObserverPerformance_sinkResult_join, sizeof(JoinedFlightData));
 
     // =================== Create directory and file to store processed results =========================
     std::string fileFullPath;

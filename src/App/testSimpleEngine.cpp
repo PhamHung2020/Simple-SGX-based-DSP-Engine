@@ -16,9 +16,10 @@
 #include "Source/Parser.h"
 #include "App/utils.h"
 
-std::string resultDirName = "../../results/callbacks";
-std::string sinkFileName = "map.csv";
-std::string sourceFileName = "../../dataset/secure-sgx-dataset/2005.csv";
+std::string resultDirName = "../../results/callbacks/2024-04-09_14-21-15";
+std::string sinkFileName = "join.csv";
+//std::string sourceFileName = "../../dataset/secure-sgx-dataset/2005.csv";
+std::string sourceFileName = "../../results/callbacks/2024-04-09_14-21-15/map.csv";
 std::ofstream fout;
 
 void testSimpleEngine_sinkResult(void* rawData)
@@ -27,26 +28,29 @@ void testSimpleEngine_sinkResult(void* rawData)
         return;
     }
 
-    const auto flightData = static_cast<FlightData*>(rawData);
-    fout << flightData->uniqueCarrier << "," << flightData->arrDelay << std::endl;
+//    const auto flightData = static_cast<FlightData*>(rawData);
+//    fout << flightData->uniqueCarrier << "," << flightData->arrDelay << std::endl;
 
 //    const auto reducedFlight = static_cast<ReducedFlightData*> (rawData);
 //    fout << reducedFlight->uniqueCarrier << "," << reducedFlight->count << "," << reducedFlight->total << std::endl;
+
+    const auto joinedFlightData = static_cast<JoinedFlightData*>(rawData);
+    fout << joinedFlightData->uniqueCarrier1 << "," << joinedFlightData->uniqueCarrier2 << "," << joinedFlightData->arrDelay << std::endl;
 }
 
 void testSimpleEngine() {
 //    FlightDataParser flightDataParser;
-//    FlightDataIntermediateParser parser;
+    FlightDataIntermediateParser parser;
     FastCallEmitter emitter;
-    CsvSource source1(1, sourceFileName, 0, true, 100);
-//    source1.setParser(&parser);
+    CsvSource source1(1, sourceFileName, 0, true, -1);
+    source1.setParser(&parser);
 
     SimpleEngine engine;
     engine.setSource(source1);
     engine.setEmitter(emitter);
 
     // map
-    engine.addTask(4, 200);
+//    engine.addTask(4, 200);
 
     // filter
 //    engine.addTask(5, sizeof(FlightData));
@@ -55,9 +59,9 @@ void testSimpleEngine() {
 //     engine.addTask(6, sizeof(FlightData));
 
     // join
-    //engine.addTask(7, sizeof(FlightData));
+    engine.addTask(7, sizeof(FlightData));
 
-    engine.setSink(testSimpleEngine_sinkResult, sizeof(FlightData));
+    engine.setSink(testSimpleEngine_sinkResult, sizeof(JoinedFlightData));
 
     // create directory and file to store processed results
     std::string fileFullPath;

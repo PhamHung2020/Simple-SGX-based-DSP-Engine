@@ -205,7 +205,7 @@ void ReduceFlight(void* data) {
     }
 }
 
-constexpr int joinWindow = 10;
+constexpr int joinWindow = 100;
 FlightData buffer1[joinWindow];
 FlightData buffer2[joinWindow];
 JoinedFlightData joinedData[joinWindow * joinWindow + 5];
@@ -228,14 +228,14 @@ void JoinFlight(void *data) {
     }
 
     if (n1 == joinWindow && n2 == joinWindow) {
-        for (int i = 0; i < joinWindow; ++i) {
-            for (int j = 0; j < joinWindow; ++j) {
+        for (auto & flight1 : buffer1) {
+            for (auto & flight2 : buffer2) {
                 // if (true) {
-                if (strcmp(buffer1[i].uniqueCarrier, buffer2[j].uniqueCarrier) == 0) {
-                // if (buffer1[i].arrDelay == buffer2[j].arrDelay) {
-                    strncpy(joinedData[nJoin].uniqueCarrier1, buffer1[i].uniqueCarrier, 10);
-                    strncpy(joinedData[nJoin].uniqueCarrier2, buffer2[j].uniqueCarrier, 10);
-                    joinedData[nJoin].arrDelay = buffer1[i].arrDelay;
+//                if (strcmp(flight1.uniqueCarrier, flight2.uniqueCarrier) == 0) {
+                 if (flight1.arrDelay == flight2.arrDelay && flight1.arrDelay != 0) {
+                    strncpy(joinedData[nJoin].uniqueCarrier1, flight1.uniqueCarrier, 10);
+                    strncpy(joinedData[nJoin].uniqueCarrier2, flight2.uniqueCarrier, 10);
+                    joinedData[nJoin].arrDelay = flight1.arrDelay;
                     nJoin++;
                 }
             }
@@ -246,13 +246,13 @@ void JoinFlight(void *data) {
                 FastCall_request(globalFastOCall, &joinedData[i]);
             }
             nJoin = 0;
-
-            for (int i = 0; i < joinWindow; ++i) {
-                strncpy(buffer2[i].uniqueCarrier, buffer1[i].uniqueCarrier, 10);
-                buffer2[i].arrDelay = buffer1[i].arrDelay;
-            }
-            n1 = 0;
-            n2 = joinWindow;
         }
+
+        for (int i = 0; i < joinWindow; ++i) {
+            strncpy(buffer2[i].uniqueCarrier, buffer1[i].uniqueCarrier, 10);
+            buffer2[i].arrDelay = buffer1[i].arrDelay;
+        }
+        n1 = 0;
+        n2 = joinWindow;
     }
 }
