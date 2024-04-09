@@ -135,9 +135,7 @@ int SimpleEngine::initializeDataStructures() {
             0,
             0,
             MAX_BUFFER_SIZE,
-            this->dataSizeVector_[i],
-            nullptr,
-            nullptr
+            this->dataSizeVector_[i]
         });
         this->fastCallDatas_.push_back({
             .spinlock = SGX_SPINLOCK_INITIALIZER,

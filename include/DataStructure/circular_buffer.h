@@ -8,8 +8,6 @@ struct circular_buffer
     volatile int tail;
     const int maxlen;
     const int data_size;
-    void (*pushCallback)(void*);
-    void (*popCallback)(void*);
 };
 
 int circular_buffer_push(struct circular_buffer* cir_buf, void* data);
