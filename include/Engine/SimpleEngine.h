@@ -39,9 +39,8 @@ protected:
 
     static void* startSource_(void* sourceEmitterPairAsVoid);
     static void* enclaveResponderThread_(void* fastCallPairAsVoidP);
-    static void* appResponserThread_(void* fastOCallAsVoidP);
+    static void* appResponderThread_(void* fastOCallAsVoidP);
     static void clearTime();
-    static void popCallback(void* data);
 
     virtual int initializeEnclaves();
     virtual int destroyEnclaves() const;
@@ -63,9 +62,6 @@ public:
     static std::chrono::_V2::system_clock::time_point getEndPipelineTime();
     static std::chrono::_V2::system_clock::time_point getStartEnclaveTime(int index);
     static std::chrono::_V2::system_clock::time_point getEndEnclaveTime(int index);
-
-    static std::vector<int> tails;
-    static std::vector<std::chrono::_V2::system_clock::time_point> timePoints;
 
     typedef struct {
         Source* source;

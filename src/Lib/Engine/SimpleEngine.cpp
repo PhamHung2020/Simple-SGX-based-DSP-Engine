@@ -18,8 +18,6 @@ std::chrono::_V2::system_clock::time_point SimpleEngine::endSourceTime_;
 std::chrono::_V2::system_clock::time_point SimpleEngine::endPipelineTime_;
 std::vector<std::chrono::_V2::system_clock::time_point> SimpleEngine::startEnclaveTimes_;
 std::vector<std::chrono::_V2::system_clock::time_point> SimpleEngine::endEnclaveTimes_;
-std::vector<int> SimpleEngine::tails;
-std::vector<std::chrono::_V2::system_clock::time_point> SimpleEngine::timePoints;
 
 SimpleEngine::SimpleEngine() {
     this->sourceThread_ = 0;
@@ -60,7 +58,7 @@ void *SimpleEngine::enclaveResponderThread_(void *fastCallPairAsVoidP)
     return nullptr;
 }
 
-void* SimpleEngine::appResponserThread_(void* fastOCallAsVoidP)
+void* SimpleEngine::appResponderThread_(void* fastOCallAsVoidP)
 {
     const auto fastOCallStruct = static_cast<FastOCallStruct *>(fastOCallAsVoidP);
 
@@ -138,7 +136,7 @@ int SimpleEngine::initializeDataStructures() {
             0,
             MAX_BUFFER_SIZE,
             this->dataSizeVector_[i],
-            popCallback,
+            nullptr,
             nullptr
         });
         this->fastCallDatas_.push_back({
@@ -227,7 +225,7 @@ int SimpleEngine::start()
             .fastOCallData = &this->fastCallDatas_.back(),
             .sinkFunc = this->sink_
         };
-        pthread_create(&this->fastCallDatas_.back().responderThread, nullptr, appResponserThread_, &fastOCallStruct);
+        pthread_create(&this->fastCallDatas_.back().responderThread, nullptr, appResponderThread_, &fastOCallStruct);
         printf("Start sink...\n");
 
         emitter_->setFastCallData(&this->fastCallDatas_[0]);
@@ -287,10 +285,4 @@ std::chrono::_V2::system_clock::time_point SimpleEngine::getEndEnclaveTime(const
     }
 
     return endEnclaveTimes_[index];
-}
-
-void SimpleEngine::popCallback(void *data) {
-//    auto* tail = static_cast<int*>(data);
-//    SimpleEngine::tails.push_back(*tail);
-    SimpleEngine::timePoints.push_back(std::chrono::high_resolution_clock::now());
 }
