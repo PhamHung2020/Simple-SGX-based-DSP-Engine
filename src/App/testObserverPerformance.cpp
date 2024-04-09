@@ -14,21 +14,19 @@
 #include "Engine/EngineWithBufferObserver.h"
 #include "App/utils.h"
 
+std::ofstream testObserverPerformance_sinkFileStream;
+
 void testObserverPerformance_sinkResult(void* rawData)
 {
     if (rawData == NULL) {
         return;
     }
-    // const auto flight = static_cast<FlightData*> (rawData);
-    // printf("Sink result: (%s %d)\n", flight->uniqueCarrier, flight->arrDelay);
+
+//    const auto flightData = static_cast<FlightData*>(rawData);
+//    testObserverPerformance_sinkFileStream << flightData->uniqueCarrier << "," << flightData->arrDelay << std::endl;
 
     const auto reducedFlight = static_cast<ReducedFlightData*> (rawData);
-    printf(
-        "Sink result:\n\t- Unique carrier: %s\n\t- Count: %d\n\t- Total: %d\n\n",
-        reducedFlight->uniqueCarrier,
-        reducedFlight->count,
-        reducedFlight->total
-        );
+    testObserverPerformance_sinkFileStream << reducedFlight->uniqueCarrier << "," << reducedFlight->count << "," << reducedFlight->total << std::endl;
 }
 
 void writeBufferObserverMeasurementToFile(const std::string& pathToFile, const EngineWithBufferObserver::ObservedData& observedData) {
@@ -47,21 +45,54 @@ void writeBufferObserverMeasurementToFile(const std::string& pathToFile, const E
 }
 
 void testObserverPerformance() {
-    FastCallEmitter emitter;
-    CsvSource source1(1, "../../dataset/secure-sgx-dataset/2005.csv", 0, true, 1000);
+    //  =============== Define variables =================
+    std::string resultDirName = "../../results/testBufferObserver/2024-04-09_10-03-43";
+    std::string sinkFileName = "reduce.csv";
+    std::string sourceFileName = "../../results/testBufferObserver/2024-04-09_10-03-43/filter.csv";
+    std::string measurementDirName = "../../measurements/testBufferObserver/2024-04-09_10-03-46";
+
+    // ================ Set up engine ====================
+    CsvSource source1(1, sourceFileName, 0, false, 10000);
+    FlightDataIntermediateParser parser;
+    source1.setParser(&parser);
 
     EngineWithBufferObserver engine;
     engine.setSource(source1);
+
+    FastCallEmitter emitter;
     engine.setEmitter(emitter);
 
-    engine.addTask(4, 200, false);
-    engine.addTask(5, sizeof(FlightData), false);
+//    engine.addTask(4, 200, true);
+//    engine.addTask(5, sizeof(FlightData), true);
     engine.addTask(6, sizeof(ReducedFlightData), true);
 
-    engine.setSink(testObserverPerformance_sinkResult, sizeof(FlightData));
+    engine.setSink(testObserverPerformance_sinkResult, sizeof(ReducedFlightData));
+
+    // =================== Create directory and file to store processed results =========================
+    std::string fileFullPath;
+    if (resultDirName == "../../results/testBufferObserver") {
+        fileFullPath = createMeasurementsDirectory(resultDirName);
+    } else {
+        fileFullPath = resultDirName;
+    }
+
+    fileFullPath.append("/").append(sinkFileName);
+    testObserverPerformance_sinkFileStream.open(fileFullPath, std::ios::out);
+    if (testObserverPerformance_sinkFileStream.fail()) {
+        std::cout << "Open out file failed.\n";
+        return;
+    }
+
+    // ======================= Start engine ==========================
     engine.start();
 
-    const std::string measurementDirName = createMeasurementsDirectory("../../measurements/testBufferObserver");
+    // ====================== Write measurements ==============================
+    std::string createdMeasurementDirName;
+    if (measurementDirName == "../../measurements/testBufferObserver") {
+        createdMeasurementDirName = createMeasurementsDirectory(measurementDirName);
+    } else {
+        createdMeasurementDirName = measurementDirName;
+    }
     const size_t nBuffer = engine.getBufferCount();
 
     for (size_t i = 0; i < nBuffer; ++i) {
@@ -69,19 +100,21 @@ void testObserverPerformance() {
             continue;
         }
 
-        std::string tailFilename = "Tail_Buffer_" + std::to_string(i);
-        std::string tailFileFullPath = measurementDirName;
+//        std::string tailFilename = "Tail_Buffer_" + std::to_string(i);
+        std::string tailFilename = "Tail_Reduce";
+        std::string tailFileFullPath = createdMeasurementDirName;
         tailFileFullPath.append("/").append(tailFilename);
 
         std::cout << "Writing measurements for tail buffer " << i << std::endl;
         writeBufferObserverMeasurementToFile(tailFileFullPath, engine.getTailObservedData(static_cast<int>(i)));
 
-        std::string headFilename = "Head_Buffer_" + std::to_string(i+1);
-        std::string headFileFullPath = measurementDirName;
-        headFileFullPath.append("/").append(headFilename);
-
-        std::cout << "Writing measurements for head buffer " << i+1 << std::endl;
-        writeBufferObserverMeasurementToFile(headFileFullPath, engine.getHeadObservedData(static_cast<int>(i+1)));
+//        std::string headFilename = "Head_Buffer_" + std::to_string(i+1);
+//        std::string headFilename = "Head_Map";
+//        std::string headFileFullPath = createdMeasurementDirName;
+//        headFileFullPath.append("/").append(headFilename);
+//
+//        std::cout << "Writing measurements for head buffer " << i+1 << std::endl;
+//        writeBufferObserverMeasurementToFile(headFileFullPath, engine.getHeadObservedData(static_cast<int>(i+1)));
     }
 
     printf("Info: Engine successfully returned.\n");

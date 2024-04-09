@@ -125,7 +125,7 @@ int EngineWithBufferObserver::start() {
 
             if (this->shouldObserved_[i]) {
                 pthread_create(&this->tailOservedDatas_[i].observedThread, nullptr, observationThread_, &this->tailOservedDatas_[i]);
-                pthread_create(&this->headOservedDatas_[i+1].observedThread, nullptr, observationThread_, &this->headOservedDatas_[i+1]);
+//                pthread_create(&this->headOservedDatas_[i+1].observedThread, nullptr, observationThread_, &this->headOservedDatas_[i+1]);
             }
         }
 
