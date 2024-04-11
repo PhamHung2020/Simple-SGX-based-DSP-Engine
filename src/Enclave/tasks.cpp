@@ -270,12 +270,10 @@ void JoinFlight2Stream(void* data) {
         strncpy(buffer1[n1].uniqueCarrier, flightData1->uniqueCarrier, 10);
         buffer1[n1].arrDelay = flightData1->arrDelay;
         n1++;
-//        print("n1\n");
     } else if (flightData2 != NULL && n2 < joinWindow) {
         strncpy(buffer2[n2].uniqueCarrier, flightData2->uniqueCarrier, 10);
         buffer2[n2].arrDelay = flightData2->arrDelay;
         n2++;
-        print("n2\n");
     }
 
     if (n1 == joinWindow || n2 == joinWindow) {
