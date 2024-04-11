@@ -34,6 +34,11 @@ typedef struct
     void (**callbacks)(void*);
 } FastCallTable;
 
+typedef struct {
+    void* data1;
+    void* data2;
+} FastCallDataGroup;
+
 static inline void _fastcall_mm_pause(void) __attribute__((always_inline));
 static inline void _fastcall_mm_pause(void)
 {
@@ -89,6 +94,17 @@ static inline void FastCall_wait(FastCallStruct *fastCallData, FastCallTable* ca
             {
                 callTable->callbacks[callId](data);
             }
+
+            int next = fastCallData->data_buffer->tail + 1;
+            if (next >= fastCallData->data_buffer->maxlen)
+            {
+                next = 0;
+            }
+            fastCallData->data_buffer->tail = next;
+            sgx_spin_lock(&fastCallData->data_buffer->lock_count);
+            fastCallData->data_buffer->popped_count += 1;
+            sgx_spin_unlock(&fastCallData->data_buffer->lock_count);
+
             continue;
         }
 
@@ -99,6 +115,75 @@ static inline void FastCall_wait(FastCallStruct *fastCallData, FastCallTable* ca
 
         // for( i = 0; i<3; ++i)
         //     _mm_pause();
+    }
+
+    if (callId < callTable->numEntries)
+    {
+        callTable->callbacks[callId](NULL);
+    }
+
+    // delete[] data;
+}
+
+static inline void FastCall_wait_2(FastCallStruct *fastCallData1, FastCallStruct *fastCallData2, FastCallTable* callTable, uint16_t callId)  __attribute__((always_inline));
+static inline void FastCall_wait_2(FastCallStruct *fastCallData1, FastCallStruct *fastCallData2, FastCallTable* callTable, uint16_t callId)
+{
+    static int i = 0;
+    char* data1 = NULL;
+    char* data2 = NULL;
+    bool keepPolling = false;
+    int popResult1, popResult2;
+    // char* data = new char[fastCallData->data_buffer->data_size];
+    while(true)
+    {
+        if (fastCallData1->keepPolling) {
+            keepPolling = true;
+            popResult1 = circular_buffer_pop(fastCallData1->data_buffer, (void**)&data1);
+        }
+
+        if (fastCallData2->keepPolling) {
+            keepPolling = true;
+            popResult2 = circular_buffer_pop(fastCallData2->data_buffer, (void**)&data2);
+        }
+
+        if (data1 != NULL || data2 != NULL) {
+            FastCallDataGroup dataGroup = {
+                    data1,
+                    data2
+            };
+            callTable->callbacks[callId](&dataGroup);
+        }
+
+        if (popResult1 == 0) {
+            int next = fastCallData1->data_buffer->tail + 1;
+            if (next >= fastCallData1->data_buffer->maxlen)
+            {
+                next = 0;
+            }
+            fastCallData1->data_buffer->tail = next;
+            sgx_spin_lock(&fastCallData1->data_buffer->lock_count);
+            fastCallData1->data_buffer->popped_count += 1;
+            sgx_spin_unlock(&fastCallData1->data_buffer->lock_count);
+        }
+
+        if (popResult2 == 0) {
+            int next = fastCallData2->data_buffer->tail + 1;
+            if (next >= fastCallData2->data_buffer->maxlen)
+            {
+                next = 0;
+            }
+            fastCallData2->data_buffer->tail = next;
+            sgx_spin_lock(&fastCallData2->data_buffer->lock_count);
+            fastCallData2->data_buffer->popped_count += 1;
+            sgx_spin_unlock(&fastCallData2->data_buffer->lock_count);
+        }
+
+        if (!keepPolling) {
+            break;
+        }
+        keepPolling = false;
+        data1 = NULL;
+        data2 = NULL;
     }
 
     if (callId < callTable->numEntries)

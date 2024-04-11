@@ -28,20 +28,20 @@ int circular_buffer_pop(circular_buffer* cir_buf, void** data)
         return -1;
     }
 
-    int next = cir_buf->tail + 1;
-    if (next >= cir_buf->maxlen)
-    {
-        next = 0;
-    }
+//    int next = cir_buf->tail + 1;
+//    if (next >= cir_buf->maxlen)
+//    {
+//        next = 0;
+//    }
 
     // *data = &cir_buf->buffer[cir_buf->tail];
     // memcpy(*(char**) data, (char*) cir_buf->buffer + cir_buf->data_size * cir_buf->tail, cir_buf->data_size);
     *(char**)data = (char*) cir_buf->buffer + cir_buf->data_size * cir_buf->tail;
 
-    cir_buf->tail = next;
-    sgx_spin_lock(&cir_buf->lock_count);
-    cir_buf->popped_count += 1;
-    sgx_spin_unlock(&cir_buf->lock_count);
+//    cir_buf->tail = next;
+//    sgx_spin_lock(&cir_buf->lock_count);
+//    cir_buf->popped_count += 1;
+//    sgx_spin_unlock(&cir_buf->lock_count);
 
     return 0;
 }

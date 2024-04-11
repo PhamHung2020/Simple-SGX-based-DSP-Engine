@@ -12,7 +12,8 @@ int SGX_CDECL main(int argc, char *argv[])
 {
 //     testSimpleEngine();
 //    testHotCallPerformance();
-     testObserverPerformance();
+//     testObserverPerformance();
+    testJoin2Stream1Enclave();
 
     return 0;
 }

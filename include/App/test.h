@@ -8,5 +8,5 @@
 void testSimpleEngine();
 void testHotCallPerformance();
 void testObserverPerformance();
-
+void testJoin2Stream1Enclave();
 #endif //TEST_H
