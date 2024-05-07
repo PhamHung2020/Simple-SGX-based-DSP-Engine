@@ -10,7 +10,7 @@
 #include <chrono>
 #include <vector>
 
-#define MAX_ITEM 1000
+#define MAX_ITEM 10000000
 
 class EngineWithBufferObserver : public SimpleEngine {
 public:
@@ -19,10 +19,10 @@ public:
         pthread_t observedThread;
         circular_buffer* buffer;
         bool isHead;
-        uint16_t previousValue;
-        uint16_t noItem[MAX_ITEM];
-        std::chrono::_V2::system_clock::time_point timePoints[MAX_ITEM];
-        uint16_t count;
+        uint64_t previousValue;
+        uint64_t* noItem;
+        std::chrono::_V2::system_clock::time_point* timePoints;
+        uint64_t count;
         bool keepPolling;
         std::chrono::_V2::system_clock::time_point startTime;
     } ObservedData;
@@ -37,7 +37,7 @@ public:
     void addTask(uint16_t callId, uint16_t inputDataSize) override;
     bool isObserved(int index);
 
-    static uint64_t processedPerSecond[100];
+    static uint64_t processedPerSecond[10000];
     static int processedCountIndex;
 
 protected:

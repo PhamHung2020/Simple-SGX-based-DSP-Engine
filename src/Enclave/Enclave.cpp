@@ -1,10 +1,13 @@
 #include <unistd.h>
-
 #include "Enclave_t.h"
 
 #include "Enclave/Enclave.h"
 #include "Enclave/tasks.h"
 
+
+int ecallSum(int a, int b) {
+    return a + b;
+}
 
 void EcallStartResponder(FastCallStruct* fastECallData, FastCallStruct* fastOCallData, const uint16_t callId)
 {

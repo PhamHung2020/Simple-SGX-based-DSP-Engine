@@ -7,6 +7,7 @@
 
 void testSimpleEngine();
 void testHotCallPerformance();
-void testObserverPerformance();
+void testObserverPerformance(int n);
 void testJoin2Stream1Enclave();
+void testCpuAffinity();
 #endif //TEST_H

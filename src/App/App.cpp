@@ -13,7 +13,13 @@ int SGX_CDECL main(int argc, char *argv[])
 //     testSimpleEngine();
 //    testHotCallPerformance();
 //     testObserverPerformance();
-    testJoin2Stream1Enclave();
+//    testJoin2Stream1Enclave();
+//    testCpuAffinity();
+
+    for (int i = 0; i < 10; ++i) {
+        printf("Test %d.\n", i);
+        testObserverPerformance(i);
+    }
 
     return 0;
 }

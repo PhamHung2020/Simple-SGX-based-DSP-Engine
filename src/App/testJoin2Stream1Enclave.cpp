@@ -14,6 +14,9 @@
 #include "Enclave_u.h"
 
 std::ofstream testJoin2Stream1Enclave_sinkFileStream;
+bool testJoin2Stream1Enclave_shouldContinue = true;
+uint64_t testJoin2Stream1Enclave_processedPerSecond[1000];
+int testJoin2Stream1Enclave_processedCountIndex = 0;
 
 struct FastCallPair2 {
     uint8_t no;
@@ -44,6 +47,23 @@ typedef struct {
 
 testJoin2Stream1Enclave_ObservedData testJoin2Stream1Enclave_tailObservedData;
 testJoin2Stream1Enclave_ObservedData testJoin2Stream1Enclave_tailObservedData2;
+
+void *testJoin2Stream1Enclave_processedCountThread(void *circularBufferAsVoidP) {
+    const auto buffer = (circular_buffer*) circularBufferAsVoidP;
+    uint64_t value;
+    while (testJoin2Stream1Enclave_shouldContinue) {
+        sgx_spin_lock(&buffer->lock_count);
+        value = buffer->popped_count;
+        buffer->popped_count = 0;
+        sgx_spin_unlock(&buffer->lock_count);
+
+        testJoin2Stream1Enclave_processedPerSecond[testJoin2Stream1Enclave_processedCountIndex] = value;
+        testJoin2Stream1Enclave_processedCountIndex++;
+        sleep(1);
+    }
+
+    return nullptr;
+}
 
 void testJoin2Stream1Enclave_writeBufferObserverMeasurementToFile(const std::string& pathToFile, testJoin2Stream1Enclave_ObservedData* observedData) {
     std::ofstream measurementFile;
@@ -157,10 +177,11 @@ void testJoin2Stream1Enclave() {
     sgx_enclave_id_t enclaveId;
     FastCallEmitter emitter1;
     FastCallEmitter emitter2;
-    pthread_t sourceThread1, sourceThread2;
+    pthread_t sourceThread1, sourceThread2, processedPerSecondThread;
     std::string resultDirName = "../../results/2stream";
     std::string sinkFileName = "join2stream.csv";
     std::string measurementDirName = "../../measurements/2stream";
+    std::string throughoutFileName = "throughout.csv";
 
 
     FlightDataIntermediateParser parser1;
@@ -232,23 +253,23 @@ void testJoin2Stream1Enclave() {
             true
     };
 
-    testJoin2Stream1Enclave_tailObservedData.observedThread = 0;
-    testJoin2Stream1Enclave_tailObservedData.buffer = &buffer1;
-    testJoin2Stream1Enclave_tailObservedData.isHead = false;
-    testJoin2Stream1Enclave_tailObservedData.count = 0;
-    testJoin2Stream1Enclave_tailObservedData.keepPolling = true;
-    testJoin2Stream1Enclave_tailObservedData.previousValue = 0;
-    testJoin2Stream1Enclave_tailObservedData.noItem = new uint64_t[8000000];
-    testJoin2Stream1Enclave_tailObservedData.timePoints = new std::chrono::_V2::system_clock::time_point[8000000];
-
-    testJoin2Stream1Enclave_tailObservedData2.observedThread = 0;
-    testJoin2Stream1Enclave_tailObservedData2.buffer = &buffer2;
-    testJoin2Stream1Enclave_tailObservedData2.isHead = false;
-    testJoin2Stream1Enclave_tailObservedData2.count = 0;
-    testJoin2Stream1Enclave_tailObservedData2.keepPolling = true;
-    testJoin2Stream1Enclave_tailObservedData2.previousValue = 0;
-    testJoin2Stream1Enclave_tailObservedData2.noItem = new uint64_t[8000000];
-    testJoin2Stream1Enclave_tailObservedData2.timePoints = new std::chrono::_V2::system_clock::time_point[8000000];
+//    testJoin2Stream1Enclave_tailObservedData.observedThread = 0;
+//    testJoin2Stream1Enclave_tailObservedData.buffer = &buffer1;
+//    testJoin2Stream1Enclave_tailObservedData.isHead = false;
+//    testJoin2Stream1Enclave_tailObservedData.count = 0;
+//    testJoin2Stream1Enclave_tailObservedData.keepPolling = true;
+//    testJoin2Stream1Enclave_tailObservedData.previousValue = 0;
+//    testJoin2Stream1Enclave_tailObservedData.noItem = new uint64_t[8000000];
+//    testJoin2Stream1Enclave_tailObservedData.timePoints = new std::chrono::_V2::system_clock::time_point[8000000];
+//
+//    testJoin2Stream1Enclave_tailObservedData2.observedThread = 0;
+//    testJoin2Stream1Enclave_tailObservedData2.buffer = &buffer2;
+//    testJoin2Stream1Enclave_tailObservedData2.isHead = false;
+//    testJoin2Stream1Enclave_tailObservedData2.count = 0;
+//    testJoin2Stream1Enclave_tailObservedData2.keepPolling = true;
+//    testJoin2Stream1Enclave_tailObservedData2.previousValue = 0;
+//    testJoin2Stream1Enclave_tailObservedData2.noItem = new uint64_t[8000000];
+//    testJoin2Stream1Enclave_tailObservedData2.timePoints = new std::chrono::_V2::system_clock::time_point[8000000];
 
     if (initialize_enclave(&enclaveId) != SGX_SUCCESS) {
         std::cout << "Initialize enclave failed\n";
@@ -264,10 +285,11 @@ void testJoin2Stream1Enclave() {
             8,
             nullptr
     };
-    pthread_create(&testJoin2Stream1Enclave_tailObservedData.observedThread, nullptr, testJoin2Stream1Enclave_observationThread, &testJoin2Stream1Enclave_tailObservedData);
-    pthread_create(&testJoin2Stream1Enclave_tailObservedData2.observedThread, nullptr, testJoin2Stream1Enclave_observationThread, &testJoin2Stream1Enclave_tailObservedData2);
-
-    std::cout << "Started observer thread\n";
+//    pthread_create(&testJoin2Stream1Enclave_tailObservedData.observedThread, nullptr, testJoin2Stream1Enclave_observationThread, &testJoin2Stream1Enclave_tailObservedData);
+//    pthread_create(&testJoin2Stream1Enclave_tailObservedData2.observedThread, nullptr, testJoin2Stream1Enclave_observationThread, &testJoin2Stream1Enclave_tailObservedData2);
+//    std::cout << "Started observer thread\n";
+    pthread_create(&processedPerSecondThread, nullptr, testJoin2Stream1Enclave_processedCountThread, &buffer1);
+    std::cout << "Start processed-per-second thread\n";
 
     pthread_create(&fastCallData1.responderThread, nullptr, testJoin2Stream1Enclave_enclaveResponderThread, &fastCallPair2);
     fastCallData2.responderThread = fastCallData1.responderThread;
@@ -310,6 +332,9 @@ void testJoin2Stream1Enclave() {
     StopFastCallResponder(&fastCallData2);
     pthread_join(fastCallData1.responderThread, nullptr);
 
+    testJoin2Stream1Enclave_shouldContinue = false;
+    pthread_join(processedPerSecondThread, nullptr);
+
     std::cout << "Waiting for sink...\n";
     StopFastCallResponder(&fastCallData3);
     pthread_join(fastCallData3.responderThread, nullptr);
@@ -330,37 +355,52 @@ void testJoin2Stream1Enclave() {
     delete[] static_cast<FlightData*>(buffer2.buffer);
     delete[] static_cast<JoinedFlightData*>(buffer3.buffer);
 
-    // ====================== Write measurements ==============================
-    std::string createdMeasurementDirName;
+    // ======================= Get throughout =======================
+
+        std::string createdMeasurementDirName;
     if (measurementDirName == "../../measurements/2stream") {
         createdMeasurementDirName = createMeasurementsDirectory(measurementDirName);
     } else {
         createdMeasurementDirName = measurementDirName;
     }
 
-    {
-        std::string tailFilename = "Tail_Stream_1";
-        std::string tailFileFullPath = createdMeasurementDirName;
-        tailFileFullPath.append("/").append(tailFilename);
-
-        std::cout << "Writing measurements for tail buffer " << std::endl;
-        testJoin2Stream1Enclave_writeBufferObserverMeasurementToFile(tailFileFullPath,
-                                                                     &testJoin2Stream1Enclave_tailObservedData);
+    std::cout << "THROUGHOUT\n";
+    std::cout << "Number of records: " << testJoin2Stream1Enclave_processedCountIndex << std::endl;
+    std::ofstream throughoutStream;
+    std::string throughoutFullPath = createdMeasurementDirName;
+    throughoutStream.open(throughoutFullPath.append("/").append(throughoutFileName));
+    for (int i = 0; i < testJoin2Stream1Enclave_processedCountIndex; ++i) {
+        std::cout << i << " " << testJoin2Stream1Enclave_processedPerSecond[i] << std::endl;
+        throughoutStream << i << "," << testJoin2Stream1Enclave_processedPerSecond[i] << std::endl;
     }
-    {
-        std::string tailFilename = "Tail_Stream_2";
-        std::string tailFileFullPath = createdMeasurementDirName;
-        tailFileFullPath.append("/").append(tailFilename);
+    throughoutStream.close();
 
-        std::cout << "Writing measurements for tail buffer " << std::endl;
-        testJoin2Stream1Enclave_writeBufferObserverMeasurementToFile(tailFileFullPath,
-                                                                     &testJoin2Stream1Enclave_tailObservedData2);
-    }
+    // ====================== Write measurements ==============================
 
-    delete[] testJoin2Stream1Enclave_tailObservedData.noItem;
-    delete[] testJoin2Stream1Enclave_tailObservedData.timePoints;
-    delete[] testJoin2Stream1Enclave_tailObservedData2.noItem;
-    delete[] testJoin2Stream1Enclave_tailObservedData2.timePoints;
+//
+//    {
+//        std::string tailFilename = "Tail_Stream_1";
+//        std::string tailFileFullPath = createdMeasurementDirName;
+//        tailFileFullPath.append("/").append(tailFilename);
+//
+//        std::cout << "Writing measurements for tail buffer " << std::endl;
+//        testJoin2Stream1Enclave_writeBufferObserverMeasurementToFile(tailFileFullPath,
+//                                                                     &testJoin2Stream1Enclave_tailObservedData);
+//    }
+//    {
+//        std::string tailFilename = "Tail_Stream_2";
+//        std::string tailFileFullPath = createdMeasurementDirName;
+//        tailFileFullPath.append("/").append(tailFilename);
+//
+//        std::cout << "Writing measurements for tail buffer " << std::endl;
+//        testJoin2Stream1Enclave_writeBufferObserverMeasurementToFile(tailFileFullPath,
+//                                                                     &testJoin2Stream1Enclave_tailObservedData2);
+//    }
+//
+//    delete[] testJoin2Stream1Enclave_tailObservedData.noItem;
+//    delete[] testJoin2Stream1Enclave_tailObservedData.timePoints;
+//    delete[] testJoin2Stream1Enclave_tailObservedData2.noItem;
+//    delete[] testJoin2Stream1Enclave_tailObservedData2.timePoints;
 
     std::cout << "Success";
 

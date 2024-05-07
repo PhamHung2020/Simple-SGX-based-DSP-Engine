@@ -26,7 +26,6 @@ void testObserverPerformance_sinkResult_map_filter(void* rawData)
     testObserverPerformance_sinkFileStream << flightData->uniqueCarrier << "," << flightData->arrDelay << std::endl;
 }
 
-
 void testObserverPerformance_sinkResult_reduce(void* rawData)
 {
     if (rawData == NULL) {
@@ -50,28 +49,31 @@ void writeBufferObserverMeasurementToFile(const std::string& pathToFile, const E
     std::ofstream measurementFile;
     measurementFile.open(pathToFile, std::ios::app);
 
-    for (size_t i = 0; i < observedData.count; ++i) {
+    for (uint64_t i = 0; i < observedData.count; ++i) {
         if (i == 0) {
-            measurementFile << observedData.noItem[i] << " " << std::chrono::duration_cast<std::chrono::nanoseconds>(observedData.timePoints[i] - observedData.startTime).count() << std::endl;
+            measurementFile << observedData.noItem[i] << "," << std::chrono::duration_cast<std::chrono::nanoseconds>(observedData.timePoints[i] - observedData.startTime).count() << std::endl;
         } else {
-            measurementFile << observedData.noItem[i] << " " << std::chrono::duration_cast<std::chrono::nanoseconds>(observedData.timePoints[i] - observedData.timePoints[i-1]).count() << std::endl;
+            measurementFile << observedData.noItem[i] << "," << std::chrono::duration_cast<std::chrono::nanoseconds>(observedData.timePoints[i] - observedData.timePoints[i-1]).count() << std::endl;
         }
     }
 
     measurementFile.close();
 }
 
-void testObserverPerformance() {
+void testObserverPerformance(int n) {
     //  =============== Define variables =================
-    std::string resultDirName = "../../results/testBufferObserver/2024-04-09_10-03-43";
-    std::string sinkFileName = "join.csv";
-    std::string sourceFileName = "../../results/testBufferObserver/2024-04-09_10-03-43/filter.csv";
+//    std::string resultDirName = "../../results/testBufferObserver";
+    std::string resultDirName = "../../results/test";
+    std::string sinkFileName = std::to_string(n) +  "_reduce.csv";
+    std::string sourceFileName = "../../results/test/" + std::to_string(n) + "_filter.csv";
 //    std::string sourceFileName = "../../dataset/secure-sgx-dataset/2005.csv";
-    std::string measurementDirName = "../../measurements/testBufferObserver/2024-04-09_10-03-46";
+//    std::string measurementDirName = "../../measurements/testBufferObserver";
+    std::string measurementDirName = "../../measurements/test";
+    std::string measurementFileName = "map.csv";
+//    std::string throughoutFileName = "throughout_reduce.csv";
 
     // ================ Set up engine ====================
-//    CsvSource source1(1, sourceFileName, 0, true, 100000);
-    CsvSource source1(1, sourceFileName, 0, false, -1);
+    CsvSource source1(1, sourceFileName, 0, false, 1000000);
     FlightDataIntermediateParser parser;
     source1.setParser(&parser);
 
@@ -83,10 +85,10 @@ void testObserverPerformance() {
 
 //    engine.addTask(4, 200, true);
 //    engine.addTask(5, sizeof(FlightData), true);
-//    engine.addTask(6, sizeof(ReducedFlightData), true);
-    engine.addTask(7, sizeof(FlightData), true);
+    engine.addTask(6, sizeof(FlightData), true);
+//    engine.addTask(7, sizeof(FlightData), true);
 
-    engine.setSink(testObserverPerformance_sinkResult_join, sizeof(JoinedFlightData));
+    engine.setSink(testObserverPerformance_sinkResult_reduce, sizeof(ReducedFlightData));
 
     // =================== Create directory and file to store processed results =========================
     std::string fileFullPath;
@@ -108,12 +110,25 @@ void testObserverPerformance() {
 
     testObserverPerformance_sinkFileStream.close();
 
-    // ======================= Get throughout =======================
-    std::cout << "THROUGHOUT\n";
-    std::cout << "Number of records: " << EngineWithBufferObserver::processedCountIndex << std::endl;
-    for (int i = 0; i < EngineWithBufferObserver::processedCountIndex; ++i) {
-        std::cout << EngineWithBufferObserver::processedPerSecond[i] << std::endl;
+    // ======================= Create measurement folder =======================
+    std::string createdMeasurementDirName;
+    if (measurementDirName == "../../measurements/testBufferObserver") {
+        createdMeasurementDirName = createMeasurementsDirectory(measurementDirName);
+    } else {
+        createdMeasurementDirName = measurementDirName;
     }
+
+    // ======================= Get throughout =======================
+//    std::ofstream throughoutStream;
+//    std::string throughoutFullPath = createdMeasurementDirName;
+//    throughoutStream.open(throughoutFullPath.append("/").append(throughoutFileName));
+//
+//    std::cout << "THROUGHOUT\n";
+//    std::cout << "Number of records: " << EngineWithBufferObserver::processedCountIndex << std::endl;
+//    for (int i = 0; i < EngineWithBufferObserver::processedCountIndex; ++i) {
+//        throughoutStream << i+1 << "," << EngineWithBufferObserver::processedPerSecond[i] << std::endl;
+//    }
+//    throughoutStream.close();
 
     // ==================== Processing Time =======================
     std::cout << "Source time: " << std::chrono::duration_cast<std::chrono::microseconds>(SimpleEngine::getEndSourceTime() - SimpleEngine::getStartSourceTime()).count() << std::endl;
@@ -127,27 +142,20 @@ void testObserverPerformance() {
     std::cout << "Processing time: " << std::chrono::duration_cast<std::chrono::microseconds>(SimpleEngine::getEndEnclaveTime(nTask - 1) - SimpleEngine::getStartSourceTime()).count() << std::endl;
 
     // ====================== Write measurements ==============================
-//    std::string createdMeasurementDirName;
-//    if (measurementDirName == "../../measurements/testBufferObserver") {
-//        createdMeasurementDirName = createMeasurementsDirectory(measurementDirName);
-//    } else {
-//        createdMeasurementDirName = measurementDirName;
-//    }
-//    const size_t nBuffer = engine.getBufferCount();
-//
-//    for (size_t i = 0; i < nBuffer; ++i) {
-//        if (!engine.isObserved(static_cast<int>(i))) {
-//            continue;
-//        }
+    const size_t nBuffer = engine.getBufferCount();
+
+    for (size_t i = 0; i < nBuffer; ++i) {
+        if (!engine.isObserved(static_cast<int>(i))) {
+            continue;
+        }
 
 //        std::string tailFilename = "Tail_Buffer_" + std::to_string(i);
-//        std::string tailFilename = "Tail_Map";
-//        std::string tailFileFullPath = createdMeasurementDirName;
-//        tailFileFullPath.append("/").append(tailFilename);
-//
-//        std::cout << "Writing measurements for tail buffer " << i << std::endl;
-//        writeBufferObserverMeasurementToFile(tailFileFullPath, engine.getTailObservedData(static_cast<int>(i)));
+        std::string tailFilename = std::to_string(n) + "_process_time_tail_reduce.csv";
+        std::string tailFileFullPath = createdMeasurementDirName;
+        tailFileFullPath.append("/").append(tailFilename);
 
+        std::cout << "Writing measurements for tail buffer " << i << std::endl;
+        writeBufferObserverMeasurementToFile(tailFileFullPath, engine.getTailObservedData(static_cast<int>(i)));
 //        std::string headFilename = "Head_Buffer_" + std::to_string(i+1);
 //        std::string headFilename = "Head_Map";
 //        std::string headFileFullPath = createdMeasurementDirName;
@@ -155,7 +163,7 @@ void testObserverPerformance() {
 //
 //        std::cout << "Writing measurements for head buffer " << i+1 << std::endl;
 //        writeBufferObserverMeasurementToFile(headFileFullPath, engine.getHeadObservedData(static_cast<int>(i+1)));
-//    }
+    }
 
     printf("Info: Engine successfully returned.\n");
 }

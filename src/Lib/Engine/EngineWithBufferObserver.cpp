@@ -5,8 +5,10 @@
 #include "Engine/EngineWithBufferObserver.h"
 
 #include <stdexcept>
+#include <pthread.h>
+#include <unistd.h>
 
-uint64_t EngineWithBufferObserver::processedPerSecond[100];
+uint64_t EngineWithBufferObserver::processedPerSecond[10000];
 int EngineWithBufferObserver::processedCountIndex = 0;
 bool EngineWithBufferObserver::shouldContinue_ = true;
 
@@ -58,6 +60,7 @@ void * EngineWithBufferObserver::observationThread_(void *observedDataAsVoidP) {
                 observedData->previousValue = value;
             }
 
+//            printf("keep polling: %d\n", observedData->keepPolling);
             if (!observedData->keepPolling)
                 break;
         }
@@ -77,14 +80,16 @@ int EngineWithBufferObserver::initializeDataStructures() {
     this->tailOservedDatas_.reserve(nBuffer);
 
     for (size_t i = 0; i < nBuffer; ++i) {
-        ObservedData headObservedData;
-        headObservedData.observedThread = 0;
-        headObservedData.buffer = &this->buffers_[i];
-        headObservedData.isHead = true;
-        headObservedData.count = 0;
-        headObservedData.keepPolling = true;
-        headObservedData.previousValue = 0;
-        this->headOservedDatas_.push_back(headObservedData);
+//        ObservedData headObservedData;
+//        headObservedData.observedThread = 0;
+//        headObservedData.buffer = &this->buffers_[i];
+//        headObservedData.isHead = true;
+//        headObservedData.count = 0;
+//        headObservedData.keepPolling = true;
+//        headObservedData.previousValue = 0;
+//        headObservedData.noItem = new uint16_t[MAX_ITEM];
+//        headObservedData.timePoints = new std::chrono::_V2::system_clock::time_point[MAX_ITEM];
+//        this->headOservedDatas_.push_back(headObservedData);
 
         ObservedData tailObservedData;
         tailObservedData.observedThread = 0;
@@ -93,6 +98,8 @@ int EngineWithBufferObserver::initializeDataStructures() {
         tailObservedData.count = 0;
         tailObservedData.keepPolling = true;
         tailObservedData.previousValue = 0;
+        tailObservedData.noItem = new uint64_t[MAX_ITEM];
+        tailObservedData.timePoints = new std::chrono::_V2::system_clock::time_point[MAX_ITEM];
         this->tailOservedDatas_.push_back(tailObservedData);
     }
 
@@ -112,12 +119,31 @@ int EngineWithBufferObserver::start() {
     const int initializationResult = initializeEnclaves();
     printf("Initialized %d enclaves\n", initializationResult);
 
-    if (!this->enclaveIds_.empty()) {
-        pthread_create(&this->processedCountThreadId_, nullptr, processedCountThread_, &this->buffers_[0]);
-    }
+//    if (!this->enclaveIds_.empty()) {
+//        pthread_create(&this->processedCountThreadId_, nullptr, processedCountThread_, &this->buffers_[0]);
+//    }
+
+    pthread_attr_t enclaveAttr;
+    cpu_set_t enclaveCpu;
+    pthread_attr_t sourceAttr;
+    cpu_set_t sourceCpu;
+    pthread_attr_t sinkAttr;
+    cpu_set_t sinkCpu;
+    pthread_attr_t observerAttr;
+    cpu_set_t observerCpu;
 
     if (initializationResult == this->enclaveIds_.size())
     {
+        pthread_attr_init(&enclaveAttr);
+        CPU_ZERO(&enclaveCpu);
+        CPU_SET(0, &enclaveCpu);
+        pthread_attr_setaffinity_np(&enclaveAttr, sizeof(cpu_set_t), &enclaveCpu);
+
+        pthread_attr_init(&observerAttr);
+        CPU_ZERO(&observerCpu);
+        CPU_SET(1, &observerCpu);
+        pthread_attr_setaffinity_np(&observerAttr, sizeof(cpu_set_t), &observerCpu);
+
         for (size_t i = 0; i < this->enclaveIds_.size(); ++i)
         {
             fastCallPairs_.push_back({
@@ -128,25 +154,34 @@ int EngineWithBufferObserver::start() {
                 this->callIdVector_[i],
                 nullptr
             });
-            pthread_create(&this->fastCallDatas_[i].responderThread, nullptr, enclaveResponderThread_, &fastCallPairs_[i]);
 
-//            if (this->shouldObserved_[i]) {
-//                pthread_create(&this->tailOservedDatas_[i].observedThread, nullptr, observationThread_, &this->tailOservedDatas_[i]);
+            pthread_create(&this->fastCallDatas_[i].responderThread, &enclaveAttr, enclaveResponderThread_, &fastCallPairs_[i]);
+
+            if (this->shouldObserved_[i]) {
+                pthread_create(&this->tailOservedDatas_[i].observedThread, &observerAttr, observationThread_, &this->tailOservedDatas_[i]);
 //                pthread_create(&this->headOservedDatas_[i+1].observedThread, nullptr, observationThread_, &this->headOservedDatas_[i+1]);
-//            }
+            }
         }
 
         emitter_->setFastCallData(&this->fastCallDatas_[0]);
         SourceEmitterPair sourceEmitterPair = { this->source_, this->emitter_ };
 
-        pthread_create(&this->sourceThread_, nullptr, startSource_, &sourceEmitterPair);
+        pthread_attr_init(&sourceAttr);
+        CPU_ZERO(&sourceCpu);
+        CPU_SET(2, &sourceCpu);
+        pthread_attr_setaffinity_np(&sourceAttr, sizeof(cpu_set_t), &sourceCpu);
+        pthread_create(&this->sourceThread_, &sourceAttr, startSource_, &sourceEmitterPair);
         printf("Start source...\n");
 
         FastOCallStruct fastOCallStruct = {
             .fastOCallData = &this->fastCallDatas_.back(),
             .sinkFunc = this->sink_
         };
-        pthread_create(&this->fastCallDatas_.back().responderThread, nullptr, appResponderThread_, &fastOCallStruct);
+        pthread_attr_init(&sinkAttr);
+        CPU_ZERO(&sinkCpu);
+        CPU_SET(3, &sinkCpu);
+        pthread_attr_setaffinity_np(&sinkAttr, sizeof(cpu_set_t), &sinkCpu);
+        pthread_create(&this->fastCallDatas_.back().responderThread, &sinkAttr, appResponderThread_, &fastOCallStruct);
         printf("Start sink...\n");
 
         if (this->sourceThread_ != 0)
@@ -162,28 +197,33 @@ int EngineWithBufferObserver::start() {
         StopFastCallResponder(&this->fastCallDatas_.back());
         pthread_join(this->fastCallDatas_.back().responderThread, nullptr);
 
-        this->shouldContinue_ = false;
-        pthread_join(this->processedCountThreadId_, nullptr);
+//        this->shouldContinue_ = false;
+//        pthread_join(this->processedCountThreadId_, nullptr);
 
-//        for (size_t i = 0; i < this->buffers_.size(); ++i) {
-//            printf("Wait for head observer %lu end\n", i);
-//            this->headOservedDatas_[i].keepPolling = false;
-//
-//            printf("Wait for tail observer %lu end\n", i);
-//            this->tailOservedDatas_[i].keepPolling = false;
-//
+        for (size_t i = 0; i < this->buffers_.size(); ++i) {
+            printf("Wait for head observer %lu end\n", i);
+            this->headOservedDatas_[i].keepPolling = false;
+
+            printf("Wait for tail observer %lu end\n", i);
+            this->tailOservedDatas_[i].keepPolling = false;
+
 //            pthread_join(this->headOservedDatas_[i].observedThread, nullptr);
-//            pthread_join(this->tailOservedDatas_[i].observedThread, nullptr);
-//        }
+            pthread_join(this->tailOservedDatas_[i].observedThread, nullptr);
+        }
     }
 
     const int destroyEnclaveResult = destroyEnclaves();
     printf("Destroyed %d enclaves\n", destroyEnclaveResult);
+    printf("Count: %lu", tailOservedDatas_[0].count);
 
     for (const auto & buffer : this->buffers_)
     {
         delete[] static_cast<MyEvent *>(buffer.buffer);
     }
+
+//    for (const auto& observerData : tailOservedDatas_) {
+//        delete[] observerData.noItem;
+//    }
 
     printf("DONE\n");
     return 0;
