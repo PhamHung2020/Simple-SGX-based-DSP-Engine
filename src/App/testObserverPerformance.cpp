@@ -166,4 +166,6 @@ void testObserverPerformance(int n) {
     }
 
     printf("Info: Engine successfully returned.\n");
+
+    engine.clean();
 }

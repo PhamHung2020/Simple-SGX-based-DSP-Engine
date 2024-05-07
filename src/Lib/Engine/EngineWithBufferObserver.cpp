@@ -263,3 +263,19 @@ void *EngineWithBufferObserver::processedCountThread_(void *circularBufferAsVoid
 
     return nullptr;
 }
+
+void EngineWithBufferObserver::clean() {
+    SimpleEngine::clean();
+
+    for (auto & headObservedData : this->headOservedDatas_) {
+        delete[] headObservedData.noItem;
+        delete[] headObservedData.timePoints;
+    }
+    this->headOservedDatas_.clear();
+
+    for (auto & tailObservedData : this->tailOservedDatas_) {
+        delete[] tailObservedData.noItem;
+        delete[] tailObservedData.timePoints;
+    }
+    this->tailOservedDatas_.clear();
+}

@@ -51,6 +51,9 @@ protected:
     static void* processedCountThread_(void* circularBufferAsVoidP);
 
     int initializeDataStructures() override;
+
+public:
+    void clean() override;
 };
 
 #endif //ENGINEWITHBUFFEROBSERVER_H
