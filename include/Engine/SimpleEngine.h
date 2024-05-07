@@ -56,6 +56,7 @@ public:
     virtual int getNumberOfTask();
 
     virtual int start();
+    virtual void clean();
 
     static std::chrono::_V2::system_clock::time_point getStartSourceTime();
     static std::chrono::_V2::system_clock::time_point getEndSourceTime();

@@ -252,7 +252,7 @@ int SimpleEngine::start()
 
     for (const auto & buffer : this->buffers_)
     {
-        delete[] static_cast<MyEvent *>(buffer.buffer);
+        delete[] static_cast<char *>(buffer.buffer);
     }
 
     printf("DONE\n");
@@ -285,4 +285,21 @@ std::chrono::_V2::system_clock::time_point SimpleEngine::getEndEnclaveTime(const
     }
 
     return endEnclaveTimes_[index];
+}
+
+void SimpleEngine::clean() {
+    startSourceTime_ = std::chrono::_V2::system_clock::time_point::min();
+    endSourceTime_ = std::chrono::_V2::system_clock::time_point::min();
+    endPipelineTime_ = std::chrono::_V2::system_clock::time_point::min();
+    startEnclaveTimes_.clear();
+    endEnclaveTimes_.clear();
+
+    startEnclaveTimes_.clear();
+    endEnclaveTimes_.clear();
+
+    this->buffers_.clear();
+    this->enclaveIds_.clear();
+    this->enclaveThreads_.clear();
+    this->fastCallDatas_.clear();
+    this->fastCallPairs_.clear();
 }
