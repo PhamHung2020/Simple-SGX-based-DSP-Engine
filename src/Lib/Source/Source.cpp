@@ -49,7 +49,5 @@ int Source::start()
 
 int Source::start(Emitter &emitter)
 {
-    MyEvent event = { 0.0, 0, 0, 0, "" };
-    emitter.emit(&event);
     return 0;
 }

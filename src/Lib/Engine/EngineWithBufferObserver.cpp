@@ -10,24 +10,24 @@
 
 #include "utils.h"
 
-uint64_t EngineWithBufferObserver::processedPerSecond[10000];
+uint64_t EngineWithBufferObserver::processedPerSecond[1];
 int EngineWithBufferObserver::processedCountIndex = 0;
 bool EngineWithBufferObserver::shouldContinue_ = true;
 
 EngineWithBufferObserver::ObservedData & EngineWithBufferObserver::getHeadObservedData(const int index) {
-    if (index < 0 || index > this->headOservedDatas_.size()) {
+    if (index < 0 || index > this->headObservedDataList_.size()) {
         throw std::out_of_range("Index out of range");
     }
 
-    return this->headOservedDatas_[index];
+    return this->headObservedDataList_[index];
 }
 
 EngineWithBufferObserver::ObservedData & EngineWithBufferObserver::getTailObservedData(const int index) {
-    if (index < 0 || index > this->tailOservedDatas_.size()) {
+    if (index < 0 || index > this->tailObservedDataList_.size()) {
         throw std::out_of_range("Index out of range");
     }
 
-    return this->tailOservedDatas_[index];
+    return this->tailObservedDataList_[index];
 }
 
 size_t EngineWithBufferObserver::getBufferCount() const {
@@ -82,8 +82,8 @@ int EngineWithBufferObserver::initializeDataStructures() {
     }
 
     const int nBuffer = static_cast<int>(this->buffers_.size());
-    this->headOservedDatas_.reserve(nBuffer);
-    this->tailOservedDatas_.reserve(nBuffer);
+    this->headObservedDataList_.reserve(nBuffer);
+    this->tailObservedDataList_.reserve(nBuffer);
 
     for (size_t i = 0; i < nBuffer; ++i) {
         ObservedData headObservedData;
@@ -102,7 +102,7 @@ int EngineWithBufferObserver::initializeDataStructures() {
             headObservedData.timestampCounterPoints[j] = -1;
         }
 
-        this->headOservedDatas_.push_back(headObservedData);
+        this->headObservedDataList_.push_back(headObservedData);
 
         ObservedData tailObservedData;
         tailObservedData.observedThread = 0;
@@ -119,7 +119,7 @@ int EngineWithBufferObserver::initializeDataStructures() {
         for (size_t j = 0; j < MAX_ITEM; ++j) {
             tailObservedData.timestampCounterPoints[j] = -1;
         }
-        this->tailOservedDatas_.push_back(tailObservedData);
+        this->tailObservedDataList_.push_back(tailObservedData);
     }
 
     return nBuffer;
@@ -130,7 +130,7 @@ int EngineWithBufferObserver::start() {
     if (this->source_ == nullptr || this->callIdVector_.empty() || this->sink_ == nullptr || this->emitter_ == nullptr)
         return -1;
 
-    printf("Start\n");
+    printf("Engine started\n");
 
     this->initializeDataStructures();
     printf("Initialized %lu data structures\n", this->enclaveIds_.size());
@@ -138,6 +138,7 @@ int EngineWithBufferObserver::start() {
     const int initializationResult = initializeEnclaves();
     printf("Initialized %d enclaves\n", initializationResult);
 
+    // start processed count thread
 //    if (!this->enclaveId_.empty()) {
 //        pthread_create(&this->processedCountThreadId_, nullptr, processedCountThread_, &this->buffers_[0]);
 //    }
@@ -170,26 +171,29 @@ int EngineWithBufferObserver::start() {
         CPU_SET(5, &headObserverCpu);
         pthread_attr_setaffinity_np(&headObserverAttr, sizeof(cpu_set_t), &headObserverCpu);
 
+        // start enclave responder thread
         for (size_t i = 0; i < this->enclaveIds_.size(); ++i)
         {
             fastCallPairs_.push_back({
                 static_cast<uint8_t>(i),
                 this->enclaveIds_[i],
-                &this->fastCallDatas_[i],
-                &this->fastCallDatas_[i+1],
+                &this->fastCallDataList_[i],
+                &this->fastCallDataList_[i + 1],
                 this->callIdVector_[i],
                 nullptr
             });
 
-            pthread_create(&this->fastCallDatas_[i].responderThread, &enclaveAttr, enclaveResponderThread_, &fastCallPairs_[i]);
+            pthread_create(&this->fastCallDataList_[i].responderThread, &enclaveAttr, enclaveResponderThread_, &fastCallPairs_[i]);
 
+            // start tail observer thread and head observer thread for this enclave
             if (this->shouldObserved_[i]) {
-                pthread_create(&this->tailOservedDatas_[i].observedThread, &observerAttr, observationThread_, &this->tailOservedDatas_[i]);
-                pthread_create(&this->headOservedDatas_[i+1].observedThread, &headObserverAttr, observationThread_, &this->headOservedDatas_[i+1]);
+                pthread_create(&this->tailObservedDataList_[i].observedThread, &observerAttr, observationThread_, &this->tailObservedDataList_[i]);
+                pthread_create(&this->headObservedDataList_[i + 1].observedThread, &headObserverAttr, observationThread_, &this->headObservedDataList_[i + 1]);
             }
         }
 
-        emitter_->setFastCallData(&this->fastCallDatas_[0]);
+        // create source thread
+        emitter_->setFastCallData(&this->fastCallDataList_[0]);
         SourceEmitterPair sourceEmitterPair = { this->source_, this->emitter_ };
 
         pthread_attr_init(&sourceAttr);
@@ -199,53 +203,53 @@ int EngineWithBufferObserver::start() {
         pthread_create(&this->sourceThread_, &sourceAttr, startSource_, &sourceEmitterPair);
         printf("Start source...\n");
 
+        // create sink thread
         FastOCallStruct fastOCallStruct = {
-            .fastOCallData = &this->fastCallDatas_.back(),
+            .fastOCallData = &this->fastCallDataList_.back(),
             .sinkFunc = this->sink_
         };
         pthread_attr_init(&sinkAttr);
         CPU_ZERO(&sinkCpu);
         CPU_SET(4, &sinkCpu);
         pthread_attr_setaffinity_np(&sinkAttr, sizeof(cpu_set_t), &sinkCpu);
-        pthread_create(&this->fastCallDatas_.back().responderThread, &sinkAttr, appResponderThread_, &fastOCallStruct);
+        pthread_create(&this->fastCallDataList_.back().responderThread, &sinkAttr, appResponderThread_, &fastOCallStruct);
         printf("Start sink...\n");
 
+        // wait for source end
         if (this->sourceThread_ != 0)
             pthread_join(this->sourceThread_, nullptr);
         printf("Ended source\n");
 
+        // wait for all enclaves end
         for (size_t i = 0; i < this->enclaveIds_.size(); ++i)
         {
             printf("Wait for enclave %lu end\n", i);
-            StopFastCallResponder(&this->fastCallDatas_[i]);
-            pthread_join(this->fastCallDatas_[i].responderThread, nullptr);
+            StopFastCallResponder(&this->fastCallDataList_[i]);
+            pthread_join(this->fastCallDataList_[i].responderThread, nullptr);
         }
-        StopFastCallResponder(&this->fastCallDatas_.back());
-        pthread_join(this->fastCallDatas_.back().responderThread, nullptr);
+        StopFastCallResponder(&this->fastCallDataList_.back());
+        pthread_join(this->fastCallDataList_.back().responderThread, nullptr);
 
 //        this->shouldContinue_ = false;
 //        pthread_join(this->processedCountThreadId_, nullptr);
 
+        // wait for all observation threads end
         for (size_t i = 0; i < this->buffers_.size(); ++i) {
             printf("Wait for head observer %lu end\n", i);
-            this->headOservedDatas_[i].keepPolling = false;
+            this->headObservedDataList_[i].keepPolling = false;
 
             printf("Wait for tail observer %lu end\n", i);
-            this->tailOservedDatas_[i].keepPolling = false;
+            this->tailObservedDataList_[i].keepPolling = false;
 
-            pthread_join(this->headOservedDatas_[i].observedThread, nullptr);
-            pthread_join(this->tailOservedDatas_[i].observedThread, nullptr);
+            pthread_join(this->headObservedDataList_[i].observedThread, nullptr);
+            pthread_join(this->tailObservedDataList_[i].observedThread, nullptr);
         }
     }
 
+    // destroy enclaves
     const int destroyEnclaveResult = destroyEnclaves();
     printf("Destroyed %d enclaves\n", destroyEnclaveResult);
-
-//    for (const auto& observerData : tailOservedDatas_) {
-//        delete[] observerData.noItem;
-//    }
-
-    printf("DONE\n");
+    printf("Engine stopped\n");
     return 0;
 }
 
@@ -287,17 +291,17 @@ void *EngineWithBufferObserver::processedCountThread_(void *circularBufferAsVoid
 void EngineWithBufferObserver::clean() {
     SimpleEngine::clean();
 
-    for (auto & headObservedData : this->headOservedDatas_) {
+    for (auto & headObservedData : this->headObservedDataList_) {
         delete[] headObservedData.noItem;
 //        delete[] headObservedData.timePoints;
         delete[] headObservedData.timestampCounterPoints;
     }
-    this->headOservedDatas_.clear();
+    this->headObservedDataList_.clear();
 
-    for (auto & tailObservedData : this->tailOservedDatas_) {
+    for (auto & tailObservedData : this->tailObservedDataList_) {
         delete[] tailObservedData.noItem;
 //        delete[] tailObservedData.timePoints;
         delete[] tailObservedData.timestampCounterPoints;
     }
-    this->tailOservedDatas_.clear();
+    this->tailObservedDataList_.clear();
 }

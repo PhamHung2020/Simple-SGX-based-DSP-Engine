@@ -10,10 +10,6 @@
 
 #define TASK_COUNT 37
 
-void MapCsvRowToEvent(void* data);
-void TaskExecutor(void* data);
-void TaskExecutor2(void* data);
-void TaskExecutor3(void* data);
 
 void MapCsvRowToFlight(void* data);
 void FilterFlight(void* data);
@@ -58,10 +54,6 @@ void NexmarkQ8_Map(void* data);
 void NexmarkQA_JoinPersonBid(void* data);
 
 static void (*callbacks[TASK_COUNT])(void*) = {
-        MapCsvRowToEvent,
-        TaskExecutor,
-        TaskExecutor2,
-        TaskExecutor3,
         MapCsvRowToFlight,
         FilterFlight,
         ReduceFlight,

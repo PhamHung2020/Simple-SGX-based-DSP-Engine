@@ -13,10 +13,3 @@ void ocall_print_string(const char *str)
      */
     printf("%s", str);
 }
-
-void printEvent(MyEvent event)
-{
-    printf(
-        "(%lf %d %d %d %s)\n",
-        event.timestamp, event.sourceId, event.key, event.data, event.message);
-}

@@ -2,8 +2,8 @@
 // Created by hungpm on 27/03/2024.
 //
 
-#ifndef ENGINEWITHBUFFEROBSERVER_H
-#define ENGINEWITHBUFFEROBSERVER_H
+#ifndef ENGINE_WITH_BUFFER_OBSERVER_H
+#define ENGINE_WITH_BUFFER_OBSERVER_H
 
 #include "SimpleEngine.h"
 #include "DataStructure/circular_buffer.h"
@@ -39,12 +39,13 @@ public:
     void addTask(uint16_t callId, uint16_t inputDataSize) override;
     bool isObserved(int index);
 
-    static uint64_t processedPerSecond[10000];
+    static uint64_t processedPerSecond[1];
     static int processedCountIndex;
+    void clean() override;
 
 protected:
-    std::vector<ObservedData> headOservedDatas_;
-    std::vector<ObservedData> tailOservedDatas_;
+    std::vector<ObservedData> headObservedDataList_;
+    std::vector<ObservedData> tailObservedDataList_;
     std::vector<bool> shouldObserved_;
     pthread_t processedCountThreadId_;
     static bool shouldContinue_;
@@ -53,9 +54,6 @@ protected:
     static void* processedCountThread_(void* circularBufferAsVoidP);
 
     int initializeDataStructures() override;
-
-public:
-    void clean() override;
 };
 
-#endif //ENGINEWITHBUFFEROBSERVER_H
+#endif //ENGINE_WITH_BUFFER_OBSERVER_H

@@ -21,8 +21,6 @@ enclave {
 
   untrusted {
     void ocall_print_string([in, string] const char *str);
-
-    void printEvent(MyEvent event);
   };
 
 };

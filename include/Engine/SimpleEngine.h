@@ -2,8 +2,8 @@
 // Created by hungpm on 25/03/2024.
 //
 
-#ifndef SIMPLEENGINE_H
-#define SIMPLEENGINE_H
+#ifndef SIMPLE_ENGINE_H
+#define SIMPLE_ENGINE_H
 
 #include <vector>
 #include <chrono>
@@ -28,7 +28,7 @@ protected:
     std::vector<sgx_enclave_id_t> enclaveIds_;
     std::vector<pthread_t> enclaveThreads_;
     std::vector<circular_buffer> buffers_;
-    std::vector<FastCallStruct> fastCallDatas_;
+    std::vector<FastCallStruct> fastCallDataList_;
     std::vector<FastCallPair> fastCallPairs_;
 
     static std::chrono::_V2::system_clock::time_point startSourceTime_;
@@ -40,11 +40,11 @@ protected:
     static void* startSource_(void* sourceEmitterPairAsVoid);
     static void* enclaveResponderThread_(void* fastCallPairAsVoidP);
     static void* appResponderThread_(void* fastOCallAsVoidP);
-    static void clearTime();
 
     virtual int initializeEnclaves();
     virtual int destroyEnclaves() const;
     virtual int initializeDataStructures();
+
 public:
     virtual ~SimpleEngine() = default;
 
@@ -76,4 +76,4 @@ public:
     } FastOCallStruct;
 };
 
-#endif //SIMPLEENGINE_H
+#endif //SIMPLE_ENGINE_H
