@@ -90,6 +90,23 @@ void *FlightDataParser::parseFromString(const std::string &str) {
     return this->pFlightData_;
 }
 
+void writeObservedMeasurementToFile(const std::string& pathToFile, const EngineWithBufferObserver::ObservedData& observedData) {
+    std::ofstream measurementFile;
+    measurementFile.open(pathToFile, std::ios::out);
+    std::cout << "Count " << observedData.count << std::endl;
+
+    measurementFile << "index,time\n";
+
+    for (uint64_t i = 0; i < observedData.count; ++i) {
+        if (i == 0) {
+            measurementFile << observedData.noItem[i] << "," << observedData.timestampCounterPoints[0] - observedData.startTimestamp << std::endl;
+        } else {
+            measurementFile << observedData.noItem[i] << "," << observedData.timestampCounterPoints[i] - observedData.timestampCounterPoints[i-1] << std::endl;
+        }
+    }
+
+    measurementFile.close();
+}
 
 FlightDataParser::~FlightDataParser() {
     delete this->pFlightData_;

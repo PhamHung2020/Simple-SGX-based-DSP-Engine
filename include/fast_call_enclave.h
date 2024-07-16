@@ -130,7 +130,7 @@ static inline int FastCall_request_encrypt2(FastCallStruct* fastCallData, void *
     uint32_t numRetries = 0;
 
     const int encryptedDataLength = fastCallData->data_buffer->data_size - 4;
-    const int originalDataLength = encryptedDataLength - SGX_AESGCM_MAC_SIZE - SGX_AESGCM_IV_SIZE - 4;
+    const int originalDataLength = encryptedDataLength - SGX_AESGCM_MAC_SIZE - SGX_AESGCM_IV_SIZE;
 //    char* encryptedData = (char*) malloc((encryptedDataLength + 1) * sizeof(char));
 //    char encryptedData[1000];
     // Request call

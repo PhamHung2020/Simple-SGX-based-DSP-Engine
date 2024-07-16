@@ -7,7 +7,7 @@
 
 #include "EngineWithBufferObserver.h"
 
-class EngineWithBufferObserverCrypto : EngineWithBufferObserver {
+class EngineWithBufferObserverCrypto : public EngineWithBufferObserver {
 public:
     static void encryptInput(bool);
     static void encryptOutput(bool);

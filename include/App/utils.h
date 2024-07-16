@@ -9,6 +9,8 @@
 
 #include "Source/Parser.h"
 #include "data_types.h"
+#include "ConfigurationTesting.h"
+#include "Engine/EngineWithBufferObserver.h"
 
 std::string createMeasurementsDirectory(const std::string &pathToDir);
 
@@ -35,5 +37,9 @@ public:
     void *parseFromString(const std::string& str) override;
     ~FlightDataIntermediateParser();
 };
+
+void writeObservedMeasurementToFile(const std::string& pathToFile, const EngineWithBufferObserver::ObservedData& observedData);
+
+void runEngineWithBufferObserverCrypto(ConfigurationTesting& config, bool shouldCreateMeasurementDirectory = false, bool shouldCreateResultDirectory = false);
 
 #endif //UTILS_H

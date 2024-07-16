@@ -8,6 +8,7 @@
 #include "Nexmark/schemas.h"
 #include "Nexmark/sinks.h"
 #include "Nexmark/parsers.h"
+#include "Nexmark/NexmarkQuery.h"
 
 using namespace std;
 
@@ -66,25 +67,31 @@ int SGX_CDECL main(int argc, char *argv[])
         std::string measurementDirName = createDirectory(measurementBatchDirName + "/" + std::to_string(i));
         std::string resultDirName = createDirectory(resultBatchDirName + "/" + std::to_string(i));
 
-        ConfigurationTesting config;
-        config.resultDirName = resultDirName;
-        config.measurementDirName = measurementDirName;
+        NexmarkQuery nexmarkQuery;
+        nexmarkQuery.setMeasurementDirName(measurementDirName);
+        nexmarkQuery.setResultDirName(resultDirName);
 
-        config.sourceId = 1;
-        config.sourceDelay = 0;
-        config.sourceHasHeader = true;
-        config.sourceCount = -1;
+        nexmarkQuery.runQuery1("../../../other/bids.csv", "process_time_q1_test.csv", "q1result_test.csv");
 
-         config.sinkFileName = "q1result_test.csv";
-         config.measurementFileName = "process_time_q1_test.csv";
-         config.sourceFileName = "../../../other/bids.csv";
-         config.taskId = 12;
-         config.taskInputDataSize = sizeof(Bid) + SGX_AESGCM_MAC_SIZE + SGX_AESGCM_IV_SIZE + 4;
-         config.taskShouldBeObserved = true;
-         config.outputDataSize = sizeof(Bid) + SGX_AESGCM_MAC_SIZE + SGX_AESGCM_IV_SIZE + 4;
-         config.parser = new BidParser();
-         config.sink = sinkBid;
-         config.sinkFileStream = getSinkFileStream();
+//        ConfigurationTesting config;
+//        config.resultDirName = resultDirName;
+//        config.measurementDirName = measurementDirName;
+//
+//        config.sourceId = 1;
+//        config.sourceDelay = 0;
+//        config.sourceHasHeader = true;
+//        config.sourceCount = -1;
+//
+//         config.sinkFileName = "q1result_test.csv";
+//         config.measurementFileName = "process_time_q1_test.csv";
+//         config.sourceFileName = "../../../other/bids.csv";
+//         config.taskId = 12;
+//         config.taskInputDataSize = sizeof(Bid) + SGX_AESGCM_MAC_SIZE + SGX_AESGCM_IV_SIZE + 4;
+//         config.taskShouldBeObserved = true;
+//         config.outputDataSize = sizeof(Bid) + SGX_AESGCM_MAC_SIZE + SGX_AESGCM_IV_SIZE + 4;
+//         config.parser = new BidParser();
+//         config.sink = sinkBid;
+//         config.sinkFileStream = getSinkFileStream();
 
 //        config.sinkFileName = "q2result_filter.csv";
 //        config.measurementFileName = "process_time_q2_filter.csv";
@@ -357,7 +364,7 @@ int SGX_CDECL main(int argc, char *argv[])
 //        config.sink = sinkQ8MapResult;
 //        config.sinkFileStream = getSinkFileStream();
 //
-        testNexmark(config);
+//        testNexmark(config);
 //
 //        config.sinkFileName = "q8result_map_900.csv";
 //        config.measurementFileName = "process_time_q8_map_900.csv";
