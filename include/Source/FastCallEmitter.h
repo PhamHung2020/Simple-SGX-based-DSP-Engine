@@ -10,7 +10,7 @@
 
 class FastCallEmitter : public Emitter
 {
-private:
+protected:
     FastCallStruct* fastCallDataP_ = nullptr;
 public:
     void setFastCallData(FastCallStruct* fastCallData);

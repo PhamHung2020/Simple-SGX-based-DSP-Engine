@@ -43,6 +43,15 @@ std::string createMeasurementsDirectory(const std::string &pathToDir) {
     return m_measurementsDir;
 }
 
+std::string createDirectory(const std::string &pathToDir) {
+    if (!isDirectoryExists(pathToDir)) {
+        printf("Creating directory %s\n", pathToDir.c_str());
+        mkdir(pathToDir.c_str(), 0700);
+    }
+
+    return pathToDir;
+}
+
 FlightDataParser::FlightDataParser() {
     this->pFlightData_ = new FlightData;
 }

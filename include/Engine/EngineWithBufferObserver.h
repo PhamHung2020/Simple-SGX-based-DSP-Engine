@@ -10,7 +10,7 @@
 #include <chrono>
 #include <vector>
 
-#define MAX_ITEM 10000000
+#define MAX_ITEM 60000000
 
 class EngineWithBufferObserver : public SimpleEngine {
 public:
@@ -22,9 +22,11 @@ public:
         uint64_t previousValue;
         uint64_t* noItem;
         std::chrono::_V2::system_clock::time_point* timePoints;
+        uint64_t* timestampCounterPoints;
         uint64_t count;
         bool keepPolling;
         std::chrono::_V2::system_clock::time_point startTime;
+        uint64_t startTimestamp;
     } ObservedData;
 
     ObservedData& getHeadObservedData(int index);

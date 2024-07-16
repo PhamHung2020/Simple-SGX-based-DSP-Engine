@@ -42,7 +42,8 @@ void *SimpleEngine::enclaveResponderThread_(void *fastCallPairAsVoidP)
     const uint8_t no = fastCallPair->no;
 
     startEnclaveTimes_[no] = std::chrono::high_resolution_clock::now();
-    const sgx_status_t status = EcallStartResponder(fastCallPair->enclaveId, fastEcall, fastOcall, fastCallPair->callId);
+    const sgx_status_t status = EcallStartResponderWithDecryption(fastCallPair->enclaveId, fastEcall, fastOcall, fastCallPair->callId);
+//    const sgx_status_t status = EcallStartResponder(fastCallPair->enclaveId, fastEcall, fastOcall, fastCallPair->callId);
     endEnclaveTimes_[no] = std::chrono::high_resolution_clock::now();
 
     if (status == SGX_SUCCESS)
@@ -69,7 +70,8 @@ void* SimpleEngine::appResponderThread_(void* fastOCallAsVoidP)
     callTable.numEntries = 1;
     callTable.callbacks  = callbacks;
 
-    FastCall_wait(fastOCallStruct->fastOCallData, &callTable, 0);
+//    FastCall_wait(fastOCallStruct->fastOCallData, &callTable, 0);
+    FastCall_wait_decrypt(fastOCallStruct->fastOCallData, &callTable, 0);
     endPipelineTime_ = std::chrono::high_resolution_clock::now();
 
     return nullptr;
@@ -250,10 +252,10 @@ int SimpleEngine::start()
     const int destroyEnclaveResult = destroyEnclaves();
     printf("Destroyed %d enclaves\n", destroyEnclaveResult);
 
-    for (const auto & buffer : this->buffers_)
-    {
-        delete[] static_cast<char *>(buffer.buffer);
-    }
+//    for (const auto & buffer : this->buffers_)
+//    {
+//        delete[] static_cast<char *>(buffer.buffer);
+//    }
 
     printf("DONE\n");
     return 0;
@@ -296,6 +298,11 @@ void SimpleEngine::clean() {
 
     startEnclaveTimes_.clear();
     endEnclaveTimes_.clear();
+
+    for (const auto & buffer : this->buffers_)
+    {
+        delete[] static_cast<char *>(buffer.buffer);
+    }
 
     this->buffers_.clear();
     this->enclaveIds_.clear();

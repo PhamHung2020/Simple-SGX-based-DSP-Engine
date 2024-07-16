@@ -13,10 +13,12 @@
 #include "Source/CsvSource.h"
 #include "data_types.h"
 #include "Engine/SimpleEngine.h"
+#include "Source/FastCallEncryptedEmitter.h"
 #include "Source/Parser.h"
 #include "App/utils.h"
+#include "Crypto/aes_gcm.h"
 
-std::string resultDirName = "../../results/callbacks";
+std::string resultDirName = "../../results/callbacks/2024-07-04_10-50-22";
 std::string sinkFileName = "map.csv";
 std::string sourceFileName = "../../dataset/secure-sgx-dataset/2005.csv";
 //std::string sourceFileName = "../../results/callbacks/2024-04-09_14-21-15/map.csv";
@@ -41,8 +43,10 @@ void testSimpleEngine_sinkResult(void* rawData)
 void testSimpleEngine() {
 //    FlightDataParser flightDataParser;
 //    FlightDataIntermediateParser parser;
-    FastCallEmitter emitter;
-    CsvSource source1(1, sourceFileName, 0, true, -1);
+//    FastCallEmitter emitter;
+    FastCallEncryptedEmitter emitter;
+//    emitter.setDataLength(200);
+    CsvSource source1(1, sourceFileName, 0, true, 1000000);
 //    source1.setParser(&parser);
 
     SimpleEngine engine;
@@ -50,7 +54,7 @@ void testSimpleEngine() {
     engine.setEmitter(emitter);
 
     // map
-    engine.addTask(4, 200);
+    engine.addTask(4, SGX_AESGCM_MAC_SIZE + SGX_AESGCM_IV_SIZE + 200);
 
     // filter
 //    engine.addTask(5, sizeof(FlightData));
@@ -61,7 +65,7 @@ void testSimpleEngine() {
     // join
 //    engine.addTask(7, sizeof(FlightData));
 
-    engine.setSink(testSimpleEngine_sinkResult, sizeof(JoinedFlightData));
+    engine.setSink(testSimpleEngine_sinkResult, sizeof(FlightData) + SGX_AESGCM_MAC_SIZE + SGX_AESGCM_IV_SIZE);
 
     // create directory and file to store processed results
     std::string fileFullPath;

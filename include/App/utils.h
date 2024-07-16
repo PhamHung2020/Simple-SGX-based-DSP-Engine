@@ -12,6 +12,8 @@
 
 std::string createMeasurementsDirectory(const std::string &pathToDir);
 
+std::string createDirectory(const std::string &pathToDir);
+
 void getTimeStamp(char *timestamp, size_t size);
 
 bool isDirectoryExists(const std::string& path);

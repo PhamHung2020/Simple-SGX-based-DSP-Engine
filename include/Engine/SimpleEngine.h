@@ -13,7 +13,7 @@
 #include "Source/FastCallEmitter.h"
 #include "DataStructure/circular_buffer.h"
 
-#define MAX_BUFFER_SIZE 100000
+#define MAX_BUFFER_SIZE 2000000
 
 class SimpleEngine {
 

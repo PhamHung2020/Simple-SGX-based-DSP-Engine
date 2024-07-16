@@ -8,7 +8,7 @@
 #include <vector>
 #include "data_types.h"
 
-#define TASK_COUNT 9
+#define TASK_COUNT 37
 
 void MapCsvRowToEvent(void* data);
 void TaskExecutor(void* data);
@@ -21,16 +21,81 @@ void ReduceFlight(void* data);
 void JoinFlight(void* data);
 void JoinFlight2Stream(void* data);
 
+void MapFlightToFlight(void* data);
+void FilterCarrierAndDelay(void* data);
+void ReduceDelay(void* data);
+
+void NexmarkQ1(void* data);
+void NexmarkQ2_Filter(void* data);
+void NexmarkQ2_Map(void* data);
+void NexmarkQ3_FilterPerson(void* data);
+void NexmarkQ3_FilterAuction(void* data);
+void NexmarkQ3_JoinPersonAuction(void* data);
+void NexmarkQ3_MapResult(void* data);
+void NexmarkQ4_JoinAuctionBid(void* data);
+void NexmarkQ4_MapAuctionBid(void* data);
+void NexmarkQ4_MaxAuctionPriceByCategory(void* data);
+void NexmarkQ4_JoinWithCategory(void* data);
+void NexmarkQ4_Average(void* data);
+
+//void NexmarkQ5_CountTotal(void* data);
+void NexmarkQ5_CountByAuction(void* data);
+void NexmarkQ5_MaxBatch(void* data);
+//void NexmarkQ5_MaxWindow(void* data);
+
+void NexmarkQ6_Join(void* data);
+void NexmarkQ6_Filter(void* data);
+void NexmarkQ6_Max(void* data);
+void NexmarkQ6_Avg(void* data);
+
+//void NexmarkQ7_Max(void* data);
+//void NexmarkQ7_Join(void* data);
+void NexmarkQ7_MaxJoin(void* data);
+
+void NexmarkQ8_JoinPersonAuction(void* data);
+void NexmarkQ8_Map(void* data);
+
+void NexmarkQA_JoinPersonBid(void* data);
+
 static void (*callbacks[TASK_COUNT])(void*) = {
-    MapCsvRowToEvent,
-    TaskExecutor,
-    TaskExecutor2,
-    TaskExecutor3,
-    MapCsvRowToFlight,
-    FilterFlight,
-    ReduceFlight,
-    JoinFlight,
-    JoinFlight2Stream
+        MapCsvRowToEvent,
+        TaskExecutor,
+        TaskExecutor2,
+        TaskExecutor3,
+        MapCsvRowToFlight,
+        FilterFlight,
+        ReduceFlight,
+        JoinFlight,
+        JoinFlight2Stream,
+        MapFlightToFlight,
+        FilterCarrierAndDelay,
+        ReduceDelay,
+        NexmarkQ1,
+        NexmarkQ2_Filter,
+        NexmarkQ2_Map,
+        NexmarkQ3_FilterPerson,
+        NexmarkQ3_FilterAuction,
+        NexmarkQ3_JoinPersonAuction,
+        NexmarkQ3_MapResult,
+        NexmarkQ4_JoinAuctionBid,
+        NexmarkQ4_MapAuctionBid,
+        NexmarkQ4_MaxAuctionPriceByCategory,
+        NexmarkQ4_JoinWithCategory,
+        NexmarkQ4_Average,
+//        NexmarkQ5_CountTotal,
+        NexmarkQ5_CountByAuction,
+        NexmarkQ5_MaxBatch,
+//        NexmarkQ5_MaxWindow,
+        NexmarkQ6_Join,
+        NexmarkQ6_Filter,
+        NexmarkQ6_Max,
+        NexmarkQ6_Avg,
+//        NexmarkQ7_Max,
+//        NexmarkQ7_Join,
+        NexmarkQ7_MaxJoin,
+        NexmarkQ8_JoinPersonAuction,
+        NexmarkQ8_Map,
+        NexmarkQA_JoinPersonBid,
 };
 
 #if defined(__cplusplus)

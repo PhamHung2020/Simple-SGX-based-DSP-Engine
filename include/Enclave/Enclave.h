@@ -5,7 +5,8 @@
 #ifndef ENCLAVE_H
 #define ENCLAVE_H
 
-#include "fast_call.h"
+//#include "fast_call.h"
+#include "fast_call_enclave.h"
 
 #if defined(__cplusplus)
 extern "C" {

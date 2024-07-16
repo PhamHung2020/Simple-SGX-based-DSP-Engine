@@ -8,6 +8,8 @@
 #include <pthread.h>
 #include <unistd.h>
 
+#include "utils.h"
+
 uint64_t EngineWithBufferObserver::processedPerSecond[10000];
 int EngineWithBufferObserver::processedCountIndex = 0;
 bool EngineWithBufferObserver::shouldContinue_ = true;
@@ -36,12 +38,15 @@ void * EngineWithBufferObserver::observationThread_(void *observedDataAsVoidP) {
     const auto observedData = static_cast<ObservedData*>(observedDataAsVoidP);
 
     const auto buffer = observedData->buffer;
-    observedData->startTime = std::chrono::high_resolution_clock::now();
+//    observedData->startTime = std::chrono::high_resolution_clock::now();
+    observedData->startTimestamp = rdtscp();
     if (observedData->isHead) {
         while (true) {
             const int value = buffer->head;
             if (value != observedData->previousValue) {
-                observedData->timePoints[observedData->count] = std::chrono::high_resolution_clock::now();
+//                observedData->timePoints[observedData->count] = std::chrono::high_resolution_clock::now();
+                uint64_t timestamp = rdtscp();
+                observedData->timestampCounterPoints[observedData->count] = timestamp;
                 observedData->noItem[observedData->count] = value;
                 observedData->count += 1;
                 observedData->previousValue = value;
@@ -54,13 +59,14 @@ void * EngineWithBufferObserver::observationThread_(void *observedDataAsVoidP) {
         while (true) {
             const int value = buffer->tail;
             if (value != observedData->previousValue) {
-                observedData->timePoints[observedData->count] = std::chrono::high_resolution_clock::now();
+//                observedData->timePoints[observedData->count] = std::chrono::high_resolution_clock::now();
+                uint64_t timestamp = rdtscp();
+                observedData->timestampCounterPoints[observedData->count] = timestamp;
                 observedData->noItem[observedData->count] = value;
                 observedData->count += 1;
                 observedData->previousValue = value;
             }
 
-//            printf("keep polling: %d\n", observedData->keepPolling);
             if (!observedData->keepPolling)
                 break;
         }
@@ -80,16 +86,23 @@ int EngineWithBufferObserver::initializeDataStructures() {
     this->tailOservedDatas_.reserve(nBuffer);
 
     for (size_t i = 0; i < nBuffer; ++i) {
-//        ObservedData headObservedData;
-//        headObservedData.observedThread = 0;
-//        headObservedData.buffer = &this->buffers_[i];
-//        headObservedData.isHead = true;
-//        headObservedData.count = 0;
-//        headObservedData.keepPolling = true;
-//        headObservedData.previousValue = 0;
-//        headObservedData.noItem = new uint16_t[MAX_ITEM];
+        ObservedData headObservedData;
+        headObservedData.observedThread = 0;
+        headObservedData.buffer = &this->buffers_[i];
+        headObservedData.isHead = true;
+        headObservedData.count = 0;
+        headObservedData.keepPolling = true;
+        headObservedData.previousValue = 0;
+        headObservedData.noItem = new uint64_t[MAX_ITEM];
 //        headObservedData.timePoints = new std::chrono::_V2::system_clock::time_point[MAX_ITEM];
-//        this->headOservedDatas_.push_back(headObservedData);
+        headObservedData.timestampCounterPoints = new uint64_t[MAX_ITEM];
+
+        // initialize timestamp
+        for (size_t j = 0; j < MAX_ITEM; ++j) {
+            headObservedData.timestampCounterPoints[j] = -1;
+        }
+
+        this->headOservedDatas_.push_back(headObservedData);
 
         ObservedData tailObservedData;
         tailObservedData.observedThread = 0;
@@ -99,7 +112,13 @@ int EngineWithBufferObserver::initializeDataStructures() {
         tailObservedData.keepPolling = true;
         tailObservedData.previousValue = 0;
         tailObservedData.noItem = new uint64_t[MAX_ITEM];
-        tailObservedData.timePoints = new std::chrono::_V2::system_clock::time_point[MAX_ITEM];
+//        tailObservedData.timePoints = new std::chrono::_V2::system_clock::time_point[MAX_ITEM];
+        tailObservedData.timestampCounterPoints = new uint64_t[MAX_ITEM];
+
+        // initialize timestamp
+        for (size_t j = 0; j < MAX_ITEM; ++j) {
+            tailObservedData.timestampCounterPoints[j] = -1;
+        }
         this->tailOservedDatas_.push_back(tailObservedData);
     }
 
@@ -119,7 +138,7 @@ int EngineWithBufferObserver::start() {
     const int initializationResult = initializeEnclaves();
     printf("Initialized %d enclaves\n", initializationResult);
 
-//    if (!this->enclaveIds_.empty()) {
+//    if (!this->enclaveId_.empty()) {
 //        pthread_create(&this->processedCountThreadId_, nullptr, processedCountThread_, &this->buffers_[0]);
 //    }
 
@@ -131,18 +150,25 @@ int EngineWithBufferObserver::start() {
     cpu_set_t sinkCpu;
     pthread_attr_t observerAttr;
     cpu_set_t observerCpu;
+    pthread_attr_t headObserverAttr;
+    cpu_set_t headObserverCpu;
 
     if (initializationResult == this->enclaveIds_.size())
     {
         pthread_attr_init(&enclaveAttr);
         CPU_ZERO(&enclaveCpu);
-        CPU_SET(0, &enclaveCpu);
+        CPU_SET(7, &enclaveCpu);
         pthread_attr_setaffinity_np(&enclaveAttr, sizeof(cpu_set_t), &enclaveCpu);
 
         pthread_attr_init(&observerAttr);
         CPU_ZERO(&observerCpu);
-        CPU_SET(1, &observerCpu);
+        CPU_SET(6, &observerCpu);
         pthread_attr_setaffinity_np(&observerAttr, sizeof(cpu_set_t), &observerCpu);
+
+        pthread_attr_init(&headObserverAttr);
+        CPU_ZERO(&headObserverCpu);
+        CPU_SET(5, &headObserverCpu);
+        pthread_attr_setaffinity_np(&headObserverAttr, sizeof(cpu_set_t), &headObserverCpu);
 
         for (size_t i = 0; i < this->enclaveIds_.size(); ++i)
         {
@@ -159,7 +185,7 @@ int EngineWithBufferObserver::start() {
 
             if (this->shouldObserved_[i]) {
                 pthread_create(&this->tailOservedDatas_[i].observedThread, &observerAttr, observationThread_, &this->tailOservedDatas_[i]);
-//                pthread_create(&this->headOservedDatas_[i+1].observedThread, nullptr, observationThread_, &this->headOservedDatas_[i+1]);
+                pthread_create(&this->headOservedDatas_[i+1].observedThread, &headObserverAttr, observationThread_, &this->headOservedDatas_[i+1]);
             }
         }
 
@@ -168,7 +194,7 @@ int EngineWithBufferObserver::start() {
 
         pthread_attr_init(&sourceAttr);
         CPU_ZERO(&sourceCpu);
-        CPU_SET(2, &sourceCpu);
+        CPU_SET(3, &sourceCpu);
         pthread_attr_setaffinity_np(&sourceAttr, sizeof(cpu_set_t), &sourceCpu);
         pthread_create(&this->sourceThread_, &sourceAttr, startSource_, &sourceEmitterPair);
         printf("Start source...\n");
@@ -179,7 +205,7 @@ int EngineWithBufferObserver::start() {
         };
         pthread_attr_init(&sinkAttr);
         CPU_ZERO(&sinkCpu);
-        CPU_SET(3, &sinkCpu);
+        CPU_SET(4, &sinkCpu);
         pthread_attr_setaffinity_np(&sinkAttr, sizeof(cpu_set_t), &sinkCpu);
         pthread_create(&this->fastCallDatas_.back().responderThread, &sinkAttr, appResponderThread_, &fastOCallStruct);
         printf("Start sink...\n");
@@ -207,19 +233,13 @@ int EngineWithBufferObserver::start() {
             printf("Wait for tail observer %lu end\n", i);
             this->tailOservedDatas_[i].keepPolling = false;
 
-//            pthread_join(this->headOservedDatas_[i].observedThread, nullptr);
+            pthread_join(this->headOservedDatas_[i].observedThread, nullptr);
             pthread_join(this->tailOservedDatas_[i].observedThread, nullptr);
         }
     }
 
     const int destroyEnclaveResult = destroyEnclaves();
     printf("Destroyed %d enclaves\n", destroyEnclaveResult);
-    printf("Count: %lu", tailOservedDatas_[0].count);
-
-    for (const auto & buffer : this->buffers_)
-    {
-        delete[] static_cast<MyEvent *>(buffer.buffer);
-    }
 
 //    for (const auto& observerData : tailOservedDatas_) {
 //        delete[] observerData.noItem;
@@ -269,13 +289,15 @@ void EngineWithBufferObserver::clean() {
 
     for (auto & headObservedData : this->headOservedDatas_) {
         delete[] headObservedData.noItem;
-        delete[] headObservedData.timePoints;
+//        delete[] headObservedData.timePoints;
+        delete[] headObservedData.timestampCounterPoints;
     }
     this->headOservedDatas_.clear();
 
     for (auto & tailObservedData : this->tailOservedDatas_) {
         delete[] tailObservedData.noItem;
-        delete[] tailObservedData.timePoints;
+//        delete[] tailObservedData.timePoints;
+        delete[] tailObservedData.timestampCounterPoints;
     }
     this->tailOservedDatas_.clear();
 }

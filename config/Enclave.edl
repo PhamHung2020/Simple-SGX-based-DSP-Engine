@@ -2,13 +2,17 @@
 
 enclave {
   include "../include/hot_calls.h"
-  include "../include/fast_call.h"
+  include "../include/fast_call_enclave.h"
   include "../include/data_types.h"
 
   trusted {
     public void EcallStartResponder([user_check] FastCallStruct* fastECallData, [user_check] FastCallStruct* fastOCallData, uint16_t callId);
 
+    public void EcallStartResponderWithDecryption([user_check] FastCallStruct* fastECallData, [user_check] FastCallStruct* fastOCallData, uint16_t callId);
+
     public void EcallStartResponder2([user_check] FastCallStruct* fastECallData1, [user_check] FastCallStruct* fastECallData2, [user_check] FastCallStruct* fastOCallData, uint16_t callId);
+
+    public void EcallStartResponder2WithDecryption([user_check] FastCallStruct* fastECallData1, [user_check] FastCallStruct* fastECallData2, [user_check] FastCallStruct* fastOCallData, uint16_t callId);
 
     public void EcallStartResponderWithHotCall([user_check] FastCallStruct* fastECallData, [user_check] FastCallStruct* fastOCallData, uint16_t callId, [user_check] HotCall* hotCall);
 

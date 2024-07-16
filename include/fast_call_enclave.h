@@ -3,11 +3,10 @@
 
 #include <stdbool.h>
 #include <sgx_spinlock.h>
+#include "Enclave/cryptography.h"
 #include "DataStructure/circular_buffer.h"
-#include "Crypto/aes_gcm.h"
 #include "sgx_eid.h"     /* sgx_enclave_id_t */
 #include "hot_calls.h"
-#include <string.h>
 
 #pragma GCC diagnostic ignored "-Wunused-function"
 
@@ -91,42 +90,73 @@ static inline int FastCall_request_encrypt(FastCallStruct* fastCallData, void *d
     int i = 0;
     const uint32_t MAX_RETRIES = 10000;
     uint32_t numRetries = 0;
-    int encryptedDataLength = fastCallData->data_buffer->data_size;
-    int originalDataLength = encryptedDataLength - SGX_AESGCM_MAC_SIZE - SGX_AESGCM_IV_SIZE;
-    char* encryptedData = (char*) malloc((encryptedDataLength + 1) * sizeof(char));
 
+    const int encryptedDataLength = fastCallData->data_buffer->data_size;
+    const int originalDataLength = encryptedDataLength - SGX_AESGCM_MAC_SIZE - SGX_AESGCM_IV_SIZE;
+    char* encryptedData = (char*) malloc((encryptedDataLength + 1) * sizeof(char));
+//    char encryptedData[encryptedDataLength+1];
     // Request call
     while(true)
     {
         // sgx_spin_lock(&fastCallData->spinlock);
-//        printf("Encrypting %s\n", (char *)data);
-        aes128GcmEncrypt(
-                (unsigned char *) data,
-                originalDataLength, NULL, 0,
-                const_cast<unsigned char *>(AES_GCM_KEY),
-                const_cast<unsigned char *>(AES_GCM_IV), SGX_AESGCM_IV_SIZE,
-                (unsigned char *)(encryptedData + SGX_AESGCM_MAC_SIZE + SGX_AESGCM_IV_SIZE),
-                (unsigned char *)(encryptedData));
 
-//        strncpy(encryptedData + SGX_AESGCM_MAC_SIZE, reinterpret_cast<const char *>(AES_GCM_IV), SGX_AESGCM_IV_SIZE);
+//        aesGcmEncrypt((char*)data, originalDataLength, encryptedData, encryptedDataLength);
         encryptedData[encryptedDataLength] = '\0';
-        if (circular_buffer_push(fastCallData->data_buffer, encryptedData) == 0)
-        {
-            // sgx_spin_unlock(&fastCallData->spinlock);
-            break;
-        }
-        // sgx_spin_unlock(&fastCallData->spinlock);
-
-        numRetries++;
-        if(numRetries > MAX_RETRIES)
-            return -1;
-
-        for (i = 0; i<3; ++i)
-            _mm_pause();
+        circular_buffer_push(fastCallData->data_buffer, encryptedData);
+        break;
+//        if (circular_buffer_push(fastCallData->data_buffer, encryptedData) == 0)
+//        {
+//            // sgx_spin_unlock(&fastCallData->spinlock);
+//            break;
+//        }
+//        // sgx_spin_unlock(&fastCallData->spinlock);
+//
+//        numRetries++;m
+//        if(numRetries > MAX_RETRIES)
+//            return -1;
+//
+//        for (i = 0; i<3; ++i)
+//            _mm_pause();
     }
 
-    free(encryptedData);
+//    free(encryptedData);
+    return numRetries;
+}
 
+static inline int FastCall_request_encrypt2(FastCallStruct* fastCallData, void *data, char* encryptedData)
+{
+    int i = 0;
+    const uint32_t MAX_RETRIES = 10000;
+    uint32_t numRetries = 0;
+
+    const int encryptedDataLength = fastCallData->data_buffer->data_size - 4;
+    const int originalDataLength = encryptedDataLength - SGX_AESGCM_MAC_SIZE - SGX_AESGCM_IV_SIZE - 4;
+//    char* encryptedData = (char*) malloc((encryptedDataLength + 1) * sizeof(char));
+//    char encryptedData[1000];
+    // Request call
+    while(true)
+    {
+        // sgx_spin_lock(&fastCallData->spinlock);
+        aesGcmEncrypt((char*)data, originalDataLength, encryptedData, encryptedDataLength);
+        encryptedData[encryptedDataLength] = '\0';
+        circular_buffer_push(fastCallData->data_buffer, encryptedData);
+        break;
+//        if (circular_buffer_push(fastCallData->data_buffer, encryptedData) == 0)
+//        {
+//            // sgx_spin_unlock(&fastCallData->spinlock);
+//            break;
+//        }
+//        // sgx_spin_unlock(&fastCallData->spinlock);
+//
+//        numRetries++;m
+//        if(numRetries > MAX_RETRIES)
+//            return -1;
+//
+//        for (i = 0; i<3; ++i)
+//            _mm_pause();
+    }
+
+//    free(encryptedData);
     return numRetries;
 }
 
@@ -184,32 +214,27 @@ static inline void FastCall_wait_decrypt(FastCallStruct *fastCallData, FastCallT
 static inline void FastCall_wait_decrypt(FastCallStruct *fastCallData, FastCallTable* callTable, uint16_t callId)
 {
     static int i = 0;
-    // char* data = new char[fastCallData->data_buffer->data_size];
     char* data;
-    int decryptedDataLength = fastCallData->data_buffer->data_size - SGX_AESGCM_MAC_SIZE - SGX_AESGCM_IV_SIZE - 4;
-    char* decryptedData = (char*) malloc((decryptedDataLength + 1) * sizeof(char));
+    const int dataSize = fastCallData->data_buffer->data_size - SGX_AESGCM_MAC_SIZE - SGX_AESGCM_IV_SIZE - 4;
+    char* decryptedData =  (char *) malloc((dataSize+1) * sizeof(char ));
     while(true)
     {
         // if (!fastCallData->keepPolling) {
         //     break;
         // }
+
         // sgx_spin_lock((&fastCallData->spinlock));
         if (circular_buffer_pop(fastCallData->data_buffer, (void**)&data) == 0)
         {
             // sgx_spin_unlock((&fastCallData->spinlock));
             if (callId < callTable->numEntries)
             {
-                aes128GcmDecrypt(
-                        (unsigned char*)data + SGX_AESGCM_MAC_SIZE + SGX_AESGCM_IV_SIZE,
-                        decryptedDataLength,
-                        NULL, 0,
-                        (unsigned char*)data,
-                        const_cast<unsigned char *>(AES_GCM_KEY),
-                        (unsigned char*)data + SGX_AESGCM_MAC_SIZE,
-                        SGX_AESGCM_IV_SIZE,
-                        (unsigned char*)decryptedData
-                );
-                decryptedData[decryptedDataLength] = '\0';
+                aesGcmDecrypt(
+                        data,
+                        dataSize,
+                        decryptedData,
+                        dataSize);
+                decryptedData[dataSize] = '\0';
                 callTable->callbacks[callId](decryptedData);
             }
 
@@ -270,6 +295,96 @@ static inline void FastCall_wait_2(FastCallStruct *fastCallData1, FastCallStruct
             FastCallDataGroup dataGroup = {
                     data1,
                     data2
+            };
+            callTable->callbacks[callId](&dataGroup);
+        }
+
+        if (popResult1 == 0) {
+            int next = fastCallData1->data_buffer->tail + 1;
+            if (next >= fastCallData1->data_buffer->maxlen) {
+                next = 0;
+            }
+            fastCallData1->data_buffer->tail = next;
+            sgx_spin_lock(&fastCallData1->data_buffer->lock_count);
+            fastCallData1->data_buffer->popped_count += 1;
+            sgx_spin_unlock(&fastCallData1->data_buffer->lock_count);
+        }
+
+        if (popResult2 == 0) {
+            int next = fastCallData2->data_buffer->tail + 1;
+            if (next >= fastCallData2->data_buffer->maxlen) {
+                next = 0;
+            }
+            fastCallData2->data_buffer->tail = next;
+            sgx_spin_lock(&fastCallData2->data_buffer->lock_count);
+            fastCallData2->data_buffer->popped_count += 1;
+            sgx_spin_unlock(&fastCallData2->data_buffer->lock_count);
+        }
+
+        if (!keepPolling && data1 == NULL && data2 == NULL) {
+            break;
+        }
+        keepPolling = false;
+        data1 = NULL;
+        data2 = NULL;
+    }
+
+    if (callId < callTable->numEntries) {
+        callTable->callbacks[callId](NULL);
+    }
+
+    // delete[] data;
+}
+
+static inline void FastCall_wait_2_decrypt(FastCallStruct *fastCallData1, FastCallStruct *fastCallData2, FastCallTable* callTable, uint16_t callId)  __attribute__((always_inline));
+static inline void FastCall_wait_2_decrypt(FastCallStruct *fastCallData1, FastCallStruct *fastCallData2, FastCallTable* callTable, uint16_t callId)
+{
+    static int i = 0;
+    char* data1 = NULL;
+    const int dataSize1 = fastCallData1->data_buffer->data_size - SGX_AESGCM_MAC_SIZE - SGX_AESGCM_IV_SIZE;
+    char* decryptedData1 =  (char *) malloc((dataSize1+1) * sizeof(char ));
+
+    char* data2 = NULL;
+    const int dataSize2 = fastCallData2->data_buffer->data_size - SGX_AESGCM_MAC_SIZE - SGX_AESGCM_IV_SIZE;
+    char* decryptedData2 =  (char *) malloc((dataSize2+1) * sizeof(char ));
+
+    bool keepPolling = false;
+    int popResult1, popResult2;
+    // char* data = new char[fastCallData->data_buffer->data_size];
+    while(true)
+    {
+        popResult1 = circular_buffer_pop(fastCallData1->data_buffer, (void**)&data1);
+        if (popResult1 == 0) {
+            aesGcmDecrypt(
+                    data1,
+                    dataSize1,
+                    decryptedData1,
+                    dataSize1);
+            decryptedData1[dataSize1] = '\0';
+        }
+
+        popResult2 = circular_buffer_pop(fastCallData2->data_buffer, (void**)&data2);
+        if (popResult2 == 0) {
+            aesGcmDecrypt(
+                    data2,
+                    dataSize2,
+                    decryptedData2,
+                    dataSize2);
+            decryptedData2[dataSize2] = '\0';
+        }
+
+        if (fastCallData1->keepPolling) {
+            keepPolling = true;
+        }
+
+        if (fastCallData2->keepPolling) {
+            keepPolling = true;
+        }
+
+        if (data1 != NULL || data2 != NULL) {
+            FastCallDataGroup dataGroup = {
+                    data1 != NULL ? decryptedData1 : data1,
+                    data2 != NULL ? decryptedData2 : data2
             };
             callTable->callbacks[callId](&dataGroup);
         }
