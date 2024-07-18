@@ -109,3 +109,32 @@ void NexmarkQuery::runQuery3_FilterAuction(std::string sourceFilePath, std::stri
 
     runEngineWithBufferObserverCrypto(config);
 }
+
+void NexmarkQuery::runQuery3_JoinPersonAuction(std::string sourceFilePath1, std::string sourceFilePath2, std::string measurementFileName, std::string sinkFileName) {
+    ConfigurationTesting config;
+    this->setupConfiguration_(&config, "", std::move(measurementFileName), std::move(sinkFileName));
+
+    config.sourceFileName1 = std::move(sourceFilePath1);
+    config.sourceId1 = 1;
+    config.sourceDelay1 = 0;
+    config.sourceHasHeader1 = true;
+    config.sourceCount1 = -1;
+    config.parser1 = new PersonParser();
+
+    config.sourceFileName2 = std::move(sourceFilePath2);
+    config.sourceId2 = 2;
+    config.sourceDelay2 = 0;
+    config.sourceHasHeader2 = true;
+    config.sourceCount2 = -1;
+    config.parser2 = new AuctionParser();
+
+    config.taskId = 13;
+    config.taskInputDataSize1 = sizeof(Person) + SGX_AESGCM_MAC_SIZE + SGX_AESGCM_IV_SIZE + 4;
+    config.taskInputDataSize2 = sizeof(Auction) + SGX_AESGCM_MAC_SIZE + SGX_AESGCM_IV_SIZE + 4;
+    config.taskShouldBeObserved = true;
+    config.outputDataSize = sizeof(Q3JoinResult) + SGX_AESGCM_MAC_SIZE + SGX_AESGCM_IV_SIZE + 4;
+    config.sink = sinkQ3JoinResult;
+    config.sinkFileStream = getSinkFileStream();
+
+    runSimple2SourceObserverEngine(config);
+}

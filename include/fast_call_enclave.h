@@ -337,11 +337,11 @@ static inline void FastCall_wait_2_decrypt(FastCallStruct *fastCallData1, FastCa
 {
     static int i = 0;
     char* data1 = NULL;
-    const int dataSize1 = fastCallData1->data_buffer->data_size - SGX_AESGCM_MAC_SIZE - SGX_AESGCM_IV_SIZE;
+    const int dataSize1 = fastCallData1->data_buffer->data_size - SGX_AESGCM_MAC_SIZE - SGX_AESGCM_IV_SIZE - 4;
     char* decryptedData1 =  (char *) malloc((dataSize1+1) * sizeof(char ));
 
     char* data2 = NULL;
-    const int dataSize2 = fastCallData2->data_buffer->data_size - SGX_AESGCM_MAC_SIZE - SGX_AESGCM_IV_SIZE;
+    const int dataSize2 = fastCallData2->data_buffer->data_size - SGX_AESGCM_MAC_SIZE - SGX_AESGCM_IV_SIZE - 4;
     char* decryptedData2 =  (char *) malloc((dataSize2+1) * sizeof(char ));
 
     bool keepPolling = false;

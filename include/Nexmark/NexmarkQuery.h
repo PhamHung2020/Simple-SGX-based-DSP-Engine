@@ -17,6 +17,7 @@ public:
     void runQuery2_Map(std::string, std::string, std::string);
     void runQuery3_FilterPerson(std::string, std::string, std::string);
     void runQuery3_FilterAuction(std::string, std::string, std::string);
+    void runQuery3_JoinPersonAuction(std::string, std::string, std::string, std::string);
 
 protected:
     std::string measurementDirName_;

@@ -11,6 +11,7 @@
 #include "data_types.h"
 #include "ConfigurationTesting.h"
 #include "Engine/EngineWithBufferObserver.h"
+#include "Engine/Simple2SourceObserverEngine.h"
 
 std::string createMeasurementsDirectory(const std::string &pathToDir);
 
@@ -39,7 +40,9 @@ public:
 };
 
 void writeObservedMeasurementToFile(const std::string& pathToFile, const EngineWithBufferObserver::ObservedData& observedData);
+void writeObservedMeasurementToFile(const std::string& pathToFile, const Simple2SourceObserverEngine::ObservedData& observedData);
 
 void runEngineWithBufferObserverCrypto(ConfigurationTesting& config, bool shouldCreateMeasurementDirectory = false, bool shouldCreateResultDirectory = false);
+void runSimple2SourceObserverEngine(ConfigurationTesting& config, bool shouldCreateMeasurementDirectory = false, bool shouldCreateResultDirectory = false);
 
 #endif //UTILS_H

@@ -151,32 +151,32 @@ int Simple2SourceObserverEngine::initializeDataStructures() {
     fastCallPair_.fastOCall = &outFastCallData_;
     fastCallPair_.callId = this->taskId_;
 
-    this->tailObserveredData1_.observedThread = 0;
-    this->tailObserveredData1_.buffer = this->inBuffer1_;
-    this->tailObserveredData1_.isHead = false;
-    this->tailObserveredData1_.count = 0;
-    this->tailObserveredData1_.keepPolling = true;
-    this->tailObserveredData1_.previousValue = 0;
-    this->tailObserveredData1_.noItem = new uint64_t[60000000];
-    this->tailObserveredData1_.timestampCounterPoints = new uint64_t[60000000];
+    this->tailObservedData1_.observedThread = 0;
+    this->tailObservedData1_.buffer = this->inBuffer1_;
+    this->tailObservedData1_.isHead = false;
+    this->tailObservedData1_.count = 0;
+    this->tailObservedData1_.keepPolling = true;
+    this->tailObservedData1_.previousValue = 0;
+    this->tailObservedData1_.noItem = new uint64_t[60000000];
+    this->tailObservedData1_.timestampCounterPoints = new uint64_t[60000000];
 
-    this->tailObserveredData2_.observedThread = 0;
-    this->tailObserveredData2_.buffer = this->inBuffer2_;
-    this->tailObserveredData2_.isHead = false;
-    this->tailObserveredData2_.count = 0;
-    this->tailObserveredData2_.keepPolling = true;
-    this->tailObserveredData2_.previousValue = 0;
-    this->tailObserveredData2_.noItem = new uint64_t[60000000];
-    this->tailObserveredData2_.timestampCounterPoints = new uint64_t[60000000];
+    this->tailObservedData2_.observedThread = 0;
+    this->tailObservedData2_.buffer = this->inBuffer2_;
+    this->tailObservedData2_.isHead = false;
+    this->tailObservedData2_.count = 0;
+    this->tailObservedData2_.keepPolling = true;
+    this->tailObservedData2_.previousValue = 0;
+    this->tailObservedData2_.noItem = new uint64_t[60000000];
+    this->tailObservedData2_.timestampCounterPoints = new uint64_t[60000000];
 
-    this->headObserveredData_.observedThread = 0;
-    this->headObserveredData_.buffer = this->outBuffer_;
-    this->headObserveredData_.isHead = true;
-    this->headObserveredData_.count = 0;
-    this->headObserveredData_.keepPolling = true;
-    this->headObserveredData_.previousValue = 0;
-    this->headObserveredData_.noItem = new uint64_t[60000000];
-    this->headObserveredData_.timestampCounterPoints = new uint64_t[60000000];
+    this->headObservedData_.observedThread = 0;
+    this->headObservedData_.buffer = this->outBuffer_;
+    this->headObservedData_.isHead = true;
+    this->headObservedData_.count = 0;
+    this->headObservedData_.keepPolling = true;
+    this->headObservedData_.previousValue = 0;
+    this->headObservedData_.noItem = new uint64_t[60000000];
+    this->headObservedData_.timestampCounterPoints = new uint64_t[60000000];
 
     return 0;
 }
@@ -236,19 +236,19 @@ int Simple2SourceObserverEngine::start() {
     CPU_ZERO(&tailObserverCpu1);
     CPU_SET(6, &tailObserverCpu1);
     pthread_attr_setaffinity_np(&tailObserverAttr1, sizeof(cpu_set_t), &tailObserverCpu1);
-    pthread_create(&this->tailObserveredData1_.observedThread, &tailObserverAttr1, Simple2SourceObserverEngine::observationThread_, &this->tailObserveredData1_);
+    pthread_create(&this->tailObservedData1_.observedThread, &tailObserverAttr1, Simple2SourceObserverEngine::observationThread_, &this->tailObservedData1_);
 
     pthread_attr_init(&tailObserverAttr2);
     CPU_ZERO(&tailObserverCpu2);
     CPU_SET(5, &tailObserverCpu2);
     pthread_attr_setaffinity_np(&tailObserverAttr2, sizeof(cpu_set_t), &tailObserverCpu2);
-    pthread_create(&this->tailObserveredData2_.observedThread, &tailObserverAttr2, Simple2SourceObserverEngine::observationThread_, &this->tailObserveredData2_);
+    pthread_create(&this->tailObservedData2_.observedThread, &tailObserverAttr2, Simple2SourceObserverEngine::observationThread_, &this->tailObservedData2_);
 
     pthread_attr_init(&headObserverAttr);
     CPU_ZERO(&headObserverCpu);
     CPU_SET(4, &headObserverCpu);
     pthread_attr_setaffinity_np(&headObserverAttr, sizeof(cpu_set_t), &headObserverCpu);
-    pthread_create(&this->headObserveredData_.observedThread, &headObserverAttr, Simple2SourceObserverEngine::observationThread_, &this->headObserveredData_);
+    pthread_create(&this->headObservedData_.observedThread, &headObserverAttr, Simple2SourceObserverEngine::observationThread_, &this->headObservedData_);
     std::cout << "Started observer thread\n";
 
     pthread_attr_init(&enclaveAttr);
@@ -303,12 +303,12 @@ int Simple2SourceObserverEngine::start() {
     pthread_join(this->outFastCallData_.responderThread, nullptr);
 
     std::cout << "Waiting for observer thread...\n";
-    this->tailObserveredData1_.keepPolling = false;
-    pthread_join(this->tailObserveredData1_.observedThread, nullptr);
-    this->tailObserveredData2_.keepPolling = false;
-    pthread_join(this->tailObserveredData2_.observedThread, nullptr);
-    this->headObserveredData_.keepPolling = false;
-    pthread_join(this->headObserveredData_.observedThread, nullptr);
+    this->tailObservedData1_.keepPolling = false;
+    pthread_join(this->tailObservedData1_.observedThread, nullptr);
+    this->tailObservedData2_.keepPolling = false;
+    pthread_join(this->tailObservedData2_.observedThread, nullptr);
+    this->headObservedData_.keepPolling = false;
+    pthread_join(this->headObservedData_.observedThread, nullptr);
 
     const int destroyEnclaveResult = destroyEnclaves();
     std::cout << "Destroyed " <<  destroyEnclaveResult <<  " enclaves\n";

@@ -2,8 +2,8 @@
 // Created by hungpm on 10/06/2024.
 //
 
-#ifndef SIMPLE_DSP_ENGINE_SIMPLE2SOURCEOBSERVERENGINE_H
-#define SIMPLE_DSP_ENGINE_SIMPLE2SOURCEOBSERVERENGINE_H
+#ifndef SIMPLE_DSP_ENGINE_SIMPLE_2_SOURCE_OBSERVER_ENGINE_H
+#define SIMPLE_DSP_ENGINE_SIMPLE_2_SOURCE_OBSERVER_ENGINE_H
 
 #include "SimpleObserverEngine.h"
 #include "DataStructure/circular_buffer.h"
@@ -51,9 +51,9 @@ public:
     virtual int start();
     virtual void clean();
 
-    ObservedData tailObserveredData1_;
-    ObservedData tailObserveredData2_;
-    ObservedData headObserveredData_;
+    ObservedData tailObservedData1_;
+    ObservedData tailObservedData2_;
+    ObservedData headObservedData_;
 protected:
     Source* source1_ = nullptr;
     Source* source2_ = nullptr;
@@ -91,4 +91,4 @@ protected:
     virtual int initializeDataStructures();
 };
 
-#endif //SIMPLE_DSP_ENGINE_SIMPLE2SOURCEOBSERVERENGINE_H
+#endif //SIMPLE_DSP_ENGINE_SIMPLE_2_SOURCE_OBSERVER_ENGINE_H

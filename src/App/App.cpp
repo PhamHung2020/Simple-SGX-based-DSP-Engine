@@ -44,13 +44,8 @@ int SGX_CDECL main(int argc, char *argv[])
 //   std::string measurementBatchDirName = "../../measurements/testNexmark/batch/2024-06-12_09-58-38";
 //   std::string resultBatchDirName = "../../results/testNexmark/batch/2024-06-12_09-58-38";
 
-    std::string measurementBatchDirName = "../../measurements/testNexmark/crypto/data";
-    std::string resultBatchDirName = "../../results/testNexmark/crypto/data";
-
-
-    for (int i = 0; i < -5; ++i) {
-        testNexmark2(i);
-    }
+    std::string measurementBatchDirName = "../../measurements/testNexmark/crypto/test";
+    std::string resultBatchDirName = "../../results/testNexmark/crypto/test";
 
     for (int i = 0; i < 1; ++i) {
         std::string measurementDirName = createDirectory(measurementBatchDirName + "/" + std::to_string(i));
@@ -64,8 +59,9 @@ int SGX_CDECL main(int argc, char *argv[])
 //        nexmarkQuery.runQuery2_Filter("../../../other/bids.csv", "process_time_q2_filter.csv", "q2result_filter.csv");
 //        nexmarkQuery.runQuery2_Map(resultDirName +  "/q2result_filter.csv", "process_time_q2_map.csv", "q2result_map.csv");
 //        nexmarkQuery.runQuery3_FilterPerson("../../../other/people.csv", "process_time_q3_filter_person_4_state.csv", "q3result_filter_person_4_state.csv");
-        nexmarkQuery.runQuery3_FilterPerson("../../../other/people.csv", "process_time_q3_filter_person_3_state.csv", "q3result_filter_person_3_state.csv");
+//        nexmarkQuery.runQuery3_FilterPerson("../../../other/people.csv", "process_time_q3_filter_person_3_state.csv", "q3result_filter_person_3_state.csv");
 //        nexmarkQuery.runQuery3_FilterAuction("../../../other/auction.csv", "process_time_q3_filter_auction.csv", "q3result_filter_auction.csv");
+        nexmarkQuery.runQuery3_JoinPersonAuction("../../../other/people.csv", "../../../other/auction.csv", "q3_join_600.csv", "q3result_join_600.csv");
 
 //        config.sinkFileName = "q3result_map_600.csv";
 //        config.measurementFileName = "process_time_q3_map_600.csv";

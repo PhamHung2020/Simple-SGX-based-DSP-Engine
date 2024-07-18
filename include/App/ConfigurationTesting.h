@@ -33,7 +33,23 @@ public:
 
     Parser* parser = nullptr;
 
+    int sourceId1 = 1;
+    int sourceDelay1 = 0;
+    bool sourceHasHeader1 = false;
+    int sourceCount1 = 1000000;
+    std::string sourceFileName1;
 
+    int sourceId2 = 1;
+    int sourceDelay2 = 0;
+    bool sourceHasHeader2 = false;
+    int sourceCount2 = 1000000;
+    std::string sourceFileName2;
+
+    Parser* parser1 = nullptr;
+    Parser* parser2 = nullptr;
+
+    int taskInputDataSize1;
+    int taskInputDataSize2;
 
 
 };

@@ -8,6 +8,8 @@
 #include "Engine/EngineWithBufferObserver.h"
 #include "Engine/EngineWithBufferObserverCrypto.h"
 #include "Source/CsvSource.h"
+#include "Source/FastCallEncryptedEmitter.h"
+#include "Engine/Simple2SourceObserverEngine.h"
 
 void runEngineWithBufferObserverCrypto(ConfigurationTesting& config, bool shouldCreateMeasurementDirectory, bool shouldCreateResultDirectory) {
     // ================ Set up engine ====================
@@ -87,4 +89,78 @@ void runEngineWithBufferObserverCrypto(ConfigurationTesting& config, bool should
     std::cout << "Info: Engine successfully returned.\n";
 
     engine.clean();
+}
+
+void runSimple2SourceObserverEngine(ConfigurationTesting& config, bool shouldCreateMeasurementDirectory, bool shouldCreateResultDirectory) {
+    // ================ Set up engine ====================
+    CsvSource source1(config.sourceId1, config.sourceFileName1, config.sourceDelay1, config.sourceHasHeader1, config.sourceCount1);
+    source1.setParser(config.parser1);
+
+    CsvSource source2(config.sourceId2, config.sourceFileName2, config.sourceDelay2, config.sourceHasHeader2, config.sourceCount2);
+    source2.setParser(config.parser2);
+
+    Simple2SourceObserverEngine engine;
+    engine.setSource1(source1);
+    engine.setSource2(source2);
+
+    FastCallEncryptedEmitter emitter1, emitter2;
+    engine.setEmitter(emitter1, emitter2);
+
+    engine.setTask(config.taskId, config.taskInputDataSize1, config.taskInputDataSize2);
+    engine.setSink(config.sink, config.outputDataSize);
+
+    // =================== Create directory and file to store processed results =========================
+    std::string fileFullPath;
+    if (shouldCreateResultDirectory) {
+        fileFullPath = createMeasurementsDirectory(config.resultDirName);
+    } else {
+        fileFullPath = config.resultDirName;
+    }
+
+    fileFullPath.append("/").append(config.sinkFileName);
+    config.sinkFileStream->open(fileFullPath, std::ios::out);
+    if (config.sinkFileStream->fail()) {
+        std::cout << "Open out file failed.\n";
+        return;
+    }
+
+    // ======================= Create measurement folder =======================
+    std::string createdMeasurementDirName;
+    if (shouldCreateMeasurementDirectory) {
+        createdMeasurementDirName = createMeasurementsDirectory(config.measurementDirName);
+    } else {
+        createdMeasurementDirName = config.measurementDirName;
+    }
+
+    // ======================= Start engine ==========================
+    engine.start();
+
+    config.sinkFileStream->close();
+
+    // ====================== Write measurements ==============================
+    std::string tailFilename = "tail_0_0_process_time_" + config.measurementFileName;
+    std::string tailFileFullPath = createdMeasurementDirName;
+    tailFileFullPath.append("/").append(tailFilename);
+
+    std::cout << "Writing measurements for tail buffer 1" << std::endl;
+    writeObservedMeasurementToFile(tailFileFullPath, engine.tailObservedData1_);
+
+    tailFilename = "tail_0_1_process_time_" + config.measurementFileName;
+    tailFileFullPath = createdMeasurementDirName;
+    tailFileFullPath.append("/").append(tailFilename);
+
+    std::cout << "Writing measurements for tail buffer 2" << std::endl;
+    writeObservedMeasurementToFile(tailFileFullPath, engine.tailObservedData2_);
+
+    std::string headFilename = "head_1_process_time_" + config.measurementFileName;
+    std::string headFileFullPath = createdMeasurementDirName;
+    headFileFullPath.append("/").append(headFilename);
+
+    std::cout << "Writing measurements for head buffer " << std::endl;
+    writeObservedMeasurementToFile(headFileFullPath, engine.headObservedData_);
+
+    printf("Info: Engine successfully returned.\n");
+
+    engine.clean();
+
 }

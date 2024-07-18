@@ -250,7 +250,7 @@ void testNexmark2(int n) {
     tailFileFullPath.append("/").append(tailFilename);
 
     std::cout << "Writing measurements for tail buffer 1" << std::endl;
-    TestNexmark2::writeMeasurementToFile(tailFileFullPath, engine.tailObserveredData1_);
+    TestNexmark2::writeMeasurementToFile(tailFileFullPath, engine.tailObservedData1_);
 
 //    tailFilename = "tail_0_1_process_time_q3_join.csv";
     tailFilename = "tail_0_1_process_time_" + measureFileName;
@@ -258,7 +258,7 @@ void testNexmark2(int n) {
     tailFileFullPath.append("/").append(tailFilename);
 
     std::cout << "Writing measurements for tail buffer 2" << std::endl;
-    TestNexmark2::writeMeasurementToFile(tailFileFullPath, engine.tailObserveredData2_);
+    TestNexmark2::writeMeasurementToFile(tailFileFullPath, engine.tailObservedData2_);
 
 //    std::string headFilename = "head_1_process_time_q3_join.csv";
     std::string headFilename = "head_1_process_time_" + measureFileName;
@@ -266,7 +266,7 @@ void testNexmark2(int n) {
     headFileFullPath.append("/").append(headFilename);
 
     std::cout << "Writing measurements for head buffer " << std::endl;
-    TestNexmark2::writeMeasurementToFile(headFileFullPath, engine.headObserveredData_);
+    TestNexmark2::writeMeasurementToFile(headFileFullPath, engine.headObservedData_);
 
     printf("Info: Engine successfully returned.\n");
 

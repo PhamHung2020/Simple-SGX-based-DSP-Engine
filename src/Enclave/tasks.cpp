@@ -361,7 +361,7 @@ void NexmarkQ3_FilterAuction(void* data) {
 std::vector<Person*> people;
 std::vector<Auction*> auctions;
 std::vector<std::pair<Person*, Auction*>> joinedResults;
-uint64_t timeRange = 3000;
+uint64_t timeRange = 600;
 uint64_t personTimeMax = 0;
 uint64_t auctionTimeMax = 0;
 void NexmarkQ3_JoinPersonAuction(void* data) {
@@ -479,7 +479,7 @@ void NexmarkQ3_JoinPersonAuction(void* data) {
 
     for (const auto& result : joinedResults) {
         Q3JoinResult mapJoinResult{ *result.first, *result.second };
-        FastCall_request_encrypt(globalFastOCall, &mapJoinResult);
+        FastCall_request_encrypt2(globalFastOCall, &mapJoinResult, encryptedData);
     }
 }
 
