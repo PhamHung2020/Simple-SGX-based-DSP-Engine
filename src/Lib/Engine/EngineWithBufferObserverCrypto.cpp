@@ -91,11 +91,6 @@ int EngineWithBufferObserverCrypto::start() {
     const int initializationResult = initializeEnclaves();
     printf("Initialized %d enclaves\n", initializationResult);
 
-    // start processed count thread
-//    if (!this->enclaveId_.empty()) {
-//        pthread_create(&this->processedCountThreadId_, nullptr, processedCountThread_, &this->buffers_[0]);
-//    }
-
     pthread_attr_t enclaveAttr;
     cpu_set_t enclaveCpu;
     pthread_attr_t sourceAttr;
@@ -182,9 +177,6 @@ int EngineWithBufferObserverCrypto::start() {
         }
         StopFastCallResponder(&this->fastCallDataList_.back());
         pthread_join(this->fastCallDataList_.back().responderThread, nullptr);
-
-//        this->shouldContinue_ = false;
-//        pthread_join(this->processedCountThreadId_, nullptr);
 
         // wait for all observation threads end
         for (size_t i = 0; i < this->buffers_.size(); ++i) {

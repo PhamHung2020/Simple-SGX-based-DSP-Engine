@@ -15,24 +15,13 @@ using namespace std;
 /* Application entry */
 int SGX_CDECL main(int argc, char *argv[])
 {
-//     testSimpleEngine();
-//    testHotCallPerformance();
-//     testObserverPerformance(0);
-//    testJoin2Stream1Enclave();
-//    testCpuAffinity();
-
-  //  for (int i = 0; i < 5; ++i) {
-  //      printf("Test %d.\n", i);
-  //      testJoin2Stream1Enclave(i);
-  //  }
-
 //    ConfigurationTesting config;
 //    config.resultDirName = "../../results/secure-sgx";
 //    config.measurementDirName = "../../measurements/secure-sgx";
 //
 //    config.sinkFileName = "reduce_1500_2005.csv";
 //    config.measurementFileName = "process_time_tail_reduce_1500_2005.csv";
-////    config.sourceFileName = "../../dataset/secure-sgx-dataset/2005.csv";
+//    config.sourceFileName = "../../dataset/secure-sgx-dataset/2005.csv";
 //    config.sourceFileName = "../../results/secure-sgx/filter_2005.csv";
 //    config.sourceId = 1;
 //    config.sourceDelay = 0;
@@ -71,71 +60,12 @@ int SGX_CDECL main(int argc, char *argv[])
         nexmarkQuery.setMeasurementDirName(measurementDirName);
         nexmarkQuery.setResultDirName(resultDirName);
 
-        nexmarkQuery.runQuery1("../../../other/bids.csv", "process_time_q1_test.csv", "q1result_test.csv");
-
-//        ConfigurationTesting config;
-//        config.resultDirName = resultDirName;
-//        config.measurementDirName = measurementDirName;
-//
-//        config.sourceId = 1;
-//        config.sourceDelay = 0;
-//        config.sourceHasHeader = true;
-//        config.sourceCount = -1;
-//
-//         config.sinkFileName = "q1result_test.csv";
-//         config.measurementFileName = "process_time_q1_test.csv";
-//         config.sourceFileName = "../../../other/bids.csv";
-//         config.taskId = 12;
-//         config.taskInputDataSize = sizeof(Bid) + SGX_AESGCM_MAC_SIZE + SGX_AESGCM_IV_SIZE + 4;
-//         config.taskShouldBeObserved = true;
-//         config.outputDataSize = sizeof(Bid) + SGX_AESGCM_MAC_SIZE + SGX_AESGCM_IV_SIZE + 4;
-//         config.parser = new BidParser();
-//         config.sink = sinkBid;
-//         config.sinkFileStream = getSinkFileStream();
-
-//        config.sinkFileName = "q2result_filter.csv";
-//        config.measurementFileName = "process_time_q2_filter.csv";
-//        config.sourceFileName = "../../../other/bids.csv";
-//        config.taskId = 13;
-//        config.taskInputDataSize = sizeof(Bid) + SGX_AESGCM_MAC_SIZE + SGX_AESGCM_IV_SIZE;
-//        config.taskShouldBeObserved = true;
-//        config.outputDataSize = sizeof(Bid) + SGX_AESGCM_MAC_SIZE + SGX_AESGCM_IV_SIZE;
-//        config.parser = new BidParser();
-//        config.sink = sinkBid;
-//        config.sinkFileStream = getSinkFileStream();
-
-//       config.sinkFileName = "q2result_map.csv";
-//       config.measurementFileName = "process_time_q2_map.csv";
-//       config.sourceFileName = config.resultDirName +  "/q2result_filter.csv";
-//       config.taskId = 14;
-//       config.taskInputDataSize = sizeof(Bid) + SGX_AESGCM_MAC_SIZE + SGX_AESGCM_IV_SIZE;
-//       config.taskShouldBeObserved = true;
-//       config.outputDataSize = sizeof(Q2Result) + SGX_AESGCM_MAC_SIZE + SGX_AESGCM_IV_SIZE;
-//       config.parser = new BidParser();
-//       config.sink = sinkQ2Result;
-//       config.sinkFileStream = getSinkFileStream();
-
-//       config.sinkFileName = "q3result_filter_person_4_state.csv";
-//       config.measurementFileName = "process_time_q3_filter_person_4_state.csv";
-//       config.sourceFileName = "../../../other/people.csv";
-//       config.taskId = 15;
-//       config.taskInputDataSize = sizeof(Person) + SGX_AESGCM_MAC_SIZE + SGX_AESGCM_IV_SIZE;
-//       config.taskShouldBeObserved = true;
-//       config.outputDataSize = sizeof(Person) + SGX_AESGCM_MAC_SIZE + SGX_AESGCM_IV_SIZE;
-//       config.parser = new PersonParser();
-//       config.sink = sinkPerson;
-//       config.sinkFileStream = getSinkFileStream();
-
-//         config.sinkFileName = "q3result_filter_auction.csv";
-//         config.measurementFileName = "process_time_q3_filter_auction.csv";
-//         config.sourceFileName = "../../../other/auction.csv";
-//         config.taskId = 16;
-//         config.taskInputDataSize = sizeof(Auction) + SGX_AESGCM_MAC_SIZE + SGX_AESGCM_IV_SIZE;
-//         config.taskShouldBeObserved = true;
-//         config.outputDataSize = sizeof(Auction) + SGX_AESGCM_MAC_SIZE + SGX_AESGCM_IV_SIZE;
-//         config.parser = new AuctionParser();
-//         config.sink = sinkAuction;
-//         config.sinkFileStream = getSinkFileStream();
+//        nexmarkQuery.runQuery1("../../../other/bids.csv", "process_time_q1.csv", "q1result.csv");
+//        nexmarkQuery.runQuery2_Filter("../../../other/bids.csv", "process_time_q2_filter.csv", "q2result_filter.csv");
+//        nexmarkQuery.runQuery2_Map(resultDirName +  "/q2result_filter.csv", "process_time_q2_map.csv", "q2result_map.csv");
+//        nexmarkQuery.runQuery3_FilterPerson("../../../other/people.csv", "process_time_q3_filter_person_4_state.csv", "q3result_filter_person_4_state.csv");
+        nexmarkQuery.runQuery3_FilterPerson("../../../other/people.csv", "process_time_q3_filter_person_3_state.csv", "q3result_filter_person_3_state.csv");
+//        nexmarkQuery.runQuery3_FilterAuction("../../../other/auction.csv", "process_time_q3_filter_auction.csv", "q3result_filter_auction.csv");
 
 //        config.sinkFileName = "q3result_map_600.csv";
 //        config.measurementFileName = "process_time_q3_map_600.csv";

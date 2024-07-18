@@ -91,7 +91,7 @@ static inline int FastCall_request_encrypt(FastCallStruct* fastCallData, void *d
     const uint32_t MAX_RETRIES = 10000;
     uint32_t numRetries = 0;
 
-    const int encryptedDataLength = fastCallData->data_buffer->data_size;
+    const int encryptedDataLength = fastCallData->data_buffer->data_size - 4;
     const int originalDataLength = encryptedDataLength - SGX_AESGCM_MAC_SIZE - SGX_AESGCM_IV_SIZE;
     char* encryptedData = (char*) malloc((encryptedDataLength + 1) * sizeof(char));
 //    char encryptedData[encryptedDataLength+1];
@@ -131,29 +131,25 @@ static inline int FastCall_request_encrypt2(FastCallStruct* fastCallData, void *
 
     const int encryptedDataLength = fastCallData->data_buffer->data_size - 4;
     const int originalDataLength = encryptedDataLength - SGX_AESGCM_MAC_SIZE - SGX_AESGCM_IV_SIZE;
-//    char* encryptedData = (char*) malloc((encryptedDataLength + 1) * sizeof(char));
-//    char encryptedData[1000];
     // Request call
     while(true)
     {
         // sgx_spin_lock(&fastCallData->spinlock);
         aesGcmEncrypt((char*)data, originalDataLength, encryptedData, encryptedDataLength);
         encryptedData[encryptedDataLength] = '\0';
-        circular_buffer_push(fastCallData->data_buffer, encryptedData);
-        break;
-//        if (circular_buffer_push(fastCallData->data_buffer, encryptedData) == 0)
-//        {
-//            // sgx_spin_unlock(&fastCallData->spinlock);
-//            break;
-//        }
-//        // sgx_spin_unlock(&fastCallData->spinlock);
-//
-//        numRetries++;m
-//        if(numRetries > MAX_RETRIES)
-//            return -1;
-//
-//        for (i = 0; i<3; ++i)
-//            _mm_pause();
+        if (circular_buffer_push(fastCallData->data_buffer, encryptedData) == 0)
+        {
+            // sgx_spin_unlock(&fastCallData->spinlock);
+            break;
+        }
+        // sgx_spin_unlock(&fastCallData->spinlock);
+
+        numRetries++;
+        if(numRetries > MAX_RETRIES)
+            return -1;
+
+        for (i = 0; i<3; ++i)
+            _mm_pause();
     }
 
 //    free(encryptedData);

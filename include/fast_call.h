@@ -99,7 +99,6 @@ static inline int FastCall_request_encrypt(FastCallStruct* fastCallData, void *d
     while(true)
     {
         // sgx_spin_lock(&fastCallData->spinlock);
-//        printf("Encrypting %s\n", (char *)data);
         aes128GcmEncrypt(
                 (unsigned char *) data,
                 originalDataLength, NULL, 0,

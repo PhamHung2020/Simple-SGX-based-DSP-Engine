@@ -18,6 +18,7 @@
 
 FastCallStruct* globalFastOCall;
 circular_buffer* fastOCallBuffer;
+char encryptedData[1000];
 
 void MapCsvRowToFlight(void* data) {
     if (data == NULL) {
@@ -295,19 +296,16 @@ void ReduceDelay(void* data) {
     }
 }
 
-char encryptedData[1000];
 void NexmarkQ1(void* data) {
     if (data == NULL) {
         return;
     }
 
-//    const auto bid = static_cast<Bid*>(data);
+    const auto bid = static_cast<Bid*>(data);
     // convert dollar to euro
-//    long double exchangeRate = 0.92;
-//    bid->price = (uint64_t)(bid->price * exchangeRate);
-//    bid->price = 0;
-    FastCall_request_encrypt2(globalFastOCall, data, encryptedData);
-//    FastCall_request(globalFastOCall, data);
+    long double exchangeRate = 0.92;
+    bid->price = (uint64_t)(bid->price * exchangeRate);
+    FastCall_request_encrypt2(globalFastOCall, bid, encryptedData);
 
 }
 
@@ -319,7 +317,7 @@ void NexmarkQ2_Filter(void* data) {
 
     const auto bid = static_cast<Bid*>(data);
     if (bid->auction == 17600 || bid->auction == 27500 || bid->auction == 40700 || bid->auction == 51500) {
-        FastCall_request_encrypt(globalFastOCall, bid);
+        FastCall_request_encrypt2(globalFastOCall, bid, encryptedData);
     }
 }
 
@@ -332,7 +330,7 @@ void NexmarkQ2_Map(void* data) {
     Q2Result mapBidResult{};
     mapBidResult.auction = bid->auction;
     mapBidResult.price = bid->price;
-    FastCall_request_encrypt(globalFastOCall, &mapBidResult);
+    FastCall_request_encrypt2(globalFastOCall, &mapBidResult, encryptedData);
 }
 
 void NexmarkQ3_FilterPerson(void* data) {
@@ -343,8 +341,9 @@ void NexmarkQ3_FilterPerson(void* data) {
     const auto person = static_cast<Person*>(data);
     // P.state = `OR' OR P.state = `ID' OR P.state = `CA'
 //    if (strcmp(person->state, "or") == 0 || strcmp(person->state, "id") == 0 || strcmp(person->state, "ca") == 0) {
-    if (strcmp(person->state, "or") == 0 || strcmp(person->state, "id") == 0 || strcmp(person->state, "ca") == 0 || strcmp(person->state, "wa") == 0) {
-            FastCall_request_encrypt(globalFastOCall, person);
+    if (strcmp(person->state, "or") == 0 || strcmp(person->state, "id") == 0 || strcmp(person->state, "ca") == 0) {
+//    if (strcmp(person->state, "or") == 0 || strcmp(person->state, "id") == 0 || strcmp(person->state, "ca") == 0 || strcmp(person->state, "wa") == 0) {
+            FastCall_request_encrypt2(globalFastOCall, person, encryptedData);
     }
 }
 
@@ -355,7 +354,7 @@ void NexmarkQ3_FilterAuction(void* data) {
 
     const auto auction = static_cast<Auction*>(data);
     if (auction->category == 10) {
-        FastCall_request_encrypt(globalFastOCall, auction);
+        FastCall_request_encrypt2(globalFastOCall, auction, encryptedData);
     }
 }
 
