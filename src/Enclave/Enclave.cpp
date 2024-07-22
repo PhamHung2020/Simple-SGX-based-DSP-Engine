@@ -4,6 +4,10 @@
 #include "Enclave/Enclave.h"
 #include "Enclave/tasks.h"
 
+char decryptedData[1000];
+char decryptedData1[1000];
+char decryptedData2[1000];
+
 
 int ecallSum(int a, int b) {
     return a + b;
@@ -30,7 +34,7 @@ void EcallStartResponderWithDecryption(FastCallStruct* fastECallData, FastCallSt
     callTable.numEntries = TASK_COUNT;
     callTable.callbacks  = callbacks;
 
-    FastCall_wait_decrypt(fastECallData, &callTable, callId);
+    FastCall_wait_decrypt(fastECallData, &callTable, callId, decryptedData);
 }
 
 void EcallStartResponder2(FastCallStruct* fastECallData1, FastCallStruct* fastECallData2, FastCallStruct* fastOCallData, const uint16_t callId)
@@ -55,7 +59,7 @@ void EcallStartResponder2WithDecryption(FastCallStruct* fastECallData1, FastCall
     callTable.numEntries = TASK_COUNT;
     callTable.callbacks  = callbacks;
 
-    FastCall_wait_2_decrypt(fastECallData1, fastECallData2, &callTable, callId);
+    FastCall_wait_2_decrypt(fastECallData1, fastECallData2, &callTable, callId, decryptedData1, decryptedData2);
 }
 
 void EcallStartResponderWithHotCall(FastCallStruct* fastECallData, FastCallStruct* fastOCallData, const uint16_t callId, HotCall* hotCall)

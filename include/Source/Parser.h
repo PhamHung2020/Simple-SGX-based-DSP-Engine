@@ -9,6 +9,7 @@
 
 class Parser {
 public:
+    virtual ~Parser() = default;
     virtual void* parseFromString(const std::string& str) = 0;
 };
 

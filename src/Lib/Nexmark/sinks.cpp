@@ -94,6 +94,27 @@ void sinkQ3Result(void* rawData) {
     nexmarkSinkFileStream << result->auctionId << "," << result->name << "," << result->city << "," << result->state << std::endl;
 }
 
+void sinkQ4Join1Result(void* rawData) {
+    if (rawData == NULL) {
+        return;
+    }
+
+    const auto result = static_cast<Q4Join1Result*>(rawData);
+    nexmarkSinkFileStream
+            << result->auction.id << ","
+            << result->auction.itemName << ","
+            << result->auction.initialBid << ","
+            << result->auction.reserve << ","
+            << result->auction.datetime << ","
+            << result->auction.expires << ","
+            << result->auction.seller << ","
+            << result->auction.category << ","
+            << result->bid.auction << ","
+            << result->bid.bidder << ","
+            << result->bid.price << ","
+            << result->bid.datetime << std::endl;
+}
+
 void sinkQ4MapResult(void* rawData) {
     if (rawData == NULL) {
         return;
@@ -178,6 +199,30 @@ void sinkQ7MaxResult(void* rawData) {
 
     const auto result = static_cast<uint64_t *>(rawData);
     nexmarkSinkFileStream << *result << std::endl;
+}
+
+void sinkQ8JoinResult(void* rawData) {
+    if (rawData == NULL) {
+        return;
+    }
+
+    const auto result = static_cast<Q8JoinResult*>(rawData);
+    nexmarkSinkFileStream
+            << result->auction.id << ","
+            << result->auction.itemName << ","
+            << result->auction.initialBid << ","
+            << result->auction.reserve << ","
+            << result->auction.datetime << ","
+            << result->auction.expires << ","
+            << result->auction.seller << ","
+            << result->auction.category << ","
+            << result->person.id << ","
+            << result->person.name << ","
+            << result->person.emailAddress << ","
+            << result->person.creditCard << ","
+            << result->person.city << ","
+            << result->person.state << ","
+            << result->person.datetime << std::endl;
 }
 
 void sinkQ8MapResult(void* rawData) {

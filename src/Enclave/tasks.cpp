@@ -341,7 +341,7 @@ void NexmarkQ3_FilterPerson(void* data) {
     const auto person = static_cast<Person*>(data);
     // P.state = `OR' OR P.state = `ID' OR P.state = `CA'
 //    if (strcmp(person->state, "or") == 0 || strcmp(person->state, "id") == 0 || strcmp(person->state, "ca") == 0) {
-    if (strcmp(person->state, "or") == 0 || strcmp(person->state, "id") == 0 || strcmp(person->state, "ca") == 0) {
+    if (strcmp(person->state, "or") == 0) {
 //    if (strcmp(person->state, "or") == 0 || strcmp(person->state, "id") == 0 || strcmp(person->state, "ca") == 0 || strcmp(person->state, "wa") == 0) {
             FastCall_request_encrypt2(globalFastOCall, person, encryptedData);
     }
@@ -361,7 +361,7 @@ void NexmarkQ3_FilterAuction(void* data) {
 std::vector<Person*> people;
 std::vector<Auction*> auctions;
 std::vector<std::pair<Person*, Auction*>> joinedResults;
-uint64_t timeRange = 600;
+uint64_t timeRange = 1500;
 uint64_t personTimeMax = 0;
 uint64_t auctionTimeMax = 0;
 void NexmarkQ3_JoinPersonAuction(void* data) {
@@ -494,7 +494,7 @@ void NexmarkQ3_MapResult(void* data) {
     strncpy(result.name, joinResult->person.name, PERSON_NAME_SIZE);
     strncpy(result.city, joinResult->person.city, PERSON_CITY_SIZE);
     strncpy(result.state, joinResult->person.state, PERSON_STATE_SIZE);
-    FastCall_request_encrypt(globalFastOCall, &result);
+    FastCall_request_encrypt2(globalFastOCall, &result, encryptedData);
 }
 
 std::vector<Auction*> auctionsQ4;
@@ -621,7 +621,7 @@ void NexmarkQ4_JoinAuctionBid(void* data) {
 
     for (const auto& result : join1ResultsQ4) {
         Q4Join1Result mapJoinResult{ *result.first, *result.second };
-        FastCall_request_encrypt(globalFastOCall, &mapJoinResult);
+        FastCall_request_encrypt2(globalFastOCall, &mapJoinResult, encryptedData);
     }
 }
 
@@ -635,7 +635,7 @@ void NexmarkQ4_MapAuctionBid(void* data) {
     mapResult.final = joinResult->bid.price;
     mapResult.category = joinResult->auction.category;
 
-    FastCall_request_encrypt(globalFastOCall, &mapResult);
+    FastCall_request_encrypt2(globalFastOCall, &mapResult, encryptedData);
 }
 
 std::map<uint64_t, uint64_t> maxPriceByCategoryQ4;
@@ -737,7 +737,7 @@ void NexmarkQ4_Average(void* data) {
 
 //std::vector<Bid*> bidsCountTotalQ5;
 //uint64_t bidTimeMaxCountTotalQ5 = 0;
-uint64_t timeRangeQ5 = 600;
+uint64_t timeRangeQ5 = 1500;
 //void NexmarkQ5_CountTotal(void* data) {
 //    if (data == NULL) {
 //        return;
@@ -847,7 +847,7 @@ void NexmarkQ5_CountByAuction(void* data) {
         result.auction = countAuctionResult.first;
         result.count = countAuctionResult.second;
         result.datetime = countId;
-        FastCall_request_encrypt(globalFastOCall, &result);
+        FastCall_request_encrypt2(globalFastOCall, &result, encryptedData);
     }
     countId++;
 }
@@ -882,7 +882,7 @@ void NexmarkQ5_MaxBatch(void* data) {
 
     if (!outputResults.empty()) {
         for (const auto outputResult : outputResults) {
-            FastCall_request_encrypt(globalFastOCall, outputResult);
+            FastCall_request_encrypt2(globalFastOCall, outputResult, encryptedData);
         }
     }
 
@@ -1027,7 +1027,7 @@ void NexmarkQ5_MaxBatch(void* data) {
 std::vector<Auction*> auctionsQ6;
 std::vector<Bid*> bidsQ6;
 std::vector<std::pair<Auction*, Bid*>> join1ResultsQ6;
-uint64_t timeRangeQ6 = 600;
+uint64_t timeRangeQ6 = 1500;
 uint64_t bidTimeMaxQ6 = 0;
 uint64_t auctionTimeMaxQ6 = 0;
 void NexmarkQ6_Join(void* data) {
@@ -1150,7 +1150,7 @@ void NexmarkQ6_Join(void* data) {
     if (shouldPushJoinResult) {
         for (const auto& result : join1ResultsQ6) {
             Q6JoinResult mapJoinResult{ *result.first, *result.second };
-            FastCall_request_encrypt(globalFastOCall, &mapJoinResult);
+            FastCall_request_encrypt2(globalFastOCall, &mapJoinResult, encryptedData);
         }
     }
 }
@@ -1162,11 +1162,11 @@ void NexmarkQ6_Filter(void* data) {
 
     const auto joinResult = static_cast<Q6JoinResult *>(data);
     if (joinResult->bid.datetime < joinResult->auction.expires) {
-        FastCall_request_encrypt(globalFastOCall, joinResult);
+        FastCall_request_encrypt2(globalFastOCall, joinResult, encryptedData);
     }
 }
 
-const uint64_t partitionSizeQ6 = 10;
+const uint64_t partitionSizeQ6 = 500;
 std::map<uint64_t, std::vector<Q6JoinResult*>> partitionsQ6;
 void NexmarkQ6_Max(void* data) {
     if (data == NULL) {
@@ -1223,7 +1223,7 @@ void NexmarkQ6_Max(void* data) {
 
     if (!maxResults.empty()) {
         for (auto& maxResult : maxResults) {
-            FastCall_request_encrypt(globalFastOCall, &maxResult);
+            FastCall_request_encrypt2(globalFastOCall, &maxResult, encryptedData);
         }
     }
 
@@ -1246,7 +1246,7 @@ void NexmarkQ6_Max(void* data) {
 
 std::map<uint64_t, std::pair<uint64_t, uint64_t>> averagesQ6;
 std::vector<Q6MaxResult*> averageMaxResultsQ6;
-uint64_t averageWindowSizeQ6 = 100;
+uint64_t averageWindowSizeQ6 = 500;
 void NexmarkQ6_Avg(void* data) {
     if (data == NULL) {
         return;
@@ -1282,7 +1282,7 @@ void NexmarkQ6_Avg(void* data) {
         Q6MaxResult avgResult{};
         avgResult.seller = averageResult.first;
         avgResult.final = averageResult.second.first / averageResult.second.second;
-        FastCall_request_encrypt(globalFastOCall, &avgResult);
+        FastCall_request_encrypt2(globalFastOCall, &avgResult, encryptedData);
     }
 }
 
@@ -1469,7 +1469,7 @@ void NexmarkQ7_MaxJoin(void* data) {
 
     if (!joinResultQ7.empty()) {
         for (const auto& result : joinResultQ7) {
-            FastCall_request_encrypt(globalFastOCall, result);
+            FastCall_request_encrypt2(globalFastOCall, result, encryptedData);
         }
     }
 }
@@ -1600,7 +1600,7 @@ void NexmarkQA_JoinPersonBid(void* data) {
 std::vector<Person*> peopleQ8;
 std::vector<Auction*> auctionsQ8;
 std::vector<std::pair<Person*, Auction*>> joinResultsQ8;
-uint64_t timeRangeQ8 = 1500;
+uint64_t timeRangeQ8 = 600;
 uint64_t auctionTimeMaxQ8 = 0;
 uint64_t personTimeMaxQ8 = 0;
 void NexmarkQ8_JoinPersonAuction(void* data) {
@@ -1718,7 +1718,7 @@ void NexmarkQ8_JoinPersonAuction(void* data) {
 
     for (const auto& result : joinResultsQ8) {
         Q8JoinResult mapJoinResult{*result.first, *result.second };
-        FastCall_request_encrypt(globalFastOCall, &mapJoinResult);
+        FastCall_request_encrypt2(globalFastOCall, &mapJoinResult, encryptedData);
     }
 }
 
@@ -1732,5 +1732,5 @@ void NexmarkQ8_Map(void* data) {
     mapResult.personId = joinResult->person.id;
     strncpy(mapResult.personName, joinResult->person.name, PERSON_NAME_SIZE);
     mapResult.auctionReserve = joinResult->auction.reserve;
-    FastCall_request_encrypt(globalFastOCall, &mapResult);
+    FastCall_request_encrypt2(globalFastOCall, &mapResult, encryptedData);
 }

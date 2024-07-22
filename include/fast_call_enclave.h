@@ -206,13 +206,13 @@ static inline void FastCall_wait(FastCallStruct *fastCallData, FastCallTable* ca
     // delete[] data;
 }
 
-static inline void FastCall_wait_decrypt(FastCallStruct *fastCallData, FastCallTable* callTable, uint16_t callId)  __attribute__((always_inline));
-static inline void FastCall_wait_decrypt(FastCallStruct *fastCallData, FastCallTable* callTable, uint16_t callId)
+static inline void FastCall_wait_decrypt(FastCallStruct *fastCallData, FastCallTable* callTable, uint16_t callId, char* decryptedData)  __attribute__((always_inline));
+static inline void FastCall_wait_decrypt(FastCallStruct *fastCallData, FastCallTable* callTable, uint16_t callId, char* decryptedData)
 {
     static int i = 0;
     char* data;
     const int dataSize = fastCallData->data_buffer->data_size - SGX_AESGCM_MAC_SIZE - SGX_AESGCM_IV_SIZE - 4;
-    char* decryptedData =  (char *) malloc((dataSize+1) * sizeof(char ));
+//    char* decryptedData =  (char *) malloc((dataSize+1) * sizeof(char ));
     while(true)
     {
         // if (!fastCallData->keepPolling) {
@@ -332,17 +332,17 @@ static inline void FastCall_wait_2(FastCallStruct *fastCallData1, FastCallStruct
     // delete[] data;
 }
 
-static inline void FastCall_wait_2_decrypt(FastCallStruct *fastCallData1, FastCallStruct *fastCallData2, FastCallTable* callTable, uint16_t callId)  __attribute__((always_inline));
-static inline void FastCall_wait_2_decrypt(FastCallStruct *fastCallData1, FastCallStruct *fastCallData2, FastCallTable* callTable, uint16_t callId)
+static inline void FastCall_wait_2_decrypt(FastCallStruct *fastCallData1, FastCallStruct *fastCallData2, FastCallTable* callTable, uint16_t callId, char* decryptedData1, char* decryptedData2)  __attribute__((always_inline));
+static inline void FastCall_wait_2_decrypt(FastCallStruct *fastCallData1, FastCallStruct *fastCallData2, FastCallTable* callTable, uint16_t callId, char* decryptedData1, char* decryptedData2)
 {
     static int i = 0;
     char* data1 = NULL;
     const int dataSize1 = fastCallData1->data_buffer->data_size - SGX_AESGCM_MAC_SIZE - SGX_AESGCM_IV_SIZE - 4;
-    char* decryptedData1 =  (char *) malloc((dataSize1+1) * sizeof(char ));
+//    char* decryptedData1 =  (char *) malloc((dataSize1+1) * sizeof(char ));
 
     char* data2 = NULL;
     const int dataSize2 = fastCallData2->data_buffer->data_size - SGX_AESGCM_MAC_SIZE - SGX_AESGCM_IV_SIZE - 4;
-    char* decryptedData2 =  (char *) malloc((dataSize2+1) * sizeof(char ));
+//    char* decryptedData2 =  (char *) malloc((dataSize2+1) * sizeof(char ));
 
     bool keepPolling = false;
     int popResult1, popResult2;
