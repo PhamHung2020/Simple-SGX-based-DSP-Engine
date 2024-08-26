@@ -69,7 +69,7 @@ void *FlightDataParser::parseFromString(const std::string &str) {
             pos = str.find(',', previousPos);
         }
 
-        const std::string word = str.substr(pos + 1);
+        const std::string word = str.substr(previousPos);
         words.push_back(word);
 
         if (!words[8].empty()) {

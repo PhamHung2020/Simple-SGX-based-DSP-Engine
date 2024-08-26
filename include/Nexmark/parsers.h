@@ -92,6 +92,7 @@ public:
 class Q6MaxResultParser : public Parser {
 private:
     Q6MaxResult* result_ = nullptr;
+    int count_ = 0;
 public:
     Q6MaxResultParser();
     ~Q6MaxResultParser();

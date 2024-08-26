@@ -8,6 +8,20 @@ char decryptedData[1000];
 char decryptedData1[1000];
 char decryptedData2[1000];
 
+const size_t size = 64;
+char from[size];
+char to[64];
+
+void testMemCpy() {
+    memcpy(to, from, 64);
+}
+
+void testMemCpy2(char* outMem) {
+//    for (int i = 0; i < size; ++i) {
+//        from[i] = (char )i;
+//    }
+    memcpy(outMem, from, size);
+}
 
 int ecallSum(int a, int b) {
     return a + b;

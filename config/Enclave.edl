@@ -17,6 +17,10 @@ enclave {
     public void EcallStartResponderWithHotCall([user_check] FastCallStruct* fastECallData, [user_check] FastCallStruct* fastOCallData, uint16_t callId, [user_check] HotCall* hotCall);
 
     public int ecallSum(int a, int b);
+
+    public void testMemCpy();
+
+    public void testMemCpy2([user_check] char* outMem);
   };
 
   untrusted {

@@ -7,12 +7,12 @@
 
 #include <inttypes.h>
 
-#define PERSON_NAME_SIZE 20
-#define PERSON_EMAIL_SIZE 20
-#define PERSON_CREDIT_CARD_SIZE 25
-#define PERSON_CITY_SIZE 20
-#define PERSON_STATE_SIZE 10
-#define AUCTION_ITEM_NAME_SIZE 30
+#define PERSON_NAME_SIZE 32
+#define PERSON_EMAIL_SIZE 32
+#define PERSON_CREDIT_CARD_SIZE 32
+#define PERSON_CITY_SIZE 32
+#define PERSON_STATE_SIZE 16
+#define AUCTION_ITEM_NAME_SIZE 32
 
 struct Person {
     uint64_t id;
@@ -69,6 +69,11 @@ struct Q4Map1Result {
     uint64_t category;
 };
 
+struct Q4AverageResult {
+    double average;
+    uint64_t category;
+};
+
 struct Q5CountTotalResult {
     uint64_t datetime;
     uint64_t count;
@@ -87,6 +92,11 @@ struct Q6JoinResult {
 
 struct Q6MaxResult {
     uint64_t final;
+    uint64_t seller;
+};
+
+struct Q6AverageResult {
+    double final;
     uint64_t seller;
 };
 

@@ -10,15 +10,19 @@
 #include "Source/CsvSource.h"
 #include "Source/FastCallEncryptedEmitter.h"
 #include "Engine/Simple2SourceObserverEngine.h"
+#include "Source/StringRandomGenerationSource.h"
 
 void runEngineWithBufferObserverCrypto(ConfigurationTesting& config, bool shouldCreateMeasurementDirectory, bool shouldCreateResultDirectory) {
     // ================ Set up engine ====================
     CsvSource source(config.sourceId, config.sourceFileName, config.sourceDelay, config.sourceHasHeader, config.sourceCount);
     source.setParser(config.parser);
 
+//    StringRandomGenerationSource source(config.taskInputDataSize, config.sourceCount);
+//    source.prepare();
+
     EngineWithBufferObserverCrypto engine;
-    EngineWithBufferObserverCrypto::encryptInput(true);
-    EngineWithBufferObserverCrypto::encryptOutput(true);
+    EngineWithBufferObserverCrypto::encryptInput(false);
+    EngineWithBufferObserverCrypto::encryptOutput(false);
     engine.setSource(source);
 
     engine.addTask(config.taskId, config.taskInputDataSize, config.taskShouldBeObserved);

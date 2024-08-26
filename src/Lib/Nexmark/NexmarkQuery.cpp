@@ -192,7 +192,7 @@ void NexmarkQuery::runQuery4_JoinAuctionBid(std::string sourceFilePath1, std::st
     config.sourceId2 = 2;
     config.sourceDelay2 = 0;
     config.sourceHasHeader2 = true;
-    config.sourceCount2 = 500000;
+    config.sourceCount2 = -1;
     config.parser2 = new BidParser();
 
     config.taskId = 15;
@@ -228,6 +228,60 @@ void NexmarkQuery::runQuery4_MapAuctionBid(std::string sourceFilePath, std::stri
     this->cleanConfiguration_(&config);
 }
 
+void NexmarkQuery::runQuery4_Max(std::string sourceFilePath, std::string measurementFileName, std::string sinkFileName) {
+    ConfigurationTesting config;
+    this->setupConfiguration_(&config, std::move(sourceFilePath), std::move(measurementFileName), std::move(sinkFileName));
+
+    config.taskId = 17;
+    config.taskInputDataSize = sizeof(Q4Map1Result) + SGX_AESGCM_MAC_SIZE + SGX_AESGCM_IV_SIZE + 4;
+    config.taskShouldBeObserved = true;
+    config.outputDataSize = sizeof(Q4Map1Result) + SGX_AESGCM_MAC_SIZE + SGX_AESGCM_IV_SIZE + 4;
+    config.parser = new Q4Map1ResultParser();
+    config.sink = sinkQ4MapResult;
+    config.sinkFileStream = getSinkFileStream();
+
+    std::cout << "Start Query4 Max\n";
+    runEngineWithBufferObserverCrypto(config);
+    std::cout << "End Query4 Max\n";
+    this->cleanConfiguration_(&config);
+}
+
+void NexmarkQuery::runQuery4_JoinCategory(std::string sourceFilePath, std::string measurementFileName, std::string sinkFileName) {
+    ConfigurationTesting config;
+    this->setupConfiguration_(&config, std::move(sourceFilePath), std::move(measurementFileName), std::move(sinkFileName));
+
+    config.taskId = 18;
+    config.taskInputDataSize = sizeof(Q4Map1Result) + SGX_AESGCM_MAC_SIZE + SGX_AESGCM_IV_SIZE + 4;
+    config.taskShouldBeObserved = true;
+    config.outputDataSize = sizeof(Q4Map1Result) + SGX_AESGCM_MAC_SIZE + SGX_AESGCM_IV_SIZE + 4;
+    config.parser = new Q4Map1ResultParser();
+    config.sink = sinkQ4MapResult;
+    config.sinkFileStream = getSinkFileStream();
+
+    std::cout << "Start Query4 Join Category\n";
+    runEngineWithBufferObserverCrypto(config);
+    std::cout << "End Query4 Join Category\n";
+    this->cleanConfiguration_(&config);
+}
+
+void NexmarkQuery::runQuery4_Average(std::string sourceFilePath, std::string measurementFileName, std::string sinkFileName) {
+    ConfigurationTesting config;
+    this->setupConfiguration_(&config, std::move(sourceFilePath), std::move(measurementFileName), std::move(sinkFileName));
+
+    config.taskId = 19;
+    config.taskInputDataSize = sizeof(Q4Map1Result) + SGX_AESGCM_MAC_SIZE + SGX_AESGCM_IV_SIZE + 4;
+    config.taskShouldBeObserved = true;
+    config.outputDataSize = sizeof(Q4AverageResult) + SGX_AESGCM_MAC_SIZE + SGX_AESGCM_IV_SIZE + 4;
+    config.parser = new Q4Map1ResultParser();
+    config.sink = sinkQ4AverageResult;
+    config.sinkFileStream = getSinkFileStream();
+
+    std::cout << "Start Query4 Average\n";
+    runEngineWithBufferObserverCrypto(config);
+    std::cout << "End Query4 Average\n";
+    this->cleanConfiguration_(&config);
+}
+
 void NexmarkQuery::runQuery5_CountByAuction(std::string sourceFilePath, std::string measurementFileName, std::string sinkFileName) {
     ConfigurationTesting config;
     this->setupConfiguration_(&config, std::move(sourceFilePath), std::move(measurementFileName), std::move(sinkFileName));
@@ -239,7 +293,7 @@ void NexmarkQuery::runQuery5_CountByAuction(std::string sourceFilePath, std::str
     config.parser = new BidParser();
     config.sink = sinkQ5CountByAuctionResult;
     config.sinkFileStream = getSinkFileStream();
-    config.sourceCount = 20000;
+//    config.sourceCount = 20000;
 
     std::cout << "Start Query5 Count\n";
     runEngineWithBufferObserverCrypto(config);
@@ -281,7 +335,7 @@ void NexmarkQuery::runQuery6_JoinAuctionBid(std::string sourceFilePath1, std::st
     config.sourceId2 = 2;
     config.sourceDelay2 = 0;
     config.sourceHasHeader2 = true;
-    config.sourceCount2 = 500000;
+    config.sourceCount2 = -1;
     config.parser2 = new BidParser();
 
     config.taskId = 22;
@@ -342,11 +396,15 @@ void NexmarkQuery::runQuery6_Avg(std::string sourceFilePath, std::string measure
     this->setupConfiguration_(&config, std::move(sourceFilePath), std::move(measurementFileName), std::move(sinkFileName));
 
     config.taskId = 25;
-    config.taskInputDataSize = sizeof(Q6MaxResult) + SGX_AESGCM_MAC_SIZE + SGX_AESGCM_IV_SIZE + 4;
+//    config.taskInputDataSize = sizeof(Q6MaxResult) + SGX_AESGCM_MAC_SIZE + SGX_AESGCM_IV_SIZE + 4;
+    config.taskInputDataSize = sizeof(Q6MaxResult);
+
     config.taskShouldBeObserved = true;
-    config.outputDataSize = sizeof(Q6MaxResult) + SGX_AESGCM_MAC_SIZE + SGX_AESGCM_IV_SIZE + 4;
+//    config.outputDataSize = sizeof(Q6AverageResult) + SGX_AESGCM_MAC_SIZE + SGX_AESGCM_IV_SIZE + 4;
+    config.outputDataSize = sizeof(Q6AverageResult);
+
     config.parser = new Q6MaxResultParser();
-    config.sink = sinkQ6MaxResult;
+    config.sink = sinkQ6AverageResult;
     config.sinkFileStream = getSinkFileStream();
 
     std::cout << "Start Query6 Avg\n";

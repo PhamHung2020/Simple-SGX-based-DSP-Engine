@@ -4,19 +4,19 @@
 #include <inttypes.h>
 
 struct FlightData {
-    char uniqueCarrier[10];
+    char uniqueCarrier[8];
     int arrDelay;
 };
 
 struct ReducedFlightData {
-    char uniqueCarrier[10];
+    char uniqueCarrier[8];
     uint32_t count;
     int total;
 };
 
 struct JoinedFlightData {
-    char uniqueCarrier1[10];
-    char uniqueCarrier2[10];
+    char uniqueCarrier1[8];
+    char uniqueCarrier2[8];
     int arrDelay;
 };
 

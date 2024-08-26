@@ -221,6 +221,7 @@ void *BidParser::parseFromString(const std::string &str) {
         return nullptr;
     }
 
+    this->bid_->auction = 1000;
     return this->bid_;
 }
 
@@ -790,6 +791,15 @@ void *Q6MaxResultParser::parseFromString(const std::string &str) {
     catch (const std::invalid_argument &) {
         return nullptr;
     }
+
+//    if (this->count_ < 10000) {
+//        result_->seller = 1000;
+//        this->count_++;
+//    } else {
+//        int i = (rand()%70)+1;
+////    std::cout << i << std::endl;
+//        result_->seller = 1000 + i;
+//    }
 
     return this->result_;
 }

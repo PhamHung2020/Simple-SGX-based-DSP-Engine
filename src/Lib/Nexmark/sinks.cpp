@@ -124,6 +124,15 @@ void sinkQ4MapResult(void* rawData) {
     nexmarkSinkFileStream << result->category << "," << result->final << std::endl;
 }
 
+void sinkQ4AverageResult(void* rawData) {
+    if (rawData == NULL) {
+        return;
+    }
+
+    const auto result = static_cast<Q4AverageResult*>(rawData);
+    nexmarkSinkFileStream << result->average << "," << result->category << std::endl;
+}
+
 void sinkQ5CountTotalResult(void* rawData) {
     if (rawData == NULL) {
         return;
@@ -189,6 +198,15 @@ void sinkQ6MaxResult(void* rawData) {
     }
 
     const auto result = static_cast<Q6MaxResult*>(rawData);
+    nexmarkSinkFileStream << result->final << "," << result->seller << std::endl;
+}
+
+void sinkQ6AverageResult(void* rawData) {
+    if (rawData == NULL) {
+        return;
+    }
+
+    const auto result = static_cast<Q6AverageResult*>(rawData);
     nexmarkSinkFileStream << result->final << "," << result->seller << std::endl;
 }
 

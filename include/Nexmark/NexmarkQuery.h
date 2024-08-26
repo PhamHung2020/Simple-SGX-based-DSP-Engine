@@ -24,6 +24,9 @@ public:
 
     void runQuery4_JoinAuctionBid(std::string, std::string, std::string, std::string);
     void runQuery4_MapAuctionBid(std::string, std::string, std::string);
+    void runQuery4_Max(std::string, std::string, std::string);
+    void runQuery4_JoinCategory(std::string, std::string, std::string);
+    void runQuery4_Average(std::string, std::string, std::string);
 
     void runQuery5_CountByAuction(std::string, std::string, std::string);
     void runQuery5_MaxBatch(std::string, std::string, std::string);

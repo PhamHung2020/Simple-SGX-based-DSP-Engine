@@ -14,6 +14,7 @@
 #include <string>
 #include <vector>
 #include <map>
+#include <unordered_map>
 #include <stdexcept>
 
 FastCallStruct* globalFastOCall;
@@ -26,7 +27,6 @@ void MapCsvRowToFlight(void* data) {
     }
 
     const auto row = static_cast<char *>(data);
-//    print("%s\n", row);
     std::string rowStr = row;
     FlightData flightData{};
 
@@ -63,7 +63,7 @@ void MapCsvRowToFlight(void* data) {
         return;
     }
 
-    FastCall_request_encrypt(globalFastOCall, &flightData);
+    FastCall_request_encrypt2(globalFastOCall, &flightData, encryptedData);
 }
 
 void FilterFlight(void* data) {
@@ -74,23 +74,27 @@ void FilterFlight(void* data) {
     const auto flightData = static_cast<FlightData*> (data);
 
     if (flightData->arrDelay > 0) {
-        FastCall_request_encrypt(globalFastOCall, flightData);
+//        FastCall_request(globalFastOCall, flightData);
+        FastCall_request_encrypt2(globalFastOCall, flightData, encryptedData);
     }
 }
 
-uint16_t reduceWindow = 1500                                                                                                                                        ;
+uint16_t reduceWindow = 100;
+uint16_t reduceStep = 10;
+uint16_t reduceCurrentStep = 10;
 std::vector<FlightData*> receivedFlightData;
-std::vector<ReducedFlightData*> reducedData;
-std::vector<ReducedFlightData> reducedDatas;
 void ReduceFlight(void* data) {
     if (data == NULL) {
-//        for (auto &reduceFlightData: reducedData) {
-//            FastCall_request_encrypt(globalFastOCall, reduceFlightData);
-//        }
         return;
     }
 
     const auto flightData = static_cast<FlightData*> (data);
+
+    // if window reached max size --> delete old data
+    if (receivedFlightData.size() >= reduceWindow) {
+        delete receivedFlightData[0];
+        receivedFlightData.erase(receivedFlightData.begin());
+    }
 
     // add new data
     const auto newFlightData = new FlightData;
@@ -102,43 +106,32 @@ void ReduceFlight(void* data) {
         return;
     }
 
-    // delete old data if window size is reached
-    else if (receivedFlightData.size() > reduceWindow) {
-        const auto deletedFlightData = receivedFlightData[0];
-        for (auto &reduceFlightData: reducedData) {
-            if (strcmp(deletedFlightData->uniqueCarrier, reduceFlightData->uniqueCarrier) == 0) {
-                reduceFlightData->count -= 1;
-                reduceFlightData->total -= deletedFlightData->arrDelay;
-                break;
+    reduceCurrentStep++;
+
+    if (reduceCurrentStep >= reduceStep) {
+        reduceCurrentStep = 0;
+
+        std::unordered_map<std::string, std::pair<uint32_t, int>> reducedDataMap;
+        for (const auto& storedFlight : receivedFlightData) {
+            const auto carrier = std::string(storedFlight->uniqueCarrier);
+            if (reducedDataMap.find(carrier) != reducedDataMap.end()) {
+                reducedDataMap[carrier].first += 1;
+                reducedDataMap[carrier].second += storedFlight->arrDelay;
+            } else {
+                reducedDataMap[carrier].first = 1;
+                reducedDataMap[carrier].second = storedFlight->arrDelay;
             }
         }
-        receivedFlightData.erase(receivedFlightData.begin());
-        delete deletedFlightData;
-    }
 
-    // reducing
-    bool found = false;
-    for (auto &reduceFlightData: reducedData) {
-        if (strcmp(newFlightData->uniqueCarrier, reduceFlightData->uniqueCarrier) == 0) {
-            reduceFlightData->count += 1;
-            reduceFlightData->total += newFlightData->arrDelay;
+        for (auto& reducedData : reducedDataMap) {
+            ReducedFlightData reducedFlightData{};
+            strncpy(reducedFlightData.uniqueCarrier, reducedData.first.c_str(), 8);
+            reducedFlightData.count = reducedData.second.first;
+            reducedFlightData.total = reducedData.second.second;
 
-            found = true;
-            break;
+//            FastCall_request(globalFastOCall, &reducedFlightData);
+            FastCall_request_encrypt2(globalFastOCall, &reducedFlightData, encryptedData);
         }
-    }
-
-    if (!found) {
-        auto* reducedFlightData = new ReducedFlightData;
-        strncpy(reducedFlightData->uniqueCarrier, newFlightData->uniqueCarrier, 10);
-        reducedFlightData->count = 1;
-        reducedFlightData->total = newFlightData->arrDelay;
-        reducedData.push_back(reducedFlightData);
-    }
-
-    // output reduced data
-    for (auto &reduceFlightData: reducedData) {
-        FastCall_request_encrypt(globalFastOCall, reduceFlightData);
     }
 }
 
@@ -273,27 +266,27 @@ uint16_t reduceDelayWindow = 200;
 uint16_t reduceDelayCount = 0;
 ReducedFlightData reducedDelayFlightData;
 void ReduceDelay(void* data) {
-    if (data == NULL) {
-        for (auto &reduceFlightData: reducedDatas) {
-            strncpy(reducedDelayFlightData.uniqueCarrier, "abc\0", 4);
-            FastCall_request(globalFastOCall, &reducedDelayFlightData);
-        }
-        return;
-    }
-
-    const auto flightData = static_cast<FlightData*> (data);
-    reducedDelayFlightData.count += 1;
-    reducedDelayFlightData.total += flightData->arrDelay;
-    reduceDelayCount++;
-
-    if (reduceDelayCount >= reduceDelayWindow) {
-        strncpy(reducedDelayFlightData.uniqueCarrier, "abc\0", 4);
-        FastCall_request(globalFastOCall, &reducedDelayFlightData);
-
-        reduceDelayCount = 0;
-        reducedDelayFlightData.count = 0;
-        reducedDelayFlightData.total = 0;
-    }
+//    if (data == NULL) {
+//        for (auto &reduceFlightData: reducedDatas) {
+//            strncpy(reducedDelayFlightData.uniqueCarrier, "abc\0", 4);
+//            FastCall_request(globalFastOCall, &reducedDelayFlightData);
+//        }
+//        return;
+//    }
+//
+//    const auto flightData = static_cast<FlightData*> (data);
+//    reducedDelayFlightData.count += 1;
+//    reducedDelayFlightData.total += flightData->arrDelay;
+//    reduceDelayCount++;
+//
+//    if (reduceDelayCount >= reduceDelayWindow) {
+//        strncpy(reducedDelayFlightData.uniqueCarrier, "abc\0", 4);
+//        FastCall_request(globalFastOCall, &reducedDelayFlightData);
+//
+//        reduceDelayCount = 0;
+//        reducedDelayFlightData.count = 0;
+//        reducedDelayFlightData.total = 0;
+//    }
 }
 
 void NexmarkQ1(void* data) {
@@ -306,7 +299,6 @@ void NexmarkQ1(void* data) {
     long double exchangeRate = 0.92;
     bid->price = (uint64_t)(bid->price * exchangeRate);
     FastCall_request_encrypt2(globalFastOCall, bid, encryptedData);
-
 }
 
 void NexmarkQ2_Filter(void* data) {
@@ -316,8 +308,11 @@ void NexmarkQ2_Filter(void* data) {
     }
 
     const auto bid = static_cast<Bid*>(data);
-    if (bid->auction == 17600 || bid->auction == 27500 || bid->auction == 40700 || bid->auction == 51500) {
-        FastCall_request_encrypt2(globalFastOCall, bid, encryptedData);
+//    if (bid->auction == 17600 || bid->auction == 27500 || bid->auction == 40700 || bid->auction == 51500) {
+//    if (bid->auction == 17600 || bid->auction == 27500 || bid->auction == 40700) {
+//    if (bid->auction == 17600 || bid->auction == 27500) {
+    if (bid->auction > 1760) {
+            FastCall_request_encrypt2(globalFastOCall, bid, encryptedData);
     }
 }
 
@@ -341,9 +336,10 @@ void NexmarkQ3_FilterPerson(void* data) {
     const auto person = static_cast<Person*>(data);
     // P.state = `OR' OR P.state = `ID' OR P.state = `CA'
 //    if (strcmp(person->state, "or") == 0 || strcmp(person->state, "id") == 0 || strcmp(person->state, "ca") == 0) {
-    if (strcmp(person->state, "or") == 0) {
-//    if (strcmp(person->state, "or") == 0 || strcmp(person->state, "id") == 0 || strcmp(person->state, "ca") == 0 || strcmp(person->state, "wa") == 0) {
-            FastCall_request_encrypt2(globalFastOCall, person, encryptedData);
+//    if (strcmp(person->state, "or") == 0) {
+    if (strcmp(person->state, "or") == 0 || strcmp(person->state, "id") == 0 || strcmp(person->state, "ca") == 0 || strcmp(person->state, "wa") == 0) {
+            FastCall_request_encrypt2(globalFastOCall, data, encryptedData);
+//    FastCall_request(globalFastOCall, data);
     }
 }
 
@@ -360,126 +356,96 @@ void NexmarkQ3_FilterAuction(void* data) {
 
 std::vector<Person*> people;
 std::vector<Auction*> auctions;
-std::vector<std::pair<Person*, Auction*>> joinedResults;
-uint64_t timeRange = 1500;
-uint64_t personTimeMax = 0;
-uint64_t auctionTimeMax = 0;
+const uint64_t q3JoinWindowSize = 200;
+const uint64_t q3JoinSlidingStep = 10;
+uint64_t q3PeopleCurrentSliding = q3JoinSlidingStep;
+uint64_t q3AuctionCurrentSliding = q3JoinSlidingStep;
 void NexmarkQ3_JoinPersonAuction(void* data) {
     if (data == NULL) {
         return;
     }
 
+    // get data and cast them to appropriate data type
     const auto dataGroup = static_cast<FastCallDataGroup*>(data);
     const auto person = dataGroup->data1 != NULL ? static_cast<Person*>(dataGroup->data1) : NULL;
     const auto auction = dataGroup->data2 != NULL ? static_cast<Auction*>(dataGroup->data2) : NULL;
-    std::map<Person*, bool> removedPersonMap;
-    std::map<Auction*, bool> removedAuctionMap;
 
-    bool isNewPersonAdded = false;
-    bool isNewAuctionAdded = false;
+    // manage person's window
     if (person != NULL) {
-        if (person->datetime > personTimeMax) {
-            personTimeMax = person->datetime;
-            for (auto & storedPerson : people) {
-                if (storedPerson->datetime >= personTimeMax - timeRange) {
-                    continue;
-                }
-
-                removedPersonMap[storedPerson] = true;
-                delete storedPerson;
-                storedPerson = NULL;
-            }
-
-            for (size_t i = 0; i < people.size(); ++i) {
-                if (people[i] == NULL) {
-                    people[i] = people.back();
-                    people.pop_back();
-                    --i;
-                }
-            }
+        // if window size reached --> delete old data
+        if (people.size() >= q3JoinWindowSize) {
+            delete people[0];
+            people.erase(people.begin());
         }
 
-        if (person->datetime >= personTimeMax - timeRange) {
-            auto* newPerson = new Person;
-            newPerson->id = person->id;
-            strncpy(newPerson->name, person->name, PERSON_NAME_SIZE);
-            strncpy(newPerson->emailAddress, person->emailAddress, PERSON_EMAIL_SIZE);
-            strncpy(newPerson->creditCard, person->creditCard, PERSON_CREDIT_CARD_SIZE);
-            strncpy(newPerson->city, person->city, PERSON_CITY_SIZE);
-            strncpy(newPerson->state, person->state, PERSON_STATE_SIZE);
-            newPerson->datetime = person->datetime;
-            people.push_back(newPerson);
+        // add new data
+        auto* newPerson = new Person;
+        newPerson->id = person->id;
+        strncpy(newPerson->name, person->name, PERSON_NAME_SIZE);
+        strncpy(newPerson->emailAddress, person->emailAddress, PERSON_EMAIL_SIZE);
+        strncpy(newPerson->creditCard, person->creditCard, PERSON_CREDIT_CARD_SIZE);
+        strncpy(newPerson->city, person->city, PERSON_CITY_SIZE);
+        strncpy(newPerson->state, person->state, PERSON_STATE_SIZE);
+        newPerson->datetime = person->datetime;
+        people.push_back(newPerson);
 
-            isNewPersonAdded = true;
-        }
+        // increase current sliding step
+        q3PeopleCurrentSliding++;
     }
 
+    // manage auction's window
     if (auction != NULL) {
-        if (auction->datetime > auctionTimeMax) {
-            auctionTimeMax = auction->datetime;
-            for (auto & storedAuction : auctions) {
-                if (storedAuction->datetime >= auctionTimeMax - timeRange) {
-                    continue;
+        // if window size reached --> delete old data
+        if (auctions.size() >= q3JoinWindowSize) {
+            delete auctions[0];
+            auctions.erase(auctions.begin());
+        }
+
+        // add new data
+        auto* newAuction = new Auction;
+        newAuction->id = auction->id;
+        strncpy(newAuction->itemName, auction->itemName, AUCTION_ITEM_NAME_SIZE);
+        newAuction->initialBid = auction->initialBid;
+        newAuction->reserve = auction->reserve;
+        newAuction->datetime = auction->datetime;
+        newAuction->expires = auction->expires;
+        newAuction->seller = auction->seller;
+        newAuction->category = auction->category;
+        auctions.push_back(newAuction);
+
+        // increase current sliding step
+        q3AuctionCurrentSliding++;
+    }
+
+    bool shouldPeopleBeJoined = people.size() >= q3JoinWindowSize && q3PeopleCurrentSliding >= q3JoinSlidingStep;
+    bool shouldAuctionBeJoined = auctions.size() >= q3JoinWindowSize && q3AuctionCurrentSliding >= q3JoinSlidingStep;
+    bool shouldJoin = shouldPeopleBeJoined || shouldAuctionBeJoined;
+
+    // if sliding enough --> join
+    if (shouldJoin) {
+        if (shouldPeopleBeJoined) {
+            q3PeopleCurrentSliding = 0;
+        }
+
+        if (shouldAuctionBeJoined) {
+            q3AuctionCurrentSliding = 0;
+        }
+
+        // nested loop join
+        std::vector<std::pair<Person*, Auction*>> joinedResults;
+        for (auto& storedPerson : people) {
+            for (auto& storedAuction : auctions) {
+                if (storedPerson->id == storedAuction->seller) {
+                    joinedResults.emplace_back(storedPerson, storedAuction);
                 }
-
-                removedAuctionMap[storedAuction] = true;
-                delete storedAuction;
-                storedAuction = NULL;
-            }
-
-            for (size_t i = 0; i < auctions.size(); ++i) {
-                if (auctions[i] == NULL) {
-                    auctions[i] = auctions.back();
-                    auctions.pop_back();
-                    --i;
-                }
             }
         }
 
-        if (auction->datetime >= auctionTimeMax - timeRange) {
-            auto* newAuction = new Auction;
-            newAuction->id = auction->id;
-            strncpy(newAuction->itemName, auction->itemName, AUCTION_ITEM_NAME_SIZE);
-            newAuction->initialBid = auction->initialBid;
-            newAuction->reserve = auction->reserve;
-            newAuction->datetime = auction->datetime;
-            newAuction->expires = auction->expires;
-            newAuction->seller = auction->seller;
-            newAuction->category = auction->category;
-            auctions.push_back(newAuction);
-
-            isNewAuctionAdded = true;
+        // output results
+        for (const auto& result : joinedResults) {
+            Q3JoinResult mapJoinResult{ *result.first, *result.second };
+            FastCall_request_encrypt2(globalFastOCall, &mapJoinResult, encryptedData);
         }
-    }
-
-    for (size_t i = 0; i < joinedResults.size(); ++i) {
-        if (removedPersonMap[joinedResults[i].first] || removedAuctionMap[joinedResults[i].second]) {
-            joinedResults[i] = joinedResults.back();
-            joinedResults.pop_back();
-            --i;
-        }
-    }
-
-    if (isNewPersonAdded) {
-        for (const auto& storedAuction: auctions) {
-            if (storedAuction->seller == person->id) {
-                joinedResults.emplace_back(people.back(), storedAuction);
-            }
-        }
-    }
-
-    if (isNewAuctionAdded) {
-        size_t peopleSize = isNewPersonAdded ? people.size() - 1 : people.size();
-        for (size_t i = 0; i < peopleSize; ++i) {
-            if (people[i]->id == auction->seller) {
-                joinedResults.emplace_back(people[i], auctions.back());
-            }
-        }
-    }
-
-    for (const auto& result : joinedResults) {
-        Q3JoinResult mapJoinResult{ *result.first, *result.second };
-        FastCall_request_encrypt2(globalFastOCall, &mapJoinResult, encryptedData);
     }
 }
 
@@ -499,10 +465,10 @@ void NexmarkQ3_MapResult(void* data) {
 
 std::vector<Auction*> auctionsQ4;
 std::vector<Bid*> bidsQ4;
-std::vector<std::pair<Auction*, Bid*>> join1ResultsQ4;
-uint64_t timeRangeQ4 = 1500;
-uint64_t bidTimeMaxQ4 = 0;
-uint64_t auctionTimeMaxQ4 = 0;
+const uint64_t q4JoinWindowSize = 100;
+const uint64_t q4JoinSlidingStep = 10;
+uint64_t q4BidCurrentSliding = q4JoinSlidingStep;
+uint64_t q4AuctionCurrentSliding = q4JoinSlidingStep;
 void NexmarkQ4_JoinAuctionBid(void* data) {
     if (data == NULL) {
         return;
@@ -511,117 +477,69 @@ void NexmarkQ4_JoinAuctionBid(void* data) {
     const auto dataGroup = static_cast<FastCallDataGroup*>(data);
     const auto auction = dataGroup->data1 != NULL ? static_cast<Auction*>(dataGroup->data1) : NULL;
     const auto bid = dataGroup->data2 != NULL ? static_cast<Bid*>(dataGroup->data2) : NULL;
-    std::map<Auction*, bool> removedAuctionMap;
-    std::map<Bid*, bool> removedBidMap;
-
-    bool isNewBidAdded = false;
-    bool isNewAuctionAdded = false;
 
     if (bid != NULL) {
-        if (bid->datetime > bidTimeMaxQ4) {
-            bidTimeMaxQ4 = bid->datetime;
-            for (auto & storedBid : bidsQ4) {
-                if (storedBid->datetime >= bidTimeMaxQ4 - timeRangeQ4) {
-                    continue;
-                }
-
-                removedBidMap[storedBid] = true;
-                delete storedBid;
-                storedBid = NULL;
-            }
-
-            for (size_t i = 0; i < bidsQ4.size(); ++i) {
-                if (bidsQ4[i] == NULL) {
-                    bidsQ4[i] = bidsQ4.back();
-                    bidsQ4.pop_back();
-                    --i;
-                }
-            }
+        if (bidsQ4.size() >= q4JoinWindowSize) {
+            delete bidsQ4[0];
+            bidsQ4.erase(bidsQ4.begin());
         }
 
-        if (bid->datetime >= bidTimeMaxQ4 - timeRangeQ4) {
-            auto* newBid = new Bid;
-            newBid->auction = bid->auction;
-            newBid->bidder = bid->bidder;
-            newBid->price = bid->price;
-            newBid->datetime = bid->datetime;
-//            print("%lu %lu %lu %lu\n", newBid->auction, newBid->bidder, newBid->price, newBid->datetime);
-            bidsQ4.push_back(newBid);
+        auto* newBid = new Bid;
+        newBid->auction = bid->auction;
+        newBid->bidder = bid->bidder;
+        newBid->price = bid->price;
+        newBid->datetime = bid->datetime;
+        bidsQ4.push_back(newBid);
 
-            isNewBidAdded = true;
-        }
-
-//        print("After %ld\n", bidsQ4.size());
-
+        q4BidCurrentSliding++;
     }
 
     if (auction != NULL) {
-//        print("%lu\n", auction->datetime);
-        if (auction->datetime > auctionTimeMaxQ4) {
-            auctionTimeMaxQ4 = auction->datetime;
-            for (auto & storedAuction : auctionsQ4) {
-                if (storedAuction->datetime >= auctionTimeMaxQ4 - timeRangeQ4) {
-                    continue;
+        if (auctionsQ4.size() >= q4JoinWindowSize) {
+            delete auctionsQ4[0];
+            auctionsQ4.erase(auctionsQ4.begin());
+        }
+
+        auto* newAuction = new Auction;
+        newAuction->id = auction->id;
+        strncpy(newAuction->itemName, auction->itemName, AUCTION_ITEM_NAME_SIZE);
+        newAuction->initialBid = auction->initialBid;
+        newAuction->reserve = auction->reserve;
+        newAuction->datetime = auction->datetime;
+        newAuction->expires = auction->expires;
+        newAuction->seller = auction->seller;
+        newAuction->category = auction->category;
+        auctionsQ4.push_back(newAuction);
+
+        q4AuctionCurrentSliding++;
+    }
+
+    bool shouldBidBeJoined = bidsQ4.size() >= q4JoinWindowSize && q4BidCurrentSliding >= q4JoinSlidingStep;
+    bool shouldAuctionBeJoined = auctionsQ4.size() >= q4JoinWindowSize && q4AuctionCurrentSliding >= q4JoinSlidingStep;
+    bool shouldJoin = shouldBidBeJoined || shouldAuctionBeJoined;
+
+    if (shouldJoin) {
+        if (shouldBidBeJoined) {
+            q4BidCurrentSliding = 0;
+        }
+
+        if (shouldAuctionBeJoined) {
+            q4AuctionCurrentSliding = 0;
+        }
+
+        std::vector<std::pair<Auction*, Bid*>> joinResultsQ4;
+        for (auto& storedAuction : auctionsQ4) {
+            for (auto& storedBid: bidsQ4) {
+                if (storedAuction->id == storedBid->auction) {
+                    joinResultsQ4.emplace_back(storedAuction, storedBid);
                 }
-
-                removedAuctionMap[storedAuction] = true;
-                delete storedAuction;
-                storedAuction = NULL;
-            }
-
-            for (size_t i = 0; i < auctionsQ4.size(); ++i) {
-                if (auctionsQ4[i] == NULL) {
-                    auctionsQ4[i] = auctionsQ4.back();
-                    auctionsQ4.pop_back();
-                    --i;
-                }
             }
         }
 
-        if (auction->datetime >= auctionTimeMaxQ4 - timeRangeQ4) {
-            auto* newAuction = new Auction;
-            newAuction->id = auction->id;
-            strncpy(newAuction->itemName, auction->itemName, AUCTION_ITEM_NAME_SIZE);
-            newAuction->initialBid = auction->initialBid;
-            newAuction->reserve = auction->reserve;
-            newAuction->datetime = auction->datetime;
-            newAuction->expires = auction->expires;
-            newAuction->seller = auction->seller;
-            newAuction->category = auction->category;
-            auctionsQ4.push_back(newAuction);
-
-            isNewAuctionAdded = true;
+        for (const auto& result : joinResultsQ4) {
+            Q4Join1Result mapJoinResult{ *result.first, *result.second };
+            FastCall_request_encrypt2(globalFastOCall, &mapJoinResult, encryptedData);
         }
-    }
-
-    for (size_t i = 0; i < join1ResultsQ4.size(); ++i) {
-        if (removedAuctionMap[join1ResultsQ4[i].first] || removedBidMap[join1ResultsQ4[i].second]) {
-            join1ResultsQ4[i] = join1ResultsQ4.back();
-            join1ResultsQ4.pop_back();
-            --i;
-        }
-    }
-
-    if (isNewBidAdded) {
-        for (const auto& storedAuction: auctionsQ4) {
-            if (storedAuction->id == bid->auction) {
-                join1ResultsQ4.emplace_back(storedAuction, bidsQ4.back());
-            }
-        }
-    }
-
-    if (isNewAuctionAdded) {
-        size_t bidSize = isNewBidAdded ? bidsQ4.size() - 1 : bidsQ4.size();
-        for (size_t i = 0; i < bidSize; ++i) {
-            if (bidsQ4[i]->auction == auction->id) {
-                join1ResultsQ4.emplace_back(auctionsQ4.back(), bidsQ4[i]);
-            }
-        }
-    }
-
-    for (const auto& result : join1ResultsQ4) {
-        Q4Join1Result mapJoinResult{ *result.first, *result.second };
-        FastCall_request_encrypt2(globalFastOCall, &mapJoinResult, encryptedData);
     }
 }
 
@@ -638,398 +556,273 @@ void NexmarkQ4_MapAuctionBid(void* data) {
     FastCall_request_encrypt2(globalFastOCall, &mapResult, encryptedData);
 }
 
-std::map<uint64_t, uint64_t> maxPriceByCategoryQ4;
+
+std::vector<Q4Map1Result*> joinResultsForMaxQ4;
+uint64_t q4MaxCurrenSlidingStep = q4JoinSlidingStep;
+bool isSetup = false;
+void setup() {
+    joinResultsForMaxQ4.reserve(q4JoinWindowSize + 2);
+    isSetup = true;
+}
+
 void NexmarkQ4_MaxAuctionPriceByCategory(void* data) {
-    if (data == NULL) {
-        return;
-    }
+//    if (!isSetup) {
+//        setup();
+//    }
 
-    const auto parsedData = static_cast<Q4Map1Result*>(data);
-    if (maxPriceByCategoryQ4.find(parsedData->category) != maxPriceByCategoryQ4.end()) {
-        if (maxPriceByCategoryQ4[parsedData->category] < parsedData->final) {
-            maxPriceByCategoryQ4[parsedData->category] = parsedData->final;
-            Q4Map1Result result{};
-            result.category = parsedData->category;
-            result.final = parsedData->final;
-            FastCall_request_encrypt(globalFastOCall, &result);
-        }
-    } else {
-        maxPriceByCategoryQ4[parsedData->category] = parsedData->final;
-        Q4Map1Result result{};
-        result.category = parsedData->category;
-        result.final = parsedData->final;
-        FastCall_request_encrypt(globalFastOCall, &result);
-    }
+//    if (data == NULL) {
+//        return;
+//    }
 
-//    for (auto & it : maxPriceByCategoryQ4) {
-//        Q4Map1Result result{};
-//        result.category = it.first;
-//        result.final = it.second;
-//        FastCall_request(globalFastOCall, &result);
+//    const auto parsedData = static_cast<Q4Map1Result*>(data);
+
+    // if window size reached --> delete old data
+//    if (joinResultsForMaxQ4.size() >= q4JoinWindowSize) {
+//        delete joinResultsForMaxQ4[0];
+//        joinResultsForMaxQ4.erase(joinResultsForMaxQ4.begin());
+//    }
+
+//    auto* newResult = new Q4Map1Result;
+//    newResult->category = parsedData->category;
+//    newResult->final = parsedData->final;
+//    joinResultsForMaxQ4.push_back(newResult);
+
+//    if (joinResultsForMaxQ4.size() < q4JoinWindowSize) {
+//        return;
+//    }
+//
+//    q4MaxCurrenSlidingStep++;
+
+    // if sliding enough --> find the maximum
+//    if (q4MaxCurrenSlidingStep >= q4JoinSlidingStep) {
+//        q4MaxCurrenSlidingStep = 0;
+
+//        std::unordered_map<uint64_t, uint64_t> maxResultsQ4;
+//        maxResultsQ4.reserve(15);
+        // iterate all events in window to find the maximum
+//        for (auto& storedResult : joinResultsForMaxQ4) {
+//            if (maxResultsQ4.find(storedResult->category) == maxResultsQ4.end() || storedResult->final > maxResultsQ4[storedResult->category]) {
+//                maxResultsQ4[storedResult->category] = storedResult->final;
+//            }
+//        }
+
+//        for (auto& maxResult : maxResultsQ4) {
+//            Q4Map1Result result{};
+//            result.category = maxResult.first;
+//            result.final = maxResult.second;
+//
+//            // output result
+//            FastCall_request_encrypt2(globalFastOCall, &result, encryptedData);
+//        }
 //    }
 }
 
 uint64_t categories[10] = { 10, 11, 12, 13, 14, 15, 16, 17, 18, 19 };
-std::vector<std::pair<uint64_t, Q4Map1Result*>> join2ResultsQ4;
-const uint64_t windowSizeJoin2Q4 = 100;
-std::vector<std::pair<uint64_t, Q4Map1Result*>> map1ResultsQ4;
-uint64_t mapResultIdQ4 = 0;
+const uint64_t q4JoinCategoryWindowSize = 500;
+const uint64_t q4JoinCategorySlidingStep = 10;
+uint64_t q4JoinCategoryCurrentSlidingStep = q4JoinCategorySlidingStep;
+std::vector<Q4Map1Result*> maxResultForJoinCategoryQ4;
 void NexmarkQ4_JoinWithCategory(void* data) {
     if (data == NULL) {
         return;
     }
 
-    const auto mapResult = static_cast<Q4Map1Result*>(data);
-    mapResultIdQ4 += 1;
-    uint64_t deletedId = -1;
-    if (map1ResultsQ4.size() == windowSizeJoin2Q4) {
-        deletedId = map1ResultsQ4[0].first;
-        delete map1ResultsQ4[0].second;
-        map1ResultsQ4.erase(map1ResultsQ4.begin());
-    }
-    auto newResult = new Q4Map1Result;
-    newResult->category = mapResult->category;
-    newResult->final = mapResult->final;
-    map1ResultsQ4.emplace_back(mapResultIdQ4, newResult);
+    const auto maxResult = static_cast<Q4Map1Result*>(data);
 
-    if (deletedId != -1) {
-        for (size_t i = 0; i < join2ResultsQ4.size(); ++i) {
-            if (join2ResultsQ4[i].first == deletedId) {
-                join2ResultsQ4[i] = join2ResultsQ4.back();
-                join2ResultsQ4.pop_back();
-                --i;
+    if (maxResultForJoinCategoryQ4.size() >= q4JoinCategoryWindowSize) {
+        delete maxResultForJoinCategoryQ4[0];
+        maxResultForJoinCategoryQ4.erase(maxResultForJoinCategoryQ4.begin());
+    }
+
+    auto newResult = new Q4Map1Result;
+    newResult->category = maxResult->category;
+    newResult->final = maxResult->final;
+    maxResultForJoinCategoryQ4.push_back(newResult);
+
+    if (maxResultForJoinCategoryQ4.size() < q4JoinCategoryWindowSize) {
+        return;
+    }
+
+    q4JoinCategoryCurrentSlidingStep++;
+
+    if (q4JoinCategoryCurrentSlidingStep >= q4JoinCategorySlidingStep) {
+        q4JoinCategoryCurrentSlidingStep = 0;
+
+        std::vector<std::pair<uint64_t, Q4Map1Result*>> joinCategoryResultsQ4;
+        for (const auto& storedResult : maxResultForJoinCategoryQ4) {
+            for (const auto& category : categories) {
+                if (storedResult->category == category) {
+                    joinCategoryResultsQ4.emplace_back(category, storedResult);
+                }
             }
         }
-    }
 
-    for (const auto& category : categories) {
-        if (newResult->category == category) {
-            join2ResultsQ4.emplace_back(mapResultIdQ4, newResult);
+        for (const auto& result : joinCategoryResultsQ4) {
+            Q4Map1Result mapJoinResult{ result.second->final, result.second->category };
+            FastCall_request_encrypt2(globalFastOCall, &mapJoinResult, encryptedData);
         }
-    }
-
-    for (const auto& join2Result : join2ResultsQ4) {
-        FastCall_request(globalFastOCall, join2Result.second);
     }
 }
 
-std::map<uint64_t, std::pair<uint64_t, uint64_t>> averagesQ4;
+std::vector<Q4Map1Result*> joinCategoryResultForAverageQ4;
+uint64_t q4AverageCurrentSlidingStep = q4JoinSlidingStep;
 void NexmarkQ4_Average(void* data) {
     if (data == NULL) {
         return;
     }
 
-    const auto maxResult = static_cast<Q4Map1Result*>(data);
-    if (averagesQ4.find(maxResult->category) == averagesQ4.end()) {
-        averagesQ4[maxResult->category] = std::make_pair(0, 0);
+    const auto parsedData = static_cast<Q4Map1Result*>(data);
+
+    if (joinCategoryResultForAverageQ4.size() >= q4JoinWindowSize) {
+        delete joinCategoryResultForAverageQ4[0];
+        joinCategoryResultForAverageQ4.erase(joinCategoryResultForAverageQ4.begin());
     }
 
-    auto& resultBySeller = averagesQ4[maxResult->category];
-    resultBySeller.first += maxResult->final;
-    resultBySeller.second += 1;
-    const auto avg = resultBySeller.first / resultBySeller.second;
+    auto newResult = new Q4Map1Result;
+    newResult->category = parsedData->category;
+    newResult->final = parsedData->final;
+    joinCategoryResultForAverageQ4.push_back(newResult);
 
-    Q4Map1Result avgResult{};
-    avgResult.category = maxResult->category;
-    avgResult.final = avg;
-    FastCall_request(globalFastOCall, &avgResult);
-}
-
-//std::vector<Bid*> bidsCountTotalQ5;
-//uint64_t bidTimeMaxCountTotalQ5 = 0;
-uint64_t timeRangeQ5 = 1500;
-//void NexmarkQ5_CountTotal(void* data) {
-//    if (data == NULL) {
-//        return;
-//    }
-//
-//    const auto bid = static_cast<Bid*>(data);
-//    if (bid->datetime > bidTimeMaxCountTotalQ5) {
-//        bidTimeMaxCountTotalQ5 = bid->datetime;
-//        for (auto & storedBid : bidsCountTotalQ5) {
-//            if (storedBid->datetime >= bidTimeMaxCountTotalQ5 - timeRangeQ5) {
-//                continue;
-//            }
-//
-//            delete storedBid;
-//            storedBid = NULL;
-//        }
-//
-//        for (size_t i = 0; i < bidsCountTotalQ5.size(); ++i) {
-//            if (bidsCountTotalQ5[i] == NULL) {
-//                bidsCountTotalQ5[i] = bidsCountTotalQ5.back();
-//                bidsCountTotalQ5.pop_back();
-//                --i;
-//            }
-//        }
-//    }
-//
-//    if (bid->datetime >= bidTimeMaxCountTotalQ5 - timeRangeQ5) {
-//        auto* newBid = new Bid;
-//        newBid->auction = bid->auction;
-//        newBid->bidder = bid->bidder;
-//        newBid->price = bid->price;
-//        newBid->datetime = bid->datetime;
-//        bidsCountTotalQ5.push_back(newBid);
-//    }
-//
-//    Q5CountTotalResult result{};
-//    result.count = bidsCountTotalQ5.size();
-//    result.datetime = bid->datetime;
-//    FastCall_request(globalFastOCall, &result);
-//}
-
-std::vector<Bid*> bidsCountByAuctionQ5;
-std::map<uint64_t, uint64_t> countByAuctionResultsQ5;
-uint64_t bidTimeMaxCountByAuctionQ5 = 0;
-uint64_t countId = 0;
-void NexmarkQ5_CountByAuction(void* data) {
-    if (data == NULL) {
+    if (joinCategoryResultForAverageQ4.size() < q4JoinWindowSize) {
         return;
     }
 
-//    std::map<uint64_t, bool> changedAuctions;
+    q4AverageCurrentSlidingStep++;
 
-    const auto bid = static_cast<Bid*>(data);
-    if (bid->datetime > bidTimeMaxCountByAuctionQ5) {
-        bidTimeMaxCountByAuctionQ5 = bid->datetime;
-        for (auto & storedBid : bidsCountByAuctionQ5) {
-            if (storedBid->datetime >= bidTimeMaxCountByAuctionQ5 - timeRangeQ5) {
-                continue;
-            }
+    if (q4AverageCurrentSlidingStep >= q4JoinSlidingStep) {
+        q4AverageCurrentSlidingStep = 0;
 
-            countByAuctionResultsQ5[storedBid->auction] -= 1;
-            if (countByAuctionResultsQ5[storedBid->auction] <= 0) {
-                countByAuctionResultsQ5.erase(storedBid->auction);
+        std::map<uint64_t, std::pair<uint64_t, uint64_t>> averageResults;
+        for (const auto& storedResult : joinCategoryResultForAverageQ4) {
+            const auto category = storedResult->category;
+            const auto final = storedResult->final;
+            if (averageResults.find(category) == averageResults.end()) {
+                averageResults[category] = std::make_pair(final, 0);
+            } else {
+                averageResults[category].first += final;
+                averageResults[category].second += 1;
             }
-//            changedAuctions[storedBid->auction] = true;
-            delete storedBid;
-            storedBid = NULL;
         }
 
-        for (size_t i = 0; i < bidsCountByAuctionQ5.size(); ++i) {
-            if (bidsCountByAuctionQ5[i] == NULL) {
-                bidsCountByAuctionQ5[i] = bidsCountByAuctionQ5.back();
-                bidsCountByAuctionQ5.pop_back();
-                --i;
-            }
+        for (auto& averageResult : averageResults) {
+            Q4AverageResult result{};
+            result.category = averageResult.first;
+            result.average = static_cast<double>(averageResult.second.first) * 1.0 / averageResult.second.second;
+
+            FastCall_request_encrypt2(globalFastOCall, &result, encryptedData);
         }
     }
+}
 
-    if (bid->datetime >= bidTimeMaxCountByAuctionQ5 - timeRangeQ5) {
-        auto* newBid = new Bid;
-        newBid->auction = bid->auction;
-        newBid->bidder = bid->bidder;
-        newBid->price = bid->price;
-        newBid->datetime = bid->datetime;
-        bidsCountByAuctionQ5.push_back(newBid);
-
-        if (countByAuctionResultsQ5.find(bid->auction) == countByAuctionResultsQ5.end()) {
-            countByAuctionResultsQ5[bid->auction] = 1;
-        } else {
-            countByAuctionResultsQ5[bid->auction] += 1;
-        }
-//        changedAuctions[bid->auction] = true;
-    }
-
-//    if (!changedAuctions.empty()) {
-//        for (const auto& changedAuction : changedAuctions) {
-//            Q5CountByAuctionResult result{};
-//            result.auction = changedAuction.first;
-//            result.count = countByAuctionResultsQ5[result.auction];
-//            result.datetime = bid->datetime;
-//            FastCall_request(globalFastOCall, &result);
-//        }
+std::vector<Bid*> bidsCountByAuctionQ5;
+const uint64_t q5WindowSize = 200;
+const uint64_t q5SlidingStep = 10;
+uint64_t q5BidCurrentSliding = q5SlidingStep;
+void NexmarkQ5_CountByAuction(void* data) {
+//    if (data == NULL) {
+//        return;
 //    }
 
-    for (const auto& countAuctionResult : countByAuctionResultsQ5) {
-        Q5CountByAuctionResult result{};
-        result.auction = countAuctionResult.first;
-        result.count = countAuctionResult.second;
-        result.datetime = countId;
-        FastCall_request_encrypt2(globalFastOCall, &result, encryptedData);
-    }
-    countId++;
+//    const auto bid = static_cast<Bid*>(data);
+
+    // if window size reached --> delete old data
+//    if (bidsCountByAuctionQ5.size() >= q5WindowSize) {
+//        delete bidsCountByAuctionQ5[0];
+//        bidsCountByAuctionQ5.erase(bidsCountByAuctionQ5.begin());
+//    }
+//
+//    // add new data
+//    auto* newBid = new Bid;
+//    newBid->auction = bid->auction;
+//    newBid->bidder = bid->bidder;
+//    newBid->price = bid->price;
+//    newBid->datetime = bid->datetime;
+//    bidsCountByAuctionQ5.push_back(newBid);
+//
+//    if (bidsCountByAuctionQ5.size() < q5WindowSize) {
+//        return;
+//    }
+//
+//    q5BidCurrentSliding++;
+//
+//    // if sliding enough --> count using a hash table<auction_id, count>
+//    if (q5BidCurrentSliding >= q5SlidingStep) {
+//        q5BidCurrentSliding = 0;
+//
+//        std::map<uint64_t, uint64_t> countByAuctionResultsQ5;
+////        countByAuctionResultsQ5.reserve(60000);
+//        for (auto& storedAuction : bidsCountByAuctionQ5) {
+//            // if auction not appeared before ==> count = 1
+//            if (countByAuctionResultsQ5.find(storedAuction->auction) == countByAuctionResultsQ5.end()) {
+//                countByAuctionResultsQ5[storedAuction->auction] = 1;
+//            } else { // else, increase count of that auction to 1
+//                countByAuctionResultsQ5[storedAuction->auction] += 1;
+//            }
+//        }
+//
+//        // output results
+//        for (auto& countAuctionResult : countByAuctionResultsQ5) {
+//            Q5CountByAuctionResult result{};
+//            result.auction = countAuctionResult.first;
+//            result.count = countAuctionResult.second;
+//            FastCall_request_encrypt2(globalFastOCall, &result, encryptedData);
+//        }
+//    }
 }
 
 std::vector<Q5CountByAuctionResult*> countByAuctionMaxBatchQ5;
-uint64_t maxBatchValueQ5 = 0;
+uint64_t q5MaxBatchCurrenSlidingStep = q5SlidingStep;
 void NexmarkQ5_MaxBatch(void* data) {
     if (data == NULL) {
         return;
     }
 
     const auto countByAuctionResult = static_cast<Q5CountByAuctionResult*>(data);
-    if (countByAuctionMaxBatchQ5.empty() || countByAuctionResult->datetime == countByAuctionMaxBatchQ5.back()->datetime) {
-        auto result = new Q5CountByAuctionResult;
-        result->datetime = countByAuctionResult->datetime;
-        result->count = countByAuctionResult->count;
-        result->auction = countByAuctionResult->auction;
-        countByAuctionMaxBatchQ5.push_back(result);
 
-        if (result->count > maxBatchValueQ5) {
-            maxBatchValueQ5 = result->count;
-        }
+    // if window size reached --> delete old data
+    if (countByAuctionMaxBatchQ5.size() >= q5WindowSize) {
+        delete countByAuctionMaxBatchQ5[0];
+        countByAuctionMaxBatchQ5.erase(countByAuctionMaxBatchQ5.begin());
+    }
+
+    // add new data
+    auto result = new Q5CountByAuctionResult;
+    result->datetime = countByAuctionResult->datetime;
+    result->auction = countByAuctionResult->auction;
+    countByAuctionMaxBatchQ5.push_back(result);
+
+    if (countByAuctionMaxBatchQ5.size() < q5WindowSize) {
         return;
     }
 
-    std::vector<Q5CountByAuctionResult*> outputResults;
-    for (const auto storedResult : countByAuctionMaxBatchQ5) {
-        if (storedResult->count >= maxBatchValueQ5) {
-            outputResults.push_back(storedResult);
+    q5MaxBatchCurrenSlidingStep++;
+
+    // if sliding enough --> find the maximum
+    if (q5MaxBatchCurrenSlidingStep >= q5SlidingStep) {
+        q5MaxBatchCurrenSlidingStep = 0;
+
+        Q5CountByAuctionResult maxResult{};
+        maxResult.count = countByAuctionMaxBatchQ5[0]->count;
+        // iterate all events in window to find the maximum
+        for (auto& storedResult : countByAuctionMaxBatchQ5) {
+            if (storedResult->count > maxResult.count) {
+                maxResult.count = storedResult->count;
+                maxResult.datetime = storedResult->datetime;
+                maxResult.auction = storedResult->auction;
+            }
         }
-    }
 
-    if (!outputResults.empty()) {
-        for (const auto outputResult : outputResults) {
-            FastCall_request_encrypt2(globalFastOCall, outputResult, encryptedData);
-        }
+        // output result
+        FastCall_request_encrypt2(globalFastOCall, &maxResult, encryptedData);
     }
-
-    for (const auto storedResult : countByAuctionMaxBatchQ5) {
-        delete storedResult;
-    }
-    countByAuctionMaxBatchQ5.clear();
-
-    auto result = new Q5CountByAuctionResult;
-    result->datetime = countByAuctionResult->datetime;
-    result->count = countByAuctionResult->count;
-    result->auction = countByAuctionResult->auction;
-    countByAuctionMaxBatchQ5.push_back(result);
-    maxBatchValueQ5 = result->count;
 }
-
-//std::vector<Q5CountByAuctionResult*> countByAuctionFilterQ5;
-////std::vector<Q5CountTotalResult*> countTotalFilterQ5;
-//std::map<uint64_t, uint64_t> countTotalMappingFilterQ5;
-//void NexmarkQ5_Filter(void* data) {
-//    if (data == NULL) {
-//        return;
-//    }
-//
-//    const auto dataGroup = static_cast<FastCallDataGroup*>(data);
-//    const auto countByAuctionResult = dataGroup->data1 != NULL ? static_cast<Q5CountByAuctionResult*>(dataGroup->data1) : NULL;
-//    const auto countTotalResult = dataGroup->data2 != NULL ? static_cast<Q5CountTotalResult*>(dataGroup->data2) : NULL;
-//
-//    if (countByAuctionResult != NULL) {
-//        auto result = new Q5CountByAuctionResult;
-//        result->datetime = countByAuctionResult->datetime;
-//        result->auction = countByAuctionResult->auction;
-//        result->count = countByAuctionResult->count;
-//        countByAuctionFilterQ5.push_back(result);
-//    }
-//
-//    if (countTotalResult != NULL) {
-////        auto result = new Q5CountTotalResult;
-////        result->datetime = countTotalResult->datetime;
-////        result->count = countTotalResult->count;
-////        countTotalFilterQ5.push_back(result);
-//
-//        countTotalMappingFilterQ5[countTotalResult->datetime] = countTotalResult->count;
-//    }
-//
-//    if ((countByAuctionResult == NULL && countTotalResult == NULL) || countByAuctionFilterQ5.empty() || countTotalMappingFilterQ5.empty()) {
-//        print("Return\n");
-//        return;
-//    }
-//
-//    uint64_t maxDatetime = countByAuctionFilterQ5.back()->datetime;
-//    std::vector<uint64_t> auctionOutputs;
-//    for (auto& storedCountByAuctionResult : countByAuctionFilterQ5) {
-//        uint64_t currentDatetime = storedCountByAuctionResult->datetime;
-//        if (countTotalMappingFilterQ5.find(currentDatetime) != countTotalMappingFilterQ5.end()) {
-//            if (storedCountByAuctionResult->count <= countTotalMappingFilterQ5[currentDatetime]) {
-//                auctionOutputs.push_back(storedCountByAuctionResult->auction);
-//            }
-//            storedCountByAuctionResult->datetime = 0;
-//        }
-////        size_t countTotalFilterSize = countTotalFilterQ5.size();
-////        for (int i = (int)countTotalFilterSize - 1; i >= 0; --i) {
-////            if (
-////                    countTotalFilterQ5[i]->datetime == currentDatetime &&
-////                    (i == 0 || countTotalFilterQ5[i-1]->datetime > currentDatetime)) {
-////                if (storedCountByAuctionResult->count > countTotalFilterQ5[i]->count) {
-////                    auctionOutputs.push_back(storedCountByAuctionResult->auction);
-////                }
-////                storedCountByAuctionResult->datetime = 0;
-////                break;
-////            }
-////        }
-//
-////        if (storedCountByAuctionResult->datetime != 0 && storedCountByAuctionResult->datetime < countTotalFilterQ5[0]->datetime) {
-////            storedCountByAuctionResult->datetime = 0;
-////        }
-//    }
-//
-//    for (size_t i = 0; i < countByAuctionFilterQ5.size(); ++i) {
-//        if (countByAuctionFilterQ5[i]->datetime == 0) {
-//            countByAuctionFilterQ5.erase(countByAuctionFilterQ5.begin() + (long)i);
-//            --i;
-//        }
-//    }
-////    countTotalFilterQ5.clear();
-//
-//    if (!countByAuctionFilterQ5.empty()) {
-//        maxDatetime = countByAuctionFilterQ5[0]->datetime;
-//    }
-//
-//    std::vector<uint64_t> deletedKeys;
-//    for (auto & it : countTotalMappingFilterQ5) {
-////        print("%lu ", it.first - maxDatetime);
-//        if (it.first < maxDatetime) {
-//            deletedKeys.push_back(it.first);
-////            countTotalMappingFilterQ5.erase(it);
-//        }
-////        print("\n");
-//    }
-//
-//    for (auto key : deletedKeys) {
-//        countTotalMappingFilterQ5.erase(key);
-//    }
-//
-////    if (deletedKeys.empty()) {
-////        print("%lu %lu\n", maxDatetime, countTotalMappingFilterQ5.begin()->first);
-////    }
-//
-////    print("%lu %lu\n", countByAuctionFilterQ5.size(), countTotalMappingFilterQ5.size());
-//
-////    size_t maxIndex = -1;
-////    if (countTotalFilterQ5.back()->datetime == maxDatetime) {
-////        maxIndex = countTotalFilterQ5.size() - 1;
-////    } else if (countTotalFilterQ5.back()->datetime < maxDatetime) {
-////        maxIndex = countByAuctionFilterQ5.size();
-////    } else {
-////        for (int i = (int)countTotalFilterQ5.size() - 2; i >= 0; --i) {
-////            print("maxDatetime: %lu, i_Datetime: %lu, i+1_Datetime: %lu\n", maxDatetime, countTotalFilterQ5[i]->datetime, countTotalFilterQ5[i+1]->datetime);
-////            if (
-////                    (countTotalFilterQ5[i]->datetime < maxDatetime && countTotalFilterQ5[i+1]->datetime >= maxDatetime) ||
-////                    (countTotalFilterQ5[i]->datetime == maxDatetime && countTotalFilterQ5[i+1]->datetime == maxDatetime)
-////                    ) {
-////                maxIndex = i + 1;
-////                break;
-////            }
-////        }
-////    }
-////
-//////    print("%lu\n", maxIndex);
-////
-////    if (maxIndex > -1) {
-////        countTotalFilterQ5.erase(countTotalFilterQ5.begin(), countTotalFilterQ5.begin() + (long)maxIndex);
-////    }
-////
-//////    print("%lu\n", countTotalFilterQ5.size());
-//
-//    for (auto output : auctionOutputs) {
-//        FastCall_request(globalFastOCall, &output);
-//    }
-//}
 
 std::vector<Auction*> auctionsQ6;
 std::vector<Bid*> bidsQ6;
-std::vector<std::pair<Auction*, Bid*>> join1ResultsQ6;
-uint64_t timeRangeQ6 = 1500;
-uint64_t bidTimeMaxQ6 = 0;
-uint64_t auctionTimeMaxQ6 = 0;
+const uint64_t q6JoinWindowSize = 200;
+const uint64_t q6JoinSlidingStep = 10;
+uint64_t q6BidCurrentSliding = q6JoinSlidingStep;
+uint64_t q6AuctionCurrentSliding = q6JoinSlidingStep;
 void NexmarkQ6_Join(void* data) {
     if (data == NULL) {
         return;
@@ -1038,118 +831,67 @@ void NexmarkQ6_Join(void* data) {
     const auto dataGroup = static_cast<FastCallDataGroup*>(data);
     const auto auction = dataGroup->data1 != NULL ? static_cast<Auction*>(dataGroup->data1) : NULL;
     const auto bid = dataGroup->data2 != NULL ? static_cast<Bid*>(dataGroup->data2) : NULL;
-    std::map<Auction*, bool> removedAuctionMap;
-    std::map<Bid*, bool> removedBidMap;
-
-    bool isNewBidAdded = false;
-    bool isNewAuctionAdded = false;
 
     if (bid != NULL) {
-        if (bid->datetime > bidTimeMaxQ6) {
-            bidTimeMaxQ6 = bid->datetime;
-            for (auto & storedBid : bidsQ6) {
-                if (storedBid->datetime >= bidTimeMaxQ6 - timeRangeQ6) {
-                    continue;
-                }
-
-                removedBidMap[storedBid] = true;
-                delete storedBid;
-                storedBid = NULL;
-            }
-
-            for (size_t i = 0; i < bidsQ6.size(); ++i) {
-                if (bidsQ6[i] == NULL) {
-                    bidsQ6[i] = bidsQ6.back();
-                    bidsQ6.pop_back();
-                    --i;
-                }
-            }
+        if (bidsQ6.size() >= q6JoinWindowSize) {
+            delete bidsQ6[0];
+            bidsQ6.erase(bidsQ6.begin());
         }
 
-        if (bid->datetime >= bidTimeMaxQ6 - timeRangeQ6) {
-            auto* newBid = new Bid;
-            newBid->auction = bid->auction;
-            newBid->bidder = bid->bidder;
-            newBid->price = bid->price;
-            newBid->datetime = bid->datetime;
-            bidsQ6.push_back(newBid);
+        auto* newBid = new Bid;
+        newBid->auction = bid->auction;
+        newBid->bidder = bid->bidder;
+        newBid->price = bid->price;
+        newBid->datetime = bid->datetime;
+        bidsQ6.push_back(newBid);
 
-            isNewBidAdded = true;
-        }
+        q6BidCurrentSliding++;
     }
 
     if (auction != NULL) {
-        if (auction->datetime > auctionTimeMaxQ6) {
-            auctionTimeMaxQ6 = auction->datetime;
-            for (auto & storedAuction : auctionsQ6) {
-                if (storedAuction->datetime >= auctionTimeMaxQ6 - timeRangeQ6) {
-                    continue;
+        if (auctionsQ6.size() >= q6JoinWindowSize) {
+            delete auctionsQ6[0];
+            auctionsQ6.erase(auctionsQ6.begin());
+        }
+
+        auto* newAuction = new Auction;
+        newAuction->id = auction->id;
+        strncpy(newAuction->itemName, auction->itemName, AUCTION_ITEM_NAME_SIZE);
+        newAuction->initialBid = auction->initialBid;
+        newAuction->reserve = auction->reserve;
+        newAuction->datetime = auction->datetime;
+        newAuction->expires = auction->expires;
+        newAuction->seller = auction->seller;
+        newAuction->category = auction->category;
+        auctionsQ6.push_back(newAuction);
+
+        q6AuctionCurrentSliding++;
+    }
+
+    bool shouldBidBeJoined = bidsQ6.size() >= q6JoinWindowSize && q6BidCurrentSliding >= q6JoinSlidingStep;
+    bool shouldAuctionBeJoined = auctionsQ6.size() >= q6JoinWindowSize && q6AuctionCurrentSliding >= q6JoinSlidingStep;
+    bool shouldJoin = shouldBidBeJoined || shouldAuctionBeJoined;
+
+    if (shouldJoin) {
+        if (shouldBidBeJoined) {
+            q6BidCurrentSliding = 0;
+        }
+
+        if (shouldAuctionBeJoined) {
+            q6AuctionCurrentSliding = 0;
+        }
+
+        std::vector<std::pair<Auction*, Bid*>> joinResultsQ6;
+        for (auto& storedAuction : auctionsQ6) {
+            for (auto& storedBid: bidsQ6) {
+                if (storedAuction->id == storedBid->auction) {
+                    joinResultsQ6.emplace_back(storedAuction, storedBid);
                 }
-
-                removedAuctionMap[storedAuction] = true;
-                delete storedAuction;
-                storedAuction = NULL;
-            }
-
-            for (size_t i = 0; i < auctionsQ6.size(); ++i) {
-                if (auctionsQ6[i] == NULL) {
-                    auctionsQ6[i] = auctionsQ6.back();
-                    auctionsQ6.pop_back();
-                    --i;
-                }
             }
         }
 
-        if (auction->datetime >= auctionTimeMaxQ6 - timeRangeQ6) {
-            auto* newAuction = new Auction;
-            newAuction->id = auction->id;
-            strncpy(newAuction->itemName, auction->itemName, AUCTION_ITEM_NAME_SIZE);
-            newAuction->initialBid = auction->initialBid;
-            newAuction->reserve = auction->reserve;
-            newAuction->datetime = auction->datetime;
-            newAuction->expires = auction->expires;
-            newAuction->seller = auction->seller;
-            newAuction->category = auction->category;
-            auctionsQ6.push_back(newAuction);
-
-            isNewAuctionAdded = true;
-        }
-    }
-
-    bool shouldPushJoinResult = false;
-    if (!removedAuctionMap.empty() || !removedBidMap.empty()) {
-        shouldPushJoinResult = true;
-        for (size_t i = 0; i < join1ResultsQ6.size(); ++i) {
-            if (removedAuctionMap[join1ResultsQ6[i].first] || removedBidMap[join1ResultsQ6[i].second]) {
-                join1ResultsQ6[i] = join1ResultsQ6.back();
-                join1ResultsQ6.pop_back();
-                --i;
-            }
-        }
-    }
-
-    if (isNewBidAdded) {
-        shouldPushJoinResult = true;
-        for (const auto& storedAuction: auctionsQ6) {
-            if (storedAuction->id == bid->auction) {
-                join1ResultsQ6.emplace_back(storedAuction, bidsQ6.back());
-            }
-        }
-    }
-
-    if (isNewAuctionAdded) {
-        shouldPushJoinResult = true;
-        size_t bidSize = isNewBidAdded ? bidsQ6.size() - 1 : bidsQ6.size();
-        for (size_t i = 0; i < bidSize; ++i) {
-            if (bidsQ6[i]->auction == auction->id) {
-                join1ResultsQ6.emplace_back(auctionsQ6.back(), bidsQ6[i]);
-            }
-        }
-    }
-
-    if (shouldPushJoinResult) {
-        for (const auto& result : join1ResultsQ6) {
-            Q6JoinResult mapJoinResult{ *result.first, *result.second };
+        for (const auto& result : joinResultsQ6) {
+            Q4Join1Result mapJoinResult{ *result.first, *result.second };
             FastCall_request_encrypt2(globalFastOCall, &mapJoinResult, encryptedData);
         }
     }
@@ -1166,27 +908,21 @@ void NexmarkQ6_Filter(void* data) {
     }
 }
 
-const uint64_t partitionSizeQ6 = 500;
-std::map<uint64_t, std::vector<Q6JoinResult*>> partitionsQ6;
+std::vector<Q6JoinResult*> joinResultsForMaxQ6;
+uint64_t q6MaxCurrenSlidingStep = q6JoinSlidingStep;
 void NexmarkQ6_Max(void* data) {
     if (data == NULL) {
         return;
     }
 
     const auto joinResult = static_cast<Q6JoinResult *>(data);
-    uint64_t seller = joinResult->auction.seller;
 
-    if (partitionsQ6.find(seller) != partitionsQ6.end()) {
-        auto& resultsInPartition = partitionsQ6[seller];
-        if (resultsInPartition.size() >= partitionSizeQ6) {
-            delete resultsInPartition[0];
-            resultsInPartition.erase(resultsInPartition.begin());
-        }
-    } else {
-        partitionsQ6[seller].reserve(partitionSizeQ6);
+    // if window size reached --> delete old data
+    if (joinResultsForMaxQ6.size() >= q6JoinWindowSize) {
+        delete joinResultsForMaxQ6[0];
+        joinResultsForMaxQ6.erase(joinResultsForMaxQ6.begin());
     }
 
-    auto& resultsInPartition = partitionsQ6[seller];
     auto* newJoinResult = new Q6JoinResult;
     newJoinResult->auction.id = joinResult->auction.id;
     strncpy(newJoinResult->auction.itemName, joinResult->auction.itemName, AUCTION_ITEM_NAME_SIZE);
@@ -1200,210 +936,88 @@ void NexmarkQ6_Max(void* data) {
     newJoinResult->bid.price = joinResult->bid.price;
     newJoinResult->bid.auction = joinResult->bid.auction;
     newJoinResult->bid.bidder = joinResult->bid.bidder;
-    resultsInPartition.push_back(newJoinResult);
+    joinResultsForMaxQ6.push_back(newJoinResult);
 
-    std::vector<Q6MaxResult> maxResults;
-    for (const auto& partition : partitionsQ6) {
-        if (partition.second.size() < partitionSizeQ6) {
-            continue;
-        }
+    if (joinResultsForMaxQ6.size() < q6JoinWindowSize) {
+        return;
+    }
 
-        uint64_t currentMaxPrice = partition.second[0]->bid.price;
-        for (const auto& result : partition.second) {
-            if (result->bid.price > currentMaxPrice) {
-                currentMaxPrice = result->bid.price;
+    q6MaxCurrenSlidingStep++;
+
+    // if sliding enough --> find the maximum
+    if (q6MaxCurrenSlidingStep >= q6JoinSlidingStep) {
+        q6MaxCurrenSlidingStep = 0;
+
+        std::map<uint64_t, uint64_t> maxResultsQ6;
+        // iterate all events in window to find the maximum
+        for (auto& storedResult : joinResultsForMaxQ6) {
+            const auto seller = storedResult->auction.seller;
+            const auto price = storedResult->bid.price;
+            if (maxResultsQ6.find(seller) == maxResultsQ6.end() || price > maxResultsQ6[seller]) {
+                maxResultsQ6[seller] = price;
             }
         }
 
-        Q6MaxResult newMaxResult{};
-        newMaxResult.final = currentMaxPrice;
-        newMaxResult.seller = partition.first;
-        maxResults.emplace_back(newMaxResult);
-    }
+        for (auto& maxResult : maxResultsQ6) {
+            Q6MaxResult result{};
+            result.seller = maxResult.first;
+            result.final = maxResult.second;
 
-    if (!maxResults.empty()) {
-        for (auto& maxResult : maxResults) {
-            FastCall_request_encrypt2(globalFastOCall, &maxResult, encryptedData);
+            // output result
+            FastCall_request_encrypt2(globalFastOCall, &result, encryptedData);
         }
     }
-
-//    uint64_t currentMaxPrice = partitionsQ6[seller][0]->bid.price;
-//    bool maxPriceChanged = false;
-//    for (const auto& resultInPartition : resultsInPartition) {
-//        if (resultInPartition->bid.price > currentMaxPrice) {
-//            currentMaxPrice = resultInPartition->bid.price;
-//            maxPriceChanged = true;
-//        }
-//    }
-//
-//    if (maxPriceChanged) {
-//        Q6MaxResult maxResult{};
-//        maxResult.seller = seller;
-//        maxResult.final = currentMaxPrice;
-//        FastCall_request(globalFastOCall, &maxResult);
-//    }
 }
 
-std::map<uint64_t, std::pair<uint64_t, uint64_t>> averagesQ6;
-std::vector<Q6MaxResult*> averageMaxResultsQ6;
-uint64_t averageWindowSizeQ6 = 500;
+const uint64_t averagePartitionSizeQ6 = 200;
+std::map<uint64_t, std::vector<Q6MaxResult*>> averagePartitionsQ6;
 void NexmarkQ6_Avg(void* data) {
     if (data == NULL) {
         return;
     }
 
     const auto maxResult = static_cast<Q6MaxResult*>(data);
-    if (averageMaxResultsQ6.size() >= averageWindowSizeQ6) {
-        const auto& deleteResult = averageMaxResultsQ6[0];
-        averagesQ6[deleteResult->seller].first -= deleteResult->final;
-        averagesQ6[deleteResult->seller].second -= 1;
-        delete averageMaxResultsQ6[0];
-        averageMaxResultsQ6.erase(averageMaxResultsQ6.begin());
+    const auto seller = maxResult->seller;
+    if (averagePartitionsQ6.find(seller) == averagePartitionsQ6.end()) {
+        averagePartitionsQ6[seller].reserve(averagePartitionSizeQ6);
+    }
+
+    auto& currentPartition = averagePartitionsQ6[seller];
+    if (currentPartition.size() >= averagePartitionSizeQ6) {
+        delete currentPartition[0];
+        currentPartition.erase(currentPartition.begin());
     }
 
     auto* newMaxResult = new Q6MaxResult;
     newMaxResult->seller = maxResult->seller;
     newMaxResult->final = maxResult->final;
-    averageMaxResultsQ6.push_back(newMaxResult);
+    currentPartition.push_back(newMaxResult);
 
-    if (averagesQ6.find(maxResult->seller) == averagesQ6.end()) {
-        averagesQ6[maxResult->seller] = std::make_pair(0, 0);
+    // processing
+    std::vector<Q6AverageResult> averageResults;
+    for (const auto& partition : averagePartitionsQ6) {
+        if (partition.second.size() < averagePartitionSizeQ6) {
+            continue;
+        }
+
+        uint64_t sum_final = 0;
+        for (const auto& e : partition.second) {
+            sum_final += e->final;
+        }
+
+        Q6AverageResult newAverageResult{};
+        newAverageResult.seller = partition.first;
+        newAverageResult.final = static_cast<double>(sum_final) * 1.0 / partition.second.size();
+        averageResults.push_back(newAverageResult);
     }
 
-    auto& resultBySeller = averagesQ6[maxResult->seller];
-    resultBySeller.first += maxResult->final;
-    resultBySeller.second += 1;
-
-    if (averageMaxResultsQ6.size() < averageWindowSizeQ6) {
-        return;
-    }
-
-    for (const auto& averageResult : averagesQ6) {
-        Q6MaxResult avgResult{};
-        avgResult.seller = averageResult.first;
-        avgResult.final = averageResult.second.first / averageResult.second.second;
-        FastCall_request_encrypt2(globalFastOCall, &avgResult, encryptedData);
+    if (!averageResults.empty()) {
+        for (auto& averageResult : averageResults) {
+            FastCall_request(globalFastOCall, &averageResult);
+//            FastCall_request_encrypt2(globalFastOCall, &averageResult, encryptedData);
+        }
     }
 }
-
-//std::vector<Bid*> bidsQ7Max;
-//uint64_t bidTimeMaxQ7 = 0;
-//uint64_t timeRangeQ7 = 300;
-//uint64_t maxPriceQ7 = 0;
-//void NexmarkQ7_Max(void* data) {
-//    if (data == NULL) {
-//        return;
-//    }
-//
-//    const auto bid = static_cast<Bid*>(data);
-//
-//    if (bid->datetime > bidTimeMaxQ7) {
-//        bidTimeMaxQ7 = bid->datetime;
-//        for (auto & storedBid : bidsQ7Max) {
-//            if (storedBid->datetime >= bidTimeMaxQ7 - timeRangeQ7) {
-//                continue;
-//            }
-//
-//            delete storedBid;
-//            storedBid = NULL;
-//        }
-//
-//        for (size_t i = 0; i < bidsQ7Max.size(); ++i) {
-//            if (bidsQ7Max[i] == NULL) {
-//                bidsQ7Max[i] = bidsQ7Max.back();
-//                bidsQ7Max.pop_back();
-//                --i;
-//            }
-//        }
-//    }
-//
-//    if (bid->datetime >= bidTimeMaxQ7 - timeRangeQ7) {
-//        auto* newBid = new Bid;
-//        newBid->auction = bid->auction;
-//        newBid->bidder = bid->bidder;
-//        newBid->price = bid->price;
-//        newBid->datetime = bid->datetime;
-//        bidsQ7Max.push_back(newBid);
-//    }
-//
-//    for (const auto& storedBid : bidsQ7Max) {
-//        if (storedBid->price > maxPriceQ7) {
-//            maxPriceQ7 = storedBid->price;
-//        }
-//    }
-//
-//    FastCall_request(globalFastOCall, &maxPriceQ7);
-//}
-//
-//std::vector<Bid*> bidsQ7Join;
-//uint64_t maxPriceQ7Join = 0;
-//uint64_t bidTimeJoinQ7 = 0;
-//void NexmarkQ7_Join(void* data) {
-//    if (data == NULL) {
-//        return;
-//    }
-//
-//    const auto dataGroup = static_cast<FastCallDataGroup*>(data);
-//    Bid *bid = dataGroup->data1 != NULL ? static_cast<Bid*>(dataGroup->data1) : NULL;
-//    const auto maxPrice = dataGroup->data2 != NULL ? static_cast<uint64_t *>(dataGroup->data2) : NULL;
-//
-//    bool hasRemoved = false;
-//    bool isNewBidAdded = false;
-//    bool isMaxPriceChanged = false;
-//
-//    if (bid != NULL && bid->datetime > bidTimeJoinQ7) {
-//        bidTimeJoinQ7 = bid->datetime;
-//        for (auto & storedBid : bidsQ7Join) {
-//            if (storedBid->datetime >= bidTimeJoinQ7 - timeRangeQ7) {
-//                continue;
-//            }
-//
-//            delete storedBid;
-//            storedBid = NULL;
-//        }
-//
-//        for (size_t i = 0; i < bidsQ7Join.size(); ++i) {
-//            if (bidsQ7Join[i] == NULL) {
-//                hasRemoved = true;
-//                bidsQ7Join[i] = bidsQ7Join.back();
-//                bidsQ7Join.pop_back();
-//                --i;
-//            }
-//        }
-//    }
-//
-//    if (bid != NULL && bid->datetime >= bidTimeJoinQ7 - timeRangeQ7) {
-//        isNewBidAdded = true;
-//        auto* newBid = new Bid;
-//        newBid->auction = bid->auction;
-//        newBid->bidder = bid->bidder;
-//        newBid->price = bid->price;
-//        newBid->datetime = bid->datetime;
-//        bidsQ7Join.push_back(newBid);
-//    }
-//
-//    if (maxPrice != NULL && *maxPrice > maxPriceQ7Join) {
-//        isMaxPriceChanged = true;
-//        maxPriceQ7Join = *maxPrice;
-//    }
-//
-//    if (!(hasRemoved || isNewBidAdded || isMaxPriceChanged)) {
-//        return;
-//    }
-//
-//    std::vector<Bid*> joinResultQ7;
-//    for (const auto& storedBid : bidsQ7Join) {
-//        if (storedBid->price == maxPriceQ7Join) {
-//            joinResultQ7.push_back(storedBid);
-//        }
-//    }
-//
-//    if (!joinResultQ7.empty()) {
-//        for (const auto& result : joinResultQ7) {
-//            FastCall_request(globalFastOCall, result);
-//        }
-//    }
-//}
 
 std::vector<Bid*> bidsQ7MaxJoin;
 uint64_t bidTimeMaxJoinQ7 = 0;
@@ -1733,4 +1347,8 @@ void NexmarkQ8_Map(void* data) {
     strncpy(mapResult.personName, joinResult->person.name, PERSON_NAME_SIZE);
     mapResult.auctionReserve = joinResult->auction.reserve;
     FastCall_request_encrypt2(globalFastOCall, &mapResult, encryptedData);
+}
+
+void testDecryption(void* data) {
+
 }
