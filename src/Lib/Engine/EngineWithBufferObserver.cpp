@@ -39,11 +39,13 @@ void * EngineWithBufferObserver::observationThread_(void *observedDataAsVoidP) {
 
     const auto buffer = observedData->buffer;
 //    observedData->startTime = std::chrono::high_resolution_clock::now();
+    uint32_t count = 1000000;
     observedData->startTimestamp = rdtscp();
     if (observedData->isHead) {
-        while (true) {
+        while (count > 0) {
             const int value = buffer->head;
             if (value != observedData->previousValue) {
+                count--;
 //                observedData->timePoints[observedData->count] = std::chrono::high_resolution_clock::now();
                 uint64_t timestamp = rdtscp();
                 observedData->timestampCounterPoints[observedData->count] = timestamp;
@@ -55,10 +57,13 @@ void * EngineWithBufferObserver::observationThread_(void *observedDataAsVoidP) {
             if (!observedData->keepPolling)
                 break;
         }
+        printf("Observer head ended\n");
+
     } else {
-        while (true) {
+        while (count > 0) {
             const int value = buffer->tail;
             if (value != observedData->previousValue) {
+                count--;
 //                observedData->timePoints[observedData->count] = std::chrono::high_resolution_clock::now();
                 uint64_t timestamp = rdtscp();
                 observedData->timestampCounterPoints[observedData->count] = timestamp;
@@ -70,6 +75,7 @@ void * EngineWithBufferObserver::observationThread_(void *observedDataAsVoidP) {
             if (!observedData->keepPolling)
                 break;
         }
+        printf("Observer tail ended\n");
     }
 
     return nullptr;

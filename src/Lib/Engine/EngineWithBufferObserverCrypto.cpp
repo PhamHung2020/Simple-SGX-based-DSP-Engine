@@ -104,19 +104,32 @@ int EngineWithBufferObserverCrypto::start() {
 
     if (initializationResult == this->enclaveIds_.size())
     {
+        // create source thread
+        emitter_->setFastCallData(&this->fastCallDataList_[0]);
+        SourceEmitterPair sourceEmitterPair = { this->source_, this->emitter_ };
+
+        pthread_attr_init(&sourceAttr);
+        CPU_ZERO(&sourceCpu);
+        CPU_SET(this->sourceCPU, &sourceCpu);
+        pthread_attr_setaffinity_np(&sourceAttr, sizeof(cpu_set_t), &sourceCpu);
+        pthread_create(&this->sourceThread_, &sourceAttr, startSource_, &sourceEmitterPair);
+        printf("Start source...\n");
+//        sleep(10);
+//        printf("Slept 10s\n");
+
         pthread_attr_init(&enclaveAttr);
         CPU_ZERO(&enclaveCpu);
-        CPU_SET(7, &enclaveCpu);
+        CPU_SET(this->enclaveCPU, &enclaveCpu);
         pthread_attr_setaffinity_np(&enclaveAttr, sizeof(cpu_set_t), &enclaveCpu);
 
         pthread_attr_init(&observerAttr);
         CPU_ZERO(&observerCpu);
-        CPU_SET(6, &observerCpu);
+        CPU_SET(this->observerCPU, &observerCpu);
         pthread_attr_setaffinity_np(&observerAttr, sizeof(cpu_set_t), &observerCpu);
 
         pthread_attr_init(&headObserverAttr);
         CPU_ZERO(&headObserverCpu);
-        CPU_SET(5, &headObserverCpu);
+        CPU_SET(this->headObserverCPU, &headObserverCpu);
         pthread_attr_setaffinity_np(&headObserverAttr, sizeof(cpu_set_t), &headObserverCpu);
 
         // start enclave responder thread
@@ -140,17 +153,6 @@ int EngineWithBufferObserverCrypto::start() {
             }
         }
 
-        // create source thread
-        emitter_->setFastCallData(&this->fastCallDataList_[0]);
-        SourceEmitterPair sourceEmitterPair = { this->source_, this->emitter_ };
-
-        pthread_attr_init(&sourceAttr);
-        CPU_ZERO(&sourceCpu);
-        CPU_SET(3, &sourceCpu);
-        pthread_attr_setaffinity_np(&sourceAttr, sizeof(cpu_set_t), &sourceCpu);
-        pthread_create(&this->sourceThread_, &sourceAttr, startSource_, &sourceEmitterPair);
-        printf("Start source...\n");
-
         // create sink thread
         FastOCallStruct fastOCallStruct = {
                 .fastOCallData = &this->fastCallDataList_.back(),
@@ -158,7 +160,7 @@ int EngineWithBufferObserverCrypto::start() {
         };
         pthread_attr_init(&sinkAttr);
         CPU_ZERO(&sinkCpu);
-        CPU_SET(4, &sinkCpu);
+        CPU_SET(this->sinkCPU, &sinkCpu);
         pthread_attr_setaffinity_np(&sinkAttr, sizeof(cpu_set_t), &sinkCpu);
         pthread_create(&this->fastCallDataList_.back().responderThread, &sinkAttr, EngineWithBufferObserverCrypto::appResponderThread_, &fastOCallStruct);
         printf("Start sink...\n");

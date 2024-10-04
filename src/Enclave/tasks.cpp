@@ -298,6 +298,7 @@ void NexmarkQ1(void* data) {
     // convert dollar to euro
     long double exchangeRate = 0.92;
     bid->price = (uint64_t)(bid->price * exchangeRate);
+//    FastCall_request(globalFastOCall, bid);
     FastCall_request_encrypt2(globalFastOCall, bid, encryptedData);
 }
 
@@ -550,6 +551,7 @@ void NexmarkQ4_MapAuctionBid(void* data) {
 
     const auto joinResult = static_cast<Q4Join1Result*>(data);
     Q4Map1Result mapResult{};
+    mapResult.auctionId = joinResult->auction.id;
     mapResult.final = joinResult->bid.price;
     mapResult.category = joinResult->auction.category;
 
@@ -559,62 +561,54 @@ void NexmarkQ4_MapAuctionBid(void* data) {
 
 std::vector<Q4Map1Result*> joinResultsForMaxQ4;
 uint64_t q4MaxCurrenSlidingStep = q4JoinSlidingStep;
-bool isSetup = false;
-void setup() {
-    joinResultsForMaxQ4.reserve(q4JoinWindowSize + 2);
-    isSetup = true;
-}
-
 void NexmarkQ4_MaxAuctionPriceByCategory(void* data) {
-//    if (!isSetup) {
-//        setup();
-//    }
+    if (data == NULL) {
+        return;
+    }
 
-//    if (data == NULL) {
-//        return;
-//    }
+    const auto parsedData = static_cast<Q4Map1Result*>(data);
 
-//    const auto parsedData = static_cast<Q4Map1Result*>(data);
+//     if window size reached --> delete old data
+    if (joinResultsForMaxQ4.size() >= q4JoinWindowSize) {
+        delete joinResultsForMaxQ4[0];
+        joinResultsForMaxQ4.erase(joinResultsForMaxQ4.begin());
+    }
 
-    // if window size reached --> delete old data
-//    if (joinResultsForMaxQ4.size() >= q4JoinWindowSize) {
-//        delete joinResultsForMaxQ4[0];
-//        joinResultsForMaxQ4.erase(joinResultsForMaxQ4.begin());
-//    }
+    auto* newResult = new Q4Map1Result;
+    newResult->category = parsedData->category;
+    newResult->final = parsedData->final;
+    joinResultsForMaxQ4.push_back(newResult);
 
-//    auto* newResult = new Q4Map1Result;
-//    newResult->category = parsedData->category;
-//    newResult->final = parsedData->final;
-//    joinResultsForMaxQ4.push_back(newResult);
+    if (joinResultsForMaxQ4.size() < q4JoinWindowSize) {
+        return;
+    }
 
-//    if (joinResultsForMaxQ4.size() < q4JoinWindowSize) {
-//        return;
-//    }
-//
-//    q4MaxCurrenSlidingStep++;
+    q4MaxCurrenSlidingStep++;
 
-    // if sliding enough --> find the maximum
-//    if (q4MaxCurrenSlidingStep >= q4JoinSlidingStep) {
-//        q4MaxCurrenSlidingStep = 0;
+//     if sliding enough --> find the maximum
+    if (q4MaxCurrenSlidingStep >= q4JoinSlidingStep) {
+        q4MaxCurrenSlidingStep = 0;
 
-//        std::unordered_map<uint64_t, uint64_t> maxResultsQ4;
-//        maxResultsQ4.reserve(15);
-        // iterate all events in window to find the maximum
-//        for (auto& storedResult : joinResultsForMaxQ4) {
-//            if (maxResultsQ4.find(storedResult->category) == maxResultsQ4.end() || storedResult->final > maxResultsQ4[storedResult->category]) {
-//                maxResultsQ4[storedResult->category] = storedResult->final;
-//            }
-//        }
+//        std::map<std::pair<uint64_t, uint64_t>, uint64_t> maxResultsQ4;
+        std::map<uint64_t, uint64_t> maxResultsQ4;
 
-//        for (auto& maxResult : maxResultsQ4) {
-//            Q4Map1Result result{};
-//            result.category = maxResult.first;
-//            result.final = maxResult.second;
-//
-//            // output result
-//            FastCall_request_encrypt2(globalFastOCall, &result, encryptedData);
-//        }
-//    }
+//         iterate all events in window to find the maximum
+        for (auto& storedResult : joinResultsForMaxQ4) {
+//            auto key = std::make_pair(storedResult->auctionId, storedResult->category);
+            if (maxResultsQ4.find(storedResult->category) == maxResultsQ4.end() || storedResult->final > maxResultsQ4[storedResult->category]) {
+                maxResultsQ4[storedResult->category] = storedResult->final;
+            }
+        }
+
+        for (auto& maxResult : maxResultsQ4) {
+            Q4Map1Result result{};
+            result.category = maxResult.first;
+            result.final = maxResult.second;
+
+            // output result
+            FastCall_request_encrypt2(globalFastOCall, &result, encryptedData);
+        }
+    }
 }
 
 uint64_t categories[10] = { 10, 11, 12, 13, 14, 15, 16, 17, 18, 19 };
@@ -719,55 +713,54 @@ const uint64_t q5WindowSize = 200;
 const uint64_t q5SlidingStep = 10;
 uint64_t q5BidCurrentSliding = q5SlidingStep;
 void NexmarkQ5_CountByAuction(void* data) {
-//    if (data == NULL) {
-//        return;
-//    }
+    if (data == NULL) {
+        return;
+    }
 
-//    const auto bid = static_cast<Bid*>(data);
+    const auto bid = static_cast<Bid*>(data);
 
-    // if window size reached --> delete old data
-//    if (bidsCountByAuctionQ5.size() >= q5WindowSize) {
-//        delete bidsCountByAuctionQ5[0];
-//        bidsCountByAuctionQ5.erase(bidsCountByAuctionQ5.begin());
-//    }
-//
-//    // add new data
-//    auto* newBid = new Bid;
-//    newBid->auction = bid->auction;
-//    newBid->bidder = bid->bidder;
-//    newBid->price = bid->price;
-//    newBid->datetime = bid->datetime;
-//    bidsCountByAuctionQ5.push_back(newBid);
-//
-//    if (bidsCountByAuctionQ5.size() < q5WindowSize) {
-//        return;
-//    }
-//
-//    q5BidCurrentSliding++;
-//
-//    // if sliding enough --> count using a hash table<auction_id, count>
-//    if (q5BidCurrentSliding >= q5SlidingStep) {
-//        q5BidCurrentSliding = 0;
-//
-//        std::map<uint64_t, uint64_t> countByAuctionResultsQ5;
-////        countByAuctionResultsQ5.reserve(60000);
-//        for (auto& storedAuction : bidsCountByAuctionQ5) {
-//            // if auction not appeared before ==> count = 1
-//            if (countByAuctionResultsQ5.find(storedAuction->auction) == countByAuctionResultsQ5.end()) {
-//                countByAuctionResultsQ5[storedAuction->auction] = 1;
-//            } else { // else, increase count of that auction to 1
-//                countByAuctionResultsQ5[storedAuction->auction] += 1;
-//            }
-//        }
-//
-//        // output results
-//        for (auto& countAuctionResult : countByAuctionResultsQ5) {
-//            Q5CountByAuctionResult result{};
-//            result.auction = countAuctionResult.first;
-//            result.count = countAuctionResult.second;
-//            FastCall_request_encrypt2(globalFastOCall, &result, encryptedData);
-//        }
-//    }
+//     if window size reached --> delete old data
+    if (bidsCountByAuctionQ5.size() >= q5WindowSize) {
+        delete bidsCountByAuctionQ5[0];
+        bidsCountByAuctionQ5.erase(bidsCountByAuctionQ5.begin());
+    }
+
+    // add new data
+    auto* newBid = new Bid;
+    newBid->auction = bid->auction;
+    newBid->bidder = bid->bidder;
+    newBid->price = bid->price;
+    newBid->datetime = bid->datetime;
+    bidsCountByAuctionQ5.push_back(newBid);
+
+    if (bidsCountByAuctionQ5.size() < q5WindowSize) {
+        return;
+    }
+
+    q5BidCurrentSliding++;
+
+    // if sliding enough --> count using a hash table<auction_id, count>
+    if (q5BidCurrentSliding >= q5SlidingStep) {
+        q5BidCurrentSliding = 0;
+
+        std::map<uint64_t, uint64_t> countByAuctionResultsQ5;
+        for (auto& storedAuction : bidsCountByAuctionQ5) {
+            // if auction not appeared before ==> count = 1
+            if (countByAuctionResultsQ5.find(storedAuction->auction) == countByAuctionResultsQ5.end()) {
+                countByAuctionResultsQ5[storedAuction->auction] = 1;
+            } else { // else, increase count of that auction to 1
+                countByAuctionResultsQ5[storedAuction->auction] += 1;
+            }
+        }
+
+        // output results
+        for (auto& countAuctionResult : countByAuctionResultsQ5) {
+            Q5CountByAuctionResult result{};
+            result.auction = countAuctionResult.first;
+            result.count = countAuctionResult.second;
+            FastCall_request_encrypt2(globalFastOCall, &result, encryptedData);
+        }
+    }
 }
 
 std::vector<Q5CountByAuctionResult*> countByAuctionMaxBatchQ5;
@@ -1350,5 +1343,16 @@ void NexmarkQ8_Map(void* data) {
 }
 
 void testDecryption(void* data) {
+//    if (data != NULL) {
+//        print("%s\n", data);
+//    } else {
+//        print("NULL...");
+//    }
+//    uint64_t a = 0;
+//    for (uint64_t i = 0; i < 10000; ++i) {
+//        a = i + 1000 * 4;
+//    }
+//    a += 5;
 
+//    FastCall_request(globalFastOCall, data);
 }

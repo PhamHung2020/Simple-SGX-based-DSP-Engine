@@ -29,10 +29,19 @@ void StringRandomGenerationSource::prepare() {
 int StringRandomGenerationSource::start(Emitter &emitter) {
     const uint64_t MAX_CHARACTERS = this->generatedDataSizeInBytes_ + 1;
     char* content = new char[MAX_CHARACTERS];
+    int count = 0;
     for (uint64_t i = 0; i < this->count_; ++i) {
         strncpy(content, this->generatedTexts_[i].c_str(), MAX_CHARACTERS);
+//        content[MAX_CHARACTERS - 1] = '\0';
+//        std::cout << content << std::endl;
         emitter.emit(content);
+//        count += 1;
+//        if (count > 50000) {
+//            sleep(1);
+//            count = 0;
+//        }
     }
+    std::cout << "Source done\n";
     return 0;
 }
 
@@ -53,4 +62,7 @@ std::string StringRandomGenerationSource::generateRandomString_() {
     return randomString;
 }
 
+std::vector<std::string>& StringRandomGenerationSource::getGeneratedTexts() {
+    return this->generatedTexts_;
+};
 

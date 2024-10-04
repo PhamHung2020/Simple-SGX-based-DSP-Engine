@@ -65,6 +65,7 @@ struct Q4Join1Result {
 };
 
 struct Q4Map1Result {
+    uint64_t auctionId;
     uint64_t final;
     uint64_t category;
 };

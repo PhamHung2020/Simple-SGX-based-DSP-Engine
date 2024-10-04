@@ -123,7 +123,7 @@ else
 endif
 
 App_Cpp_Flags := $(App_C_Flags) -std=c++11
-App_Link_Flags := $(SGX_COMMON_CFLAGS) -L$(SGX_LIBRARY_PATH) -l$(Urts_Library_Name) -lpthread -lcrypto -lssl
+App_Link_Flags := $(SGX_COMMON_CFLAGS) -L$(SGX_LIBRARY_PATH) -l$(Urts_Library_Name) -lpthread -lcrypto -lssl -lsgx_usgxssl
 
 ifneq ($(SGX_MODE), HW)
 	App_Link_Flags += -lsgx_uae_service_sim
@@ -148,11 +148,13 @@ endif
 Crypto_Library_Name := sgx_tcrypto
 
 Enclave_Cpp_Files := src/Lib/DataStructure/circular_buffer.cpp src/Enclave/Enclave.cpp $(wildcard src/Enclave/*.cpp) 
-Enclave_Include_Paths := -Iinclude -Isrc/Enclave -I$(SGX_SDK)/include -I$(SGX_SDK)/include/tlibc -I$(SGX_SDK)/include/libcxx -I$(SGX_SDK)/include/stdc++ -I$(SGX_SDK)/include/stlport
+Enclave_Include_Paths := -Iinclude -Isrc/Enclave -I$(SGX_SDK)/include -I$(SGX_SDK)/include/tlibc -I$(SGX_SDK)/include/libcxx -I$(SGX_SDK)/include/stdc++ -I$(SGX_SDK)/include/stlport -I$(SGX_SDK)/include/sgxssl
 
 Enclave_C_Flags := $(SGX_COMMON_CFLAGS) -nostdinc -fvisibility=hidden -fpie -fstack-protector $(Enclave_Include_Paths)
 Enclave_Cpp_Flags := $(Enclave_C_Flags) -std=c++11 -nostdinc++
 Enclave_Link_Flags := $(SGX_COMMON_CFLAGS) -Wl,--no-undefined -nostdlib -nodefaultlibs -nostartfiles -L$(SGX_LIBRARY_PATH) \
+	-Wl,--whole-archive -lsgx_tsgxssl \
+	-Wl,--no-whole-archive -lsgx_tsgxssl_crypto -lsgx_pthread \
 	-Wl,--whole-archive -l$(Trts_Library_Name) -Wl,--no-whole-archive \
 	-Wl,--start-group -lsgx_tstdc -lsgx_tcxx -l$(Crypto_Library_Name) -l$(Service_Library_Name) -Wl,--end-group \
 	-Wl,-Bstatic -Wl,-Bsymbolic -Wl,--no-undefined \
@@ -209,7 +211,7 @@ $(BUILDDIR):
 # 	@echo "CC   <=  $<"
 
 src/App/Enclave_u.h: $(SGX_EDGER8R) config/Enclave.edl
-	@cd src/App && $(SGX_EDGER8R) --untrusted ../../config/Enclave.edl --search-path ../Enclave --search-path $(SGX_SDK)/include
+	@cd src/App && $(SGX_EDGER8R) --untrusted ../../config/Enclave.edl --search-path ../../config --search-path ../Enclave --search-path $(SGX_SDK)/include
 	@echo "GEN  =>  $@"
 
 src/App/Enclave_u.c: src/App/Enclave_u.h
@@ -242,7 +244,7 @@ $(App_Name): $(App_Cpp_Objects) $(BUILDDIR)/App/Enclave_u.o $(BUILDDIR)/App/spin
 ######## Enclave Objects ########
 
 src/Enclave/Enclave_t.c: $(SGX_EDGER8R) config/Enclave.edl
-	@cd src/Enclave && $(SGX_EDGER8R) --trusted ../../config/Enclave.edl --search-path ../Enclave --search-path $(SGX_SDK)/include
+	@cd src/Enclave && $(SGX_EDGER8R) --trusted ../../config/Enclave.edl --search-path ../../config --search-path ../Enclave --search-path $(SGX_SDK)/include
 	@echo "GEN  =>  $@"
 
 $(BUILDDIR)/Enclave/Enclave_t.o: src/Enclave/Enclave_t.c

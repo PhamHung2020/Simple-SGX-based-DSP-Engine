@@ -12,69 +12,178 @@
 #include "SecureSGX/sinks.h"
 #include "SecureSGX/SecureSgxQuery.h"
 
+#include "Source/StringRandomGenerationSource.h"
+#include "Crypto/aes_gcm.h"
+
 #include "sgx_lib.h"
 #include "sgx_urts.h"
 #include <ostream>
 
+#define CACHE_DEFEAT_SIZE 10*1024*1024
+
 using namespace std;
 
-/* Application entry */
-int SGX_CDECL main(int argc, char *argv[])
+std::vector<uint64_t> recordedStartTime;
+std::vector<uint64_t> recordedEndTime;
+
+inline __attribute__((always_inline))  uint64_t rdtscp()
 {
-    /* TESTING DECRYPTION */
-//    ConfigurationTesting config;
-//    config.taskInputDataSize = 500;
-//    config.sourceCount = 1000000;
-//    config.taskId = 30;
-//    config.taskShouldBeObserved = true;
-//    config.sink = sinkBid;
+    unsigned int low, high;
+
+    asm volatile("rdtscp" : "=a" (low), "=d" (high));
+
+    return low | ((uint64_t)high) << 32;
+}
+
+void* testOpenSSLWithoutSGXThread(void* data) {
+    uint64_t dataSize = 1000;
+    uint64_t numberOfData = 1000000;
+    StringRandomGenerationSource source(dataSize, numberOfData);
+    source.prepare();
+    auto generatedTexts = source.getGeneratedTexts();
+    std::vector<uint64_t> measurementTimes;
+    measurementTimes.reserve(2000000);
+
+    char encryptedData[10000];
+    char decryptedData[10000];
+
+    for (int i = 0; i < numberOfData; ++i) {
+//        std::cout << generatedTexts[i] << std::endl;
+        aes128GcmEncrypt(
+                (unsigned char *) generatedTexts[i].c_str(),
+                dataSize, NULL, 0,
+                const_cast<unsigned char *>(AES_GCM_KEY),
+                const_cast<unsigned char *>(AES_GCM_IV), SGX_AESGCM_IV_SIZE,
+                (unsigned char *)(encryptedData + SGX_AESGCM_MAC_SIZE + SGX_AESGCM_IV_SIZE),
+                (unsigned char *)(encryptedData));
+
+        auto start = rdtscp();
+
+        aes128GcmDecrypt(
+                (unsigned char*)encryptedData + SGX_AESGCM_MAC_SIZE + SGX_AESGCM_IV_SIZE,
+                dataSize,
+                NULL, 0,
+                (unsigned char*)encryptedData,
+                (unsigned char *)(AES_GCM_KEY),
+                (unsigned char*)(AES_GCM_IV),
+                SGX_AESGCM_IV_SIZE,
+                (unsigned char*)decryptedData);
+
+        auto end = rdtscp();
+        measurementTimes.push_back(end - start);
+//        decryptedData[dataSize+1] = '\0';
+//        std::cout << decryptedData << std::endl;
+    }
+
+    ofstream out;
+    out.open("../../measurements/testing/openssl_without_sgx/" + std::to_string(dataSize) + ".csv", std::ios::out);
+    out << "index,time\n";
+    for (int i = 0; i < numberOfData; ++i) {
+        out << i << "," << measurementTimes[i] << std::endl;
+    }
+    out.close();
+
+    return nullptr;
+}
+
+void testOpenSSLWithoutSGX() {
+    // CPU Affinity
+    pthread_attr_t testOpenSSLWithoutSGXThreadAttr;
+    cpu_set_t testOpenSSLWithoutSGXThreadCpu;
+
+    pthread_attr_init(&testOpenSSLWithoutSGXThreadAttr);
+    CPU_ZERO(&testOpenSSLWithoutSGXThreadCpu);
+    CPU_SET(7, &testOpenSSLWithoutSGXThreadCpu);
+    pthread_attr_setaffinity_np(&testOpenSSLWithoutSGXThreadAttr, sizeof(cpu_set_t), &testOpenSSLWithoutSGXThreadCpu);
+
+    // Start thread
+    pthread_t threadId;
+    std::cout << "Starting...\n";
+    pthread_create(&threadId, &testOpenSSLWithoutSGXThreadAttr, testOpenSSLWithoutSGXThread, nullptr);
+    std::cout << "Started. Waiting for stop....\n";
+
+    // Wait for thread to stop
+    pthread_join(threadId, nullptr);
+    std::cout << "End.\n";
+}
+
+void* testCryptoOCall(void*) {
+    sgx_enclave_id_t enclaveId;
+    if (initialize_enclave(&enclaveId) != SGX_SUCCESS) {
+        std::cout << "Initialize enclave failed. Exiting...\n";
+        return nullptr;
+    }
+    std::cout << "Initialize enclave successfully\n";
+
+    recordedStartTime.reserve(1000005);
+    recordedEndTime.reserve(1000005);
+    sgx_status_t status = testOpenSslOCall(enclaveId);
+    if (status != SGX_SUCCESS) {
+        std::cout << "ECall failed. Exiting...\n";
+        sgx_destroy_enclave(enclaveId);
+        return nullptr;
+    }
+
+    if (sgx_destroy_enclave(enclaveId) != SGX_SUCCESS) {
+        std::cout << "Destroy enclave failed. Exiting...\n";
+        return nullptr;
+    }
+
+    ofstream out;
+    out.open("../../measurements/testing/cryptosdk_ocall/16.csv", ios::out);
+    out << "index,time\n";
+    for (int i = 0; i < 1000000; ++i) {
+        out << i << "," << recordedEndTime[i] - recordedStartTime[i] << std::endl;
+    }
+    out.close();
+
+    return nullptr;
+}
+
+void testingDecryption(std::string cpus) {
+    // cpus format: source-enclave-observer-headObserver-sink
+
+    ConfigurationTesting config;
+    config.sourceCPU = cpus[0] - 48;
+    config.enclaveCPU = cpus[2] - 48;
+    config.observerCPU = cpus[4] - 48;
+    config.headObserverCPU = cpus[6] - 48;
+    config.sinkCPU = cpus[8] - 48;
+
+    config.taskInputDataSize = 16 + SGX_AESGCM_MAC_SIZE + SGX_AESGCM_IV_SIZE;
+//    config.taskInputDataSize = 16;
+    config.sourceCount = 1000000;
+    config.taskId = 30;
+    config.taskShouldBeObserved = true;
+    config.sink = sinkChar;
 //    config.outputDataSize = sizeof(Bid) + SGX_AESGCM_MAC_SIZE + SGX_AESGCM_IV_SIZE + 4;
-//    config.sinkFileStream = getSinkFileStream();
-//    config.resultDirName = "../../results/testing/plain";
-//    config.measurementDirName = "../../measurements/testing/plain";
-//    config.sinkFileName = "test.csv";
-//    config.measurementFileName = "500.csv";
-//
-//    runEngineWithBufferObserverCrypto(config);
+    config.outputDataSize = 16;
+    config.sinkFileStream = getSinkFileStream();
+    config.resultDirName = "../../results/testing/cryptosdk_sourcerate";
+    config.measurementDirName = "../../measurements/testing/change_cpu_cold_cache";
+    config.sinkFileName = "test.csv";
+    config.measurementFileName = "16-" + cpus + ".csv";
 
+    runEngineWithBufferObserverCrypto(config);
+}
 
-    /* SECURE STREAMS BENCHMARK */
-//    std::string resultDirName = "../../results/secure-sgx/data_master";
-//    std::string measurementDirName = "../../measurements/secure-sgx/data_master";
-//
-//    SecureSgxQuery secureSgxQuery;
-//    secureSgxQuery.setMeasurementDirName(measurementDirName);
-//    secureSgxQuery.setResultDirName(resultDirName);
+void testSecureStreamBenchmark() {
+    std::string resultDirName = "../../results/secure-sgx/data_master";
+    std::string measurementDirName = "../../measurements/secure-sgx/data_master";
 
-//    secureSgxQuery.runMapQuery("../../dataset/secure-sgx-dataset/2005.csv", "process_time_map_2005.csv", "map_2005.csv");
-//    secureSgxQuery.runFilterQuery(resultDirName +  "/map_2005.csv", "process_time_filter_2005.csv", "filter_2005.csv");
-//    secureSgxQuery.runReduceQuery("../../dataset/secure-sgx-dataset/2005.csv", "process_time_reduce_2005_1000.csv", "reduce_2005_1000.csv");
-//    secureSgxQuery.runReduceQuery(resultDirName +  "/filter_2005.csv", "process_time_reduce_2005_100_10.csv", "reduce_2005_100_10.csv");
+    SecureSgxQuery secureSgxQuery;
+    secureSgxQuery.setMeasurementDirName(measurementDirName);
+    secureSgxQuery.setResultDirName(resultDirName);
 
+    secureSgxQuery.runMapQuery("../../dataset/secure-sgx-dataset/2005.csv", "process_time_map_2005.csv", "map_2005.csv");
+    secureSgxQuery.runFilterQuery(resultDirName +  "/map_2005.csv", "process_time_filter_2005.csv", "filter_2005.csv");
+    secureSgxQuery.runReduceQuery("../../dataset/secure-sgx-dataset/2005.csv", "process_time_reduce_2005_1000.csv", "reduce_2005_1000.csv");
+    secureSgxQuery.runReduceQuery(resultDirName +  "/filter_2005.csv", "process_time_reduce_2005_100_10.csv", "reduce_2005_100_10.csv");
+}
 
-//    config.sinkFileName = "reduce_2005.csv";
-//    config.measurementFileName = "process_time_tail_reduce_2005.csv";
-////    config.sourceFileName = "../../dataset/secure-sgx-dataset/2005.csv";
-//    config.sourceFileName = "../../results/secure-sgx/data/filter_2005.csv";
-//    config.sourceId = 1;
-//    config.sourceDelay = 0;
-//    config.sourceHasHeader = false;
-//    config.sourceCount = 100;
-//
-//    config.taskId = 2;
-//    config.parser = new FlightDataIntermediateParser();
-//    config.taskInputDataSize = sizeof(FlightData) + SGX_AESGCM_MAC_SIZE + SGX_AESGCM_IV_SIZE + 4;
-//    config.taskShouldBeObserved = true;
-//    config.outputDataSize = sizeof(ReducedFlightData) + SGX_AESGCM_MAC_SIZE + SGX_AESGCM_IV_SIZE + 4;
-//    config.sink = sinkReduce;
-//    config.sinkFileStream = getSecureSgxSinkFileStream();
-//
-//    runEngineWithBufferObserverCrypto(config);
-
-    /* NEXMARK BENCHMARK */
-
-      //  std::string measurementBatchDirName = createMeasurementsDirectory("../../measurements/testNexmark/batch");
-      //  std::string resultBatchDirName = createMeasurementsDirectory("../../results/testNexmark/batch");
+void testNexmarkBenchmark() {
+    //  std::string measurementBatchDirName = createMeasurementsDirectory("../../measurements/testNexmark/batch");
+    //  std::string resultBatchDirName = createMeasurementsDirectory("../../results/testNexmark/batch");
 
 //      std::string measurementBatchDirName = "../../measurements/testNexmark/batch/2024-06-09_23-46-53";
 //      std::string resultBatchDirName = "../../results/testNexmark/batch/2024-06-09_23-46-53";
@@ -84,9 +193,9 @@ int SGX_CDECL main(int argc, char *argv[])
 
     std::string measurementBatchDirName = "../../measurements/testNexmark/crypto/data_20240801";
     std::string resultBatchDirName = "../../results/testNexmark/crypto/data_20240801";
-    srand((unsigned)time(nullptr));
+//    srand((unsigned) time(nullptr));
 
-    for (int i = 0; i < 20; ++i) {
+    for (int i = 0; i < 5; ++i) {
         std::string measurementDirName = createDirectory(measurementBatchDirName + "/" + std::to_string(i));
         std::string resultDirName = createDirectory(resultBatchDirName + "/" + std::to_string(0));
 
@@ -94,71 +203,267 @@ int SGX_CDECL main(int argc, char *argv[])
         nexmarkQuery.setMeasurementDirName(measurementDirName);
         nexmarkQuery.setResultDirName(resultDirName);
 
-//        nexmarkQuery.runQuery1("../../../other/nexmark-data/bids.csv", "process_time_q1.csv", "q1result.csv");
+//        nexmarkQuery.runQuery1("../../../other/nexmark-data/bids.csv", "process_time_q1_changeCPU.csv", "q1result.csv");
 
 //        nexmarkQuery.runQuery2_Filter("../../../other/nexmark-data/bids.csv", "process_time_q2_filter_greater_2.csv", "q2result_filter_greater_2.csv");
 //        nexmarkQuery.runQuery2_Map("../../../other/nexmark-data/bids.csv", "process_time_q2_map.csv", "q2result_map.csv");
 //        nexmarkQuery.runQuery2_Map(resultDirName +  "/q2result_filter_4.csv", "process_time_q2_map.csv", "q2result_map.csv");
 
-//        nexmarkQuery.runQuery3_FilterPerson("../../../other/nexmark-data/people_100000.csv", "process_time_q3_filter_person_4.csv", "q3result_filter_person_4.csv");
+//        nexmarkQuery.runQuery3_FilterPerson("../../../other/nexmark-data/people_100000.csv", "process_time_q3_filter_person_4_changeCPU.csv", "q3result_filter_person_4.csv");
 //        nexmarkQuery.runQuery3_FilterAuction("../../../other/nexmark-data/auction.csv", "process_time_q3_filter_auction.csv", "q3result_filter_auction.csv");
 //        nexmarkQuery.runQuery3_JoinPersonAuction("../../../other/nexmark-data/people.csv", "../../../other/nexmark-data/auction.csv", "q3_join_200_10.csv", "q3result_join_200_10.csv");
 //        nexmarkQuery.runQuery3_MapJoinResult(resultDirName + "/q3result_join_200_10.csv", "process_time_q3_map.csv", "q3result_map.csv");
 
 //        nexmarkQuery.runQuery4_JoinAuctionBid("../../../other/nexmark-data/auction.csv", "../../../other/nexmark-data/bids.csv", "q4_join1_200_10.csv", "q4result_join1_200_10.csv");
-//        nexmarkQuery.runQuery4_MapAuctionBid(resultDirName +  "/q4result_join1.csv", "process_time_q4_map1.csv", "q4result_map1.csv");
-//        nexmarkQuery.runQuery4_Max(resultDirName +  "/q4result_map1.csv", "process_time_q4_max_parsed_100_10.csv", "q4result_max_parsed_100_10.csv");
+//        nexmarkQuery.runQuery4_MapAuctionBid(resultDirName +  "/q4result_join1_200_10.csv", "process_time_q4_map1_new.csv", "q4result_map1_new.csv");
+        nexmarkQuery.runQuery4_Max(resultDirName +  "/q4result_map1_new.csv", "process_time_q4_max_100_10_old.csv", "q4result_max_100_10_old.csv");
 //        nexmarkQuery.runQuery4_JoinCategory(resultDirName +  "/q4result_map1.csv", "process_time_q4_join_category_500_10.csv", "q4result_join_category_500_10.csv");
 //        nexmarkQuery.runQuery4_Average(resultDirName +  "/q4result_map1.csv", "process_time_q4_average_500_10.csv", "q4result_average_500_10.csv");
 
-//        nexmarkQuery.runQuery5_CountByAuction("../../../other/nexmark-data/bids.csv", "process_time_q5_count_by_auction_parsed_200_10.csv", "q5result_count_by_auction_parsed_200_10.csv");
+//        nexmarkQuery.runQuery5_CountByAuction("../../../other/nexmark-data/bids.csv", "process_time_q5_count_by_auction_200_10_changeCPU.csv", "q5result_count_by_auction_200_10.csv");
 //        nexmarkQuery.runQuery5_MaxBatch(resultDirName + "/q5result_count_by_auction_100_10.csv", "process_time_q5_max_test_200_10.csv", "q5result_max_test_200_10.csv");
 
 //        nexmarkQuery.runQuery6_JoinAuctionBid("../../../other/nexmark-data/auction.csv", "../../../other/nexmark-data/bids.csv", "q6_join_200_10.csv", "q6result_join_200_10.csv");
 //        nexmarkQuery.runQuery6_Filter(resultDirName + "/q6result_join_200_10.csv", "process_time_q6_filter.csv", "q6result_filter.csv");
 //        nexmarkQuery.runQuery6_Max(resultDirName + "/q6result_filter.csv", "process_time_q6_max_500_10.csv", "q6result_max_500_10.csv");
-        nexmarkQuery.runQuery6_Avg(resultDirName + "/q6_avg_input_54seller.csv", "process_time_q6_avg_200_nocrypto_54seller.csv", "q6result_avg_200_nocrypto_54seller.csv");
+//        nexmarkQuery.runQuery6_Avg(resultDirName + "/q6_avg_input_54seller.csv", "process_time_q6_avg_200_nocrypto_54seller.csv", "q6result_avg_200_nocrypto_54seller.csv");
 
 //        nexmarkQuery.runQuery7_MaxJoin("../../../other/bids.csv", "process_time_q7_maxjoin_1500.csv", "q7result_maxjoin_1500.csv");
 
 //        nexmarkQuery.runQuery8_JoinPersonAuction("../../../other/people.csv", "../../../other/auction.csv", "q8_join_600.csv", "q8result_join_600.csv");
 //        nexmarkQuery.runQuery8_MapJoinResult(resultDirName +  "/q8result_join_600.csv", "process_time_q8_map_600.csv", "q8result_map_600.csv");
-
-//        config.sinkFileName = "q4result_max_simple_600.csv";
-//        config.measurementFileName = "process_time_q4_max_simple.csv";
-//        config.sourceFileName = config.resultDirName +  "/q4result_map1_600.csv";
-//        config.taskId = 21;
-//        config.taskInputDataSize = sizeof(Q4Map1Result) + SGX_AESGCM_MAC_SIZE + SGX_AESGCM_IV_SIZE;
-//        config.taskShouldBeObserved = true;
-//        config.outputDataSize = sizeof(Q4Map1Result) + SGX_AESGCM_MAC_SIZE + SGX_AESGCM_IV_SIZE;
-//        config.parser = new Q4Map1ResultParser();
-//        config.sink = sinkQ4MapResult;
-//        config.sinkFileStream = getSinkFileStream();
-
-//        config.sinkFileName = "q4result_join2.csv";
-//        config.measurementFileName = "process_time_q4_join2.csv";
-//        config.sourceFileName = config.resultDirName +  "/q4result_max_simple.csv";
-//        config.taskId = 22;
-//        config.taskInputDataSize = sizeof(Q4Map1Result);
-//        config.taskShouldBeObserved = true;
-//        config.outputDataSize = sizeof(Q4Map1Result);
-//        config.parser = new Q4Map1ResultParser();
-//        config.sink = sinkQ4MapResult;
-//        config.sinkFileStream = getSinkFileStream();
-
-//        config.sinkFileName = "q4result_avg.csv";
-//        config.measurementFileName = "process_time_q4result_avg.csv";
-//        config.sourceFileName = config.resultDirName +  "/q4result_join2.csv";
-//        config.taskId = 23;
-//        config.taskInputDataSize = sizeof(Q4Map1Result);
-//        config.taskShouldBeObserved = true;
-//        config.outputDataSize = sizeof(Q4Map1Result);
-//        config.parser = new Q4Map1ResultParser();
-//        config.sink = sinkQ4MapResult;
-//        config.sinkFileStream = getSinkFileStream();
-
     }
+}
 
+
+void oCallRecordStartTime() {
+    recordedStartTime.push_back(rdtscp());
+}
+
+void oCallRecordEndTime() {
+    recordedEndTime.push_back(rdtscp());
+}
+
+inline __attribute__((always_inline)) uint64_t clearcache(void *buf, size_t size) {
+    uint64_t sum;
+    size_t count = size / sizeof(uint64_t);
+    volatile uint64_t *p = (uint64_t *)buf;
+    while (count--) {
+        sum += *p;
+        *p++ = 0;
+    }
+    asm volatile ("mfence");
+    return sum;
+}
+
+/* Application entry */
+int SGX_CDECL main(int argc, char *argv[])
+{
+    std::string argument = argv[1];
+    std::cout << "Argument: " << argument << std::endl;
+
+//    recordedStartTime.reserve(8000000);
+//    recordedEndTime.reserve(8000000);
+    /* GENERATE RANDOM STRING */
+//    StringRandomGenerationSource source(1000, 100);
+//    source.prepare();
+//    auto generatedTexts = source.getGeneratedTexts();
+//    ofstream out;
+//    out.open("../../measurements/testing/openssl_ocall/1000.txt", ios::out);
+//    for (int i = 0; i < 100; ++i) {
+//        out << "\"" << generatedTexts[i] << "\"" << ',' << std::endl;
+//    }
+//    out.close();
+
+    /* CRYPTO INSIDE SGX WITH OCALL */
+    // CPU Affinity
+//    pthread_attr_t testThreadAttr;
+//    cpu_set_t testThreadCpu;
+//
+//    pthread_attr_init(&testThreadAttr);
+//    CPU_ZERO(&testThreadCpu);
+//    CPU_SET(7, &testThreadCpu);
+//    pthread_attr_setaffinity_np(&testThreadAttr, sizeof(cpu_set_t), &testThreadCpu);
+//
+//    // Start thread
+//    pthread_t threadId;
+//    std::cout << "Starting...\n";
+//    pthread_create(&threadId, &testThreadAttr, testCryptoOCall, nullptr);
+//    std::cout << "Started. Waiting for stop....\n";
+//
+//    // Wait for thread to stop
+//    pthread_join(threadId, nullptr);
+//    std::cout << "End.\n";
+
+    /* OPENSSL WITHOUT SGX */
+//    testOpenSSLWithoutSGX();
+
+    /* TESTING DECRYPTION */
+//    std::vector<std::string> cpuOrderList = {
+//            "3-4-5-6-7",
+//            "3-4-5-7-6",
+//            "3-4-6-5-7",
+//            "3-4-6-7-5",
+//            "3-4-7-5-6",
+//            "3-4-7-6-5",
+//            "3-5-4-6-7",
+//            "3-5-4-7-6",
+//            "3-5-6-4-7",
+//            "3-5-6-7-4",
+//            "3-5-7-4-6",
+//            "3-5-7-6-4",
+//            "3-6-4-5-7",
+//            "3-6-4-7-5",
+//            "3-6-5-4-7",
+//            "3-6-5-7-4",
+//            "3-6-7-4-5",
+//            "3-6-7-5-4",
+//            "3-7-4-5-6",
+//            "3-7-4-6-5",
+//            "3-7-5-4-6",
+//            "3-7-5-6-4",
+//            "3-7-6-4-5",
+//            "3-7-6-5-4",
+//            "4-3-5-6-7",
+//            "4-3-5-7-6",
+//            "4-3-6-5-7",
+//            "4-3-6-7-5",
+//            "4-3-7-5-6",
+//            "4-3-7-6-5",
+//            "4-5-3-6-7",
+//            "4-5-3-7-6",
+//            "4-5-6-3-7",
+//            "4-5-6-7-3",
+//            "4-5-7-3-6",
+//            "4-5-7-6-3",
+//            "4-6-3-5-7",
+//            "4-6-3-7-5",
+//            "4-6-5-3-7",
+//            "4-6-5-7-3",
+//            "4-6-7-3-5",
+//            "4-6-7-5-3",
+//            "4-7-3-5-6",
+//            "4-7-3-6-5",
+//            "4-7-5-3-6",
+//            "4-7-5-6-3",
+//            "4-7-6-3-5",
+//            "4-7-6-5-3",
+//            "5-3-4-6-7",
+//            "5-3-4-7-6",
+//            "5-3-6-4-7",
+//            "5-3-6-7-4",
+//            "5-3-7-4-6",
+//            "5-3-7-6-4",
+//            "5-4-3-6-7",
+//            "5-4-3-7-6",
+//            "5-4-6-3-7",
+//            "5-4-6-7-3",
+//            "5-4-7-3-6",
+//            "5-4-7-6-3",
+//            "5-6-3-4-7",
+//            "5-6-3-7-4",
+//            "5-6-4-3-7",
+//            "5-6-4-7-3",
+//            "5-6-7-3-4",
+//            "5-6-7-4-3",
+//            "5-7-3-4-6",
+//            "5-7-3-6-4",
+//            "5-7-4-3-6",
+//            "5-7-4-6-3",
+//            "5-7-6-3-4",
+//            "5-7-6-4-3",
+//            "6-3-4-5-7",
+//            "6-3-4-7-5",
+//            "6-3-5-4-7",
+//            "6-3-5-7-4",
+//            "6-3-7-4-5",
+//            "6-3-7-5-4",
+//            "6-4-3-5-7",
+//            "6-4-3-7-5",
+//            "6-4-5-3-7",
+//            "6-4-5-7-3",
+//            "6-4-7-3-5",
+//            "6-4-7-5-3",
+//            "6-5-3-4-7",
+//            "6-5-3-7-4",
+//            "6-5-4-3-7",
+//            "6-5-4-7-3",
+//            "6-5-7-3-4",
+//            "6-5-7-4-3",
+//            "6-7-3-4-5",
+//            "6-7-3-5-4",
+//            "6-7-4-3-5",
+//            "6-7-4-5-3",
+//            "6-7-5-3-4",
+//            "6-7-5-4-3",
+//            "7-3-4-5-6",
+//            "7-3-4-6-5",
+//            "7-3-5-4-6",
+//            "7-3-5-6-4",
+//            "7-3-6-4-5",
+//            "7-3-6-5-4",
+//            "7-4-3-5-6",
+//            "7-4-3-6-5",
+//            "7-4-5-3-6",
+//            "7-4-5-6-3",
+//            "7-4-6-3-5",
+//            "7-4-6-5-3",
+//            "7-5-3-4-6",
+//            "7-5-3-6-4",
+//            "7-5-4-3-6",
+//            "7-5-4-6-3",
+//            "7-5-6-3-4",
+//            "7-5-6-4-3",
+//            "7-6-3-4-5",
+//            "7-6-3-5-4",
+//            "7-6-4-3-5",
+//            "7-6-4-5-3",
+//            "7-6-5-3-4",
+//            "7-6-5-4-3",
+//    };
+//
+//    for (std::string& cpuOrder : cpuOrderList) {
+//        testingDecryption(cpuOrder);
+//    }
+
+    void *defeat;
+    if (posix_memalign(&defeat, 64, CACHE_DEFEAT_SIZE) != 0 || !defeat) {
+        printf("defeat buffer allocation failure\n");
+        return -1;
+    }
+    void *defeat0 __attribute__((unused)) = malloc(CACHE_DEFEAT_SIZE);
+    void *defeat1 __attribute__((unused)) = malloc(CACHE_DEFEAT_SIZE);
+#define DEFEATCACHE do { memset_s(defeat0, CACHE_DEFEAT_SIZE, 0, CACHE_DEFEAT_SIZE); memcpy(defeat1, defeat0, CACHE_DEFEAT_SIZE); asm volatile ("mfence"); } while (0)
+
+    void *buffer;
+    if (posix_memalign(&buffer, 64, 2048) != 0 || !buffer) {
+        printf("aligned buffer allocation failure\n");
+        return -1;
+    }
+    memset(buffer, 0, 2048);
+    clearcache(defeat, CACHE_DEFEAT_SIZE);
+
+    testingDecryption(argument);
+
+    free(defeat);
+    free(defeat0);
+    free(defeat1);
+
+    /* SECURE STREAMS BENCHMARK */
+//    testSecureStreamBenchmark();
+
+
+    /* NEXMARK BENCHMARK */
+//    testNexmarkBenchmark();
+
+//    ofstream out;
+//    std::cout << "Writing to cryptosdk_engine_ocall\n";
+//    out.open("../../measurements/testing/cryptosdk_engine_ocall/tail_0_16_no_decryption.csv", ios::out);
+//    out << "index,time\n";
+//    for (int i = 0; i < recordedEndTime.size(); ++i) {
+//        out << i << "," << recordedEndTime[i] - recordedStartTime[i] << std::endl;
+//    }
+//    out.close();
 
     return 0;
 }

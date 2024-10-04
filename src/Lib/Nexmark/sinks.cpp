@@ -121,7 +121,7 @@ void sinkQ4MapResult(void* rawData) {
     }
 
     const auto result = static_cast<Q4Map1Result*>(rawData);
-    nexmarkSinkFileStream << result->category << "," << result->final << std::endl;
+    nexmarkSinkFileStream << result->auctionId << "," << result->category << "," << result->final << std::endl;
 }
 
 void sinkQ4AverageResult(void* rawData) {
@@ -261,6 +261,7 @@ void sinkChar(void* rawData) {
     }
 
     const auto result = static_cast<char *>(rawData);
+    result[15] = '\0';
     nexmarkSinkFileStream << result << std::endl;
 }
 

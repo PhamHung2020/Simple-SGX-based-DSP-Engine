@@ -8,6 +8,7 @@
 #include "sgx_eid.h"     /* sgx_enclave_id_t */
 #include "hot_calls.h"
 
+
 #pragma GCC diagnostic ignored "-Wunused-function"
 
 typedef unsigned long int pthread_t;
@@ -211,7 +212,9 @@ static inline void FastCall_wait_decrypt(FastCallStruct *fastCallData, FastCallT
 {
     static int i = 0;
     char* data;
-    const int dataSize = fastCallData->data_buffer->data_size - SGX_AESGCM_MAC_SIZE - SGX_AESGCM_IV_SIZE - 4;
+    int started = 0;
+    uint32_t failedTime = 1;
+    const int dataSize = fastCallData->data_buffer->data_size - SGX_AESGCM_MAC_SIZE - SGX_AESGCM_IV_SIZE;
 //    char* decryptedData =  (char *) malloc((dataSize+1) * sizeof(char ));
     while(true)
     {
@@ -222,14 +225,28 @@ static inline void FastCall_wait_decrypt(FastCallStruct *fastCallData, FastCallT
         // sgx_spin_lock((&fastCallData->spinlock));
         if (circular_buffer_pop(fastCallData->data_buffer, (void**)&data) == 0)
         {
+            started = 1;
             // sgx_spin_unlock((&fastCallData->spinlock));
             if (callId < callTable->numEntries)
             {
+                // AES of SDK
                 aesGcmDecrypt(
                         data,
                         dataSize,
                         decryptedData,
                         dataSize);
+
+                // AES of OpenSSL
+//                openSslAes128GcmDecrypt(
+//                        (unsigned char*)data + SGX_AESGCM_MAC_SIZE + SGX_AESGCM_IV_SIZE,
+//                        dataSize,
+//                        NULL, 0,
+//                        (unsigned char*)data,
+//                        (unsigned char *)(SGX_AES_GCM_KEY),
+//                        (unsigned char*)(SGX_AES_GCM_IV),
+//                        SGX_AESGCM_IV_SIZE,
+//                        (unsigned char*)decryptedData
+//                );
                 decryptedData[dataSize] = '\0';
                 callTable->callbacks[callId](decryptedData);
             }
@@ -240,11 +257,15 @@ static inline void FastCall_wait_decrypt(FastCallStruct *fastCallData, FastCallT
                 next = 0;
             }
             fastCallData->data_buffer->tail = next;
-            sgx_spin_lock(&fastCallData->data_buffer->lock_count);
-            fastCallData->data_buffer->popped_count += 1;
-            sgx_spin_unlock(&fastCallData->data_buffer->lock_count);
+//            sgx_spin_lock(&fastCallData->data_buffer->lock_count);
+//            fastCallData->data_buffer->popped_count += 1;
+//            sgx_spin_unlock(&fastCallData->data_buffer->lock_count);
 
             continue;
+        }
+
+        if (true) {
+            failedTime++;
         }
 
         if (!fastCallData->keepPolling) {
@@ -260,6 +281,8 @@ static inline void FastCall_wait_decrypt(FastCallStruct *fastCallData, FastCallT
     {
         callTable->callbacks[callId](NULL);
     }
+
+    fastCallData->data_buffer->popped_count = failedTime;
 
     // delete[] data;
 }

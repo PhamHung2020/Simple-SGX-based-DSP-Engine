@@ -9,6 +9,12 @@
 
 class EngineWithBufferObserverCrypto : public EngineWithBufferObserver {
 public:
+    uint32_t sourceCPU = 3;
+    uint32_t enclaveCPU = 4;
+    uint32_t observerCPU = 5;
+    uint32_t headObserverCPU = 6;
+    uint32_t sinkCPU = 7;
+
     static void encryptInput(bool);
     static void encryptOutput(bool);
 

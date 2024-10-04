@@ -479,18 +479,24 @@ void *Q4Map1ResultParser::parseFromString(const std::string &str) {
 
         const std::string word = str.substr(previousPos);
         words.push_back(word);
-        if (words.size() != 2) {
+        if (words.size() != 3) {
             return nullptr;
         }
 
         if (!words[0].empty()) {
-            this->result_->category = std::stoul(words[0]);
+            this->result_->auctionId = std::stoul(words[0]);
+        } else {
+            this->result_->auctionId = 0;
+        }
+
+        if (!words[1].empty()) {
+            this->result_->category = std::stoul(words[1]);
         } else {
             this->result_->category = 0;
         }
 
-        if (!words[1].empty()) {
-            this->result_->final = std::stoul(words[1]);
+        if (!words[2].empty()) {
+            this->result_->final = std::stoul(words[2]);
         } else {
             this->result_->final = 0;
         }

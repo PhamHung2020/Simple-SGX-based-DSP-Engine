@@ -51,6 +51,12 @@ public:
     int taskInputDataSize1;
     int taskInputDataSize2;
 
+    uint32_t sourceCPU = 6;
+    uint32_t enclaveCPU = 7;
+    uint32_t observerCPU = 3;
+    uint32_t headObserverCPU = 5;
+    uint32_t sinkCPU = 4;
+
 
 };
 

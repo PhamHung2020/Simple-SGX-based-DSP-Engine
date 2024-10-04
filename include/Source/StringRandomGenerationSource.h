@@ -24,6 +24,7 @@ public:
     StringRandomGenerationSource(uint64_t generatedDataSizeInBytes, uint64_t count);
     void prepare();
     int start(Emitter &emitter) override;
+    std::vector<std::string>& getGeneratedTexts();
 };
 
 #endif //SIMPLE_DSP_ENGINE_STRINGRANDOMGENERATIONSOURCE_H

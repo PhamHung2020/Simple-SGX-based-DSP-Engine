@@ -1,6 +1,10 @@
 /* Enclave.edl - Top EDL file. */
 
 enclave {
+    from "sgx_tsgxssl.edl" import *;
+    from "sgx_pthread.edl" import *;
+    //from "sgx_tstdc.edl" import sgx_cpuid;
+
   include "../include/hot_calls.h"
   include "../include/fast_call_enclave.h"
   include "../include/data_types.h"
@@ -21,10 +25,17 @@ enclave {
     public void testMemCpy();
 
     public void testMemCpy2([user_check] char* outMem);
+
+    public void testOpenSslOCall();
   };
 
   untrusted {
     void ocall_print_string([in, string] const char *str);
+
+    void oCallRecordStartTime();
+
+    void oCallRecordEndTime();
+
   };
 
 };
