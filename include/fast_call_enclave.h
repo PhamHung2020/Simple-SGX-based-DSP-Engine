@@ -214,7 +214,7 @@ static inline void FastCall_wait_decrypt(FastCallStruct *fastCallData, FastCallT
     char* data;
     int started = 0;
     uint32_t failedTime = 1;
-    const int dataSize = fastCallData->data_buffer->data_size - SGX_AESGCM_MAC_SIZE - SGX_AESGCM_IV_SIZE;
+    const int dataSize = fastCallData->data_buffer->data_size - SGX_AESGCM_MAC_SIZE - SGX_AESGCM_IV_SIZE - 4;
 //    char* decryptedData =  (char *) malloc((dataSize+1) * sizeof(char ));
     while(true)
     {
@@ -324,9 +324,9 @@ static inline void FastCall_wait_2(FastCallStruct *fastCallData1, FastCallStruct
                 next = 0;
             }
             fastCallData1->data_buffer->tail = next;
-            sgx_spin_lock(&fastCallData1->data_buffer->lock_count);
-            fastCallData1->data_buffer->popped_count += 1;
-            sgx_spin_unlock(&fastCallData1->data_buffer->lock_count);
+//            sgx_spin_lock(&fastCallData1->data_buffer->lock_count);
+//            fastCallData1->data_buffer->popped_count += 1;
+//            sgx_spin_unlock(&fastCallData1->data_buffer->lock_count);
         }
 
         if (popResult2 == 0) {
@@ -335,9 +335,9 @@ static inline void FastCall_wait_2(FastCallStruct *fastCallData1, FastCallStruct
                 next = 0;
             }
             fastCallData2->data_buffer->tail = next;
-            sgx_spin_lock(&fastCallData2->data_buffer->lock_count);
-            fastCallData2->data_buffer->popped_count += 1;
-            sgx_spin_unlock(&fastCallData2->data_buffer->lock_count);
+//            sgx_spin_lock(&fastCallData2->data_buffer->lock_count);
+//            fastCallData2->data_buffer->popped_count += 1;
+//            sgx_spin_unlock(&fastCallData2->data_buffer->lock_count);
         }
 
         if (!keepPolling && data1 == NULL && data2 == NULL) {
@@ -414,9 +414,9 @@ static inline void FastCall_wait_2_decrypt(FastCallStruct *fastCallData1, FastCa
                 next = 0;
             }
             fastCallData1->data_buffer->tail = next;
-            sgx_spin_lock(&fastCallData1->data_buffer->lock_count);
-            fastCallData1->data_buffer->popped_count += 1;
-            sgx_spin_unlock(&fastCallData1->data_buffer->lock_count);
+//            sgx_spin_lock(&fastCallData1->data_buffer->lock_count);
+//            fastCallData1->data_buffer->popped_count += 1;
+//            sgx_spin_unlock(&fastCallData1->data_buffer->lock_count);
         }
 
         if (popResult2 == 0) {
@@ -425,9 +425,9 @@ static inline void FastCall_wait_2_decrypt(FastCallStruct *fastCallData1, FastCa
                 next = 0;
             }
             fastCallData2->data_buffer->tail = next;
-            sgx_spin_lock(&fastCallData2->data_buffer->lock_count);
-            fastCallData2->data_buffer->popped_count += 1;
-            sgx_spin_unlock(&fastCallData2->data_buffer->lock_count);
+//            sgx_spin_lock(&fastCallData2->data_buffer->lock_count);
+//            fastCallData2->data_buffer->popped_count += 1;
+//            sgx_spin_unlock(&fastCallData2->data_buffer->lock_count);
         }
 
         if (!keepPolling && data1 == NULL && data2 == NULL) {

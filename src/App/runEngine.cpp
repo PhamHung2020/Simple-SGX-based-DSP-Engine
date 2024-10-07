@@ -14,16 +14,16 @@
 
 void runEngineWithBufferObserverCrypto(ConfigurationTesting& config, bool shouldCreateMeasurementDirectory, bool shouldCreateResultDirectory) {
     // ================ Set up engine ====================
-//    CsvSource source(config.sourceId, config.sourceFileName, config.sourceDelay, config.sourceHasHeader, config.sourceCount);
-//    source.setParser(config.parser);
+    CsvSource source(config.sourceId, config.sourceFileName, config.sourceDelay, config.sourceHasHeader, config.sourceCount);
+    source.setParser(config.parser);
 
-    StringRandomGenerationSource source(config.taskInputDataSize - (SGX_AESGCM_MAC_SIZE + SGX_AESGCM_IV_SIZE), config.sourceCount);
+//    StringRandomGenerationSource source(config.taskInputDataSize - (SGX_AESGCM_MAC_SIZE + SGX_AESGCM_IV_SIZE), config.sourceCount);
 //    StringRandomGenerationSource source(config.taskInputDataSize, config.sourceCount);
-    source.prepare();
+//    source.prepare();
 
     EngineWithBufferObserverCrypto engine;
     EngineWithBufferObserverCrypto::encryptInput(true);
-    EngineWithBufferObserverCrypto::encryptOutput(false);
+    EngineWithBufferObserverCrypto::encryptOutput(true);
     engine.sourceCPU = config.sourceCPU;
     engine.enclaveCPU = config.enclaveCPU;
     engine.observerCPU = config.observerCPU;

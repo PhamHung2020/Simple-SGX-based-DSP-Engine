@@ -812,7 +812,7 @@ void NexmarkQ5_MaxBatch(void* data) {
 
 std::vector<Auction*> auctionsQ6;
 std::vector<Bid*> bidsQ6;
-const uint64_t q6JoinWindowSize = 200;
+const uint64_t q6JoinWindowSize = 100;
 const uint64_t q6JoinSlidingStep = 10;
 uint64_t q6BidCurrentSliding = q6JoinSlidingStep;
 uint64_t q6AuctionCurrentSliding = q6JoinSlidingStep;
@@ -962,7 +962,7 @@ void NexmarkQ6_Max(void* data) {
     }
 }
 
-const uint64_t averagePartitionSizeQ6 = 200;
+const uint64_t averagePartitionSizeQ6 = 100;
 std::map<uint64_t, std::vector<Q6MaxResult*>> averagePartitionsQ6;
 void NexmarkQ6_Avg(void* data) {
     if (data == NULL) {
@@ -1006,8 +1006,8 @@ void NexmarkQ6_Avg(void* data) {
 
     if (!averageResults.empty()) {
         for (auto& averageResult : averageResults) {
-            FastCall_request(globalFastOCall, &averageResult);
-//            FastCall_request_encrypt2(globalFastOCall, &averageResult, encryptedData);
+//            FastCall_request(globalFastOCall, &averageResult);
+            FastCall_request_encrypt2(globalFastOCall, &averageResult, encryptedData);
         }
     }
 }

@@ -140,17 +140,19 @@ void* testCryptoOCall(void*) {
     return nullptr;
 }
 
-void testingDecryption(std::string cpus) {
+void testingDecryption(std::string cpus = "") {
     // cpus format: source-enclave-observer-headObserver-sink
 
     ConfigurationTesting config;
-    config.sourceCPU = cpus[0] - 48;
-    config.enclaveCPU = cpus[2] - 48;
-    config.observerCPU = cpus[4] - 48;
-    config.headObserverCPU = cpus[6] - 48;
-    config.sinkCPU = cpus[8] - 48;
+    if (cpus.length() >= 9) {
+        config.sourceCPU = cpus[0] - 48;
+        config.enclaveCPU = cpus[2] - 48;
+        config.observerCPU = cpus[4] - 48;
+        config.headObserverCPU = cpus[6] - 48;
+        config.sinkCPU = cpus[8] - 48;
+    }
 
-    config.taskInputDataSize = 16 + SGX_AESGCM_MAC_SIZE + SGX_AESGCM_IV_SIZE;
+    config.taskInputDataSize = 16 + SGX_AESGCM_MAC_SIZE + SGX_AESGCM_IV_SIZE + 4;
 //    config.taskInputDataSize = 16;
     config.sourceCount = 1000000;
     config.taskId = 30;
@@ -159,10 +161,10 @@ void testingDecryption(std::string cpus) {
 //    config.outputDataSize = sizeof(Bid) + SGX_AESGCM_MAC_SIZE + SGX_AESGCM_IV_SIZE + 4;
     config.outputDataSize = 16;
     config.sinkFileStream = getSinkFileStream();
-    config.resultDirName = "../../results/testing/cryptosdk_sourcerate";
-    config.measurementDirName = "../../measurements/testing/change_cpu_cold_cache";
+    config.resultDirName = "../../results/testing/rework_openssl";
+    config.measurementDirName = "../../measurements/testing/rework_openssl";
     config.sinkFileName = "test.csv";
-    config.measurementFileName = "16-" + cpus + ".csv";
+    config.measurementFileName = "16_73546.csv";
 
     runEngineWithBufferObserverCrypto(config);
 }
@@ -191,8 +193,11 @@ void testNexmarkBenchmark() {
 //   std::string measurementBatchDirName = "../../measurements/testNexmark/batch/2024-06-12_09-58-38";
 //   std::string resultBatchDirName = "../../results/testNexmark/batch/2024-06-12_09-58-38";
 
-    std::string measurementBatchDirName = "../../measurements/testNexmark/crypto/data_20240801";
-    std::string resultBatchDirName = "../../results/testNexmark/crypto/data_20240801";
+//    std::string measurementBatchDirName = "../../measurements/testNexmark/crypto/data_20240801";
+//    std::string resultBatchDirName = "../../results/testNexmark/crypto/data_20240801";
+
+    std::string measurementBatchDirName = "../../measurements/testing/rework_nexmark";
+    std::string resultBatchDirName = "../../results/testing/rework_nexmark";
 //    srand((unsigned) time(nullptr));
 
     for (int i = 0; i < 5; ++i) {
@@ -203,30 +208,31 @@ void testNexmarkBenchmark() {
         nexmarkQuery.setMeasurementDirName(measurementDirName);
         nexmarkQuery.setResultDirName(resultDirName);
 
-//        nexmarkQuery.runQuery1("../../../other/nexmark-data/bids.csv", "process_time_q1_changeCPU.csv", "q1result.csv");
+//        nexmarkQuery.runQuery1("../../../other/nexmark-data/bids.csv", "process_time_q1.csv", "q1result.csv");
 
 //        nexmarkQuery.runQuery2_Filter("../../../other/nexmark-data/bids.csv", "process_time_q2_filter_greater_2.csv", "q2result_filter_greater_2.csv");
 //        nexmarkQuery.runQuery2_Map("../../../other/nexmark-data/bids.csv", "process_time_q2_map.csv", "q2result_map.csv");
 //        nexmarkQuery.runQuery2_Map(resultDirName +  "/q2result_filter_4.csv", "process_time_q2_map.csv", "q2result_map.csv");
 
-//        nexmarkQuery.runQuery3_FilterPerson("../../../other/nexmark-data/people_100000.csv", "process_time_q3_filter_person_4_changeCPU.csv", "q3result_filter_person_4.csv");
+//        nexmarkQuery.runQuery3_FilterPerson("../../../other/nexmark-data/people.csv", "process_time_q3_filter_person_4.csv", "q3result_filter_person_4.csv");
 //        nexmarkQuery.runQuery3_FilterAuction("../../../other/nexmark-data/auction.csv", "process_time_q3_filter_auction.csv", "q3result_filter_auction.csv");
-//        nexmarkQuery.runQuery3_JoinPersonAuction("../../../other/nexmark-data/people.csv", "../../../other/nexmark-data/auction.csv", "q3_join_200_10.csv", "q3result_join_200_10.csv");
+//        nexmarkQuery.runQuery3_JoinPersonAuction("../../../other/nexmark-data/people.csv", "../../../other/nexmark-data/auction.csv", "q3_join_100_50.csv", "q3result_join_100_50.csv");
 //        nexmarkQuery.runQuery3_MapJoinResult(resultDirName + "/q3result_join_200_10.csv", "process_time_q3_map.csv", "q3result_map.csv");
 
-//        nexmarkQuery.runQuery4_JoinAuctionBid("../../../other/nexmark-data/auction.csv", "../../../other/nexmark-data/bids.csv", "q4_join1_200_10.csv", "q4result_join1_200_10.csv");
-//        nexmarkQuery.runQuery4_MapAuctionBid(resultDirName +  "/q4result_join1_200_10.csv", "process_time_q4_map1_new.csv", "q4result_map1_new.csv");
-        nexmarkQuery.runQuery4_Max(resultDirName +  "/q4result_map1_new.csv", "process_time_q4_max_100_10_old.csv", "q4result_max_100_10_old.csv");
+//        nexmarkQuery.runQuery4_JoinAuctionBid("../../../other/nexmark-data/auction.csv", "../../../other/nexmark-data/bids.csv", "q4_join1_100_10.csv", "q4result_join1_100_10.csv");
+//        nexmarkQuery.runQuery4_MapAuctionBid(resultDirName +  "/q4result_join1_200_10.csv", "process_time_q4_map1.csv", "q4result_map1.csv");
+//        nexmarkQuery.runQuery4_Max(resultDirName +  "/q4result_map1.csv", "process_time_q4_max_500_10.csv", "q4result_max_500_10.csv");
 //        nexmarkQuery.runQuery4_JoinCategory(resultDirName +  "/q4result_map1.csv", "process_time_q4_join_category_500_10.csv", "q4result_join_category_500_10.csv");
-//        nexmarkQuery.runQuery4_Average(resultDirName +  "/q4result_map1.csv", "process_time_q4_average_500_10.csv", "q4result_average_500_10.csv");
+//        nexmarkQuery.runQuery4_Average(resultDirName +  "/q4result_join_category_500_10.csv", "process_time_q4_average_200_10.csv", "q4result_average_200_10.csv");
 
-//        nexmarkQuery.runQuery5_CountByAuction("../../../other/nexmark-data/bids.csv", "process_time_q5_count_by_auction_200_10_changeCPU.csv", "q5result_count_by_auction_200_10.csv");
-//        nexmarkQuery.runQuery5_MaxBatch(resultDirName + "/q5result_count_by_auction_100_10.csv", "process_time_q5_max_test_200_10.csv", "q5result_max_test_200_10.csv");
+//        nexmarkQuery.runQuery5_CountByAuction("../../../other/nexmark-data/bids.csv", "process_time_q5_count_by_auction_80_10.csv", "q5result_count_by_auction_80_10.csv");
+//        nexmarkQuery.runQuery5_MaxBatch(resultDirName + "/q5result_count_by_auction_100_10.csv", "process_time_q5_max_80_10.csv", "q5result_max_80_10.csv");
 
-//        nexmarkQuery.runQuery6_JoinAuctionBid("../../../other/nexmark-data/auction.csv", "../../../other/nexmark-data/bids.csv", "q6_join_200_10.csv", "q6result_join_200_10.csv");
-//        nexmarkQuery.runQuery6_Filter(resultDirName + "/q6result_join_200_10.csv", "process_time_q6_filter.csv", "q6result_filter.csv");
-//        nexmarkQuery.runQuery6_Max(resultDirName + "/q6result_filter.csv", "process_time_q6_max_500_10.csv", "q6result_max_500_10.csv");
-//        nexmarkQuery.runQuery6_Avg(resultDirName + "/q6_avg_input_54seller.csv", "process_time_q6_avg_200_nocrypto_54seller.csv", "q6result_avg_200_nocrypto_54seller.csv");
+//        nexmarkQuery.runQuery6_JoinAuctionBid("../../../other/nexmark-data/auction.csv", "../../../other/nexmark-data/bids.csv", "q6_join_100_10.csv", "q6result_join_100_10.csv");
+//        nexmarkQuery.runQuery6_Filter(resultDirName + "/q6result_join_100_10.csv", "process_time_q6_filter.csv", "q6result_filter.csv");
+//        nexmarkQuery.runQuery6_Max(resultDirName + "/q6result_filter.csv", "process_time_q6_max_100_10.csv", "q6result_max_100_10.csv");
+//        nexmarkQuery.runQuery6_Avg(resultDirName + "/q6result_max_100_10.csv", "process_time_q6_avg_100.csv", "q6result_avg_100.csv");
+        nexmarkQuery.runQuery6_Avg(resultDirName + "/q6_avg_input_1seller.csv", "process_time_q6_avg_100_1seller.csv", "q6result_avg_100_1seller.csv");
 
 //        nexmarkQuery.runQuery7_MaxJoin("../../../other/bids.csv", "process_time_q7_maxjoin_1500.csv", "q7result_maxjoin_1500.csv");
 
@@ -259,8 +265,8 @@ inline __attribute__((always_inline)) uint64_t clearcache(void *buf, size_t size
 /* Application entry */
 int SGX_CDECL main(int argc, char *argv[])
 {
-    std::string argument = argv[1];
-    std::cout << "Argument: " << argument << std::endl;
+//    std::string argument = argv[1];
+//    std::cout << "Argument: " << argument << std::endl;
 
 //    recordedStartTime.reserve(8000000);
 //    recordedEndTime.reserve(8000000);
@@ -299,162 +305,35 @@ int SGX_CDECL main(int argc, char *argv[])
 //    testOpenSSLWithoutSGX();
 
     /* TESTING DECRYPTION */
-//    std::vector<std::string> cpuOrderList = {
-//            "3-4-5-6-7",
-//            "3-4-5-7-6",
-//            "3-4-6-5-7",
-//            "3-4-6-7-5",
-//            "3-4-7-5-6",
-//            "3-4-7-6-5",
-//            "3-5-4-6-7",
-//            "3-5-4-7-6",
-//            "3-5-6-4-7",
-//            "3-5-6-7-4",
-//            "3-5-7-4-6",
-//            "3-5-7-6-4",
-//            "3-6-4-5-7",
-//            "3-6-4-7-5",
-//            "3-6-5-4-7",
-//            "3-6-5-7-4",
-//            "3-6-7-4-5",
-//            "3-6-7-5-4",
-//            "3-7-4-5-6",
-//            "3-7-4-6-5",
-//            "3-7-5-4-6",
-//            "3-7-5-6-4",
-//            "3-7-6-4-5",
-//            "3-7-6-5-4",
-//            "4-3-5-6-7",
-//            "4-3-5-7-6",
-//            "4-3-6-5-7",
-//            "4-3-6-7-5",
-//            "4-3-7-5-6",
-//            "4-3-7-6-5",
-//            "4-5-3-6-7",
-//            "4-5-3-7-6",
-//            "4-5-6-3-7",
-//            "4-5-6-7-3",
-//            "4-5-7-3-6",
-//            "4-5-7-6-3",
-//            "4-6-3-5-7",
-//            "4-6-3-7-5",
-//            "4-6-5-3-7",
-//            "4-6-5-7-3",
-//            "4-6-7-3-5",
-//            "4-6-7-5-3",
-//            "4-7-3-5-6",
-//            "4-7-3-6-5",
-//            "4-7-5-3-6",
-//            "4-7-5-6-3",
-//            "4-7-6-3-5",
-//            "4-7-6-5-3",
-//            "5-3-4-6-7",
-//            "5-3-4-7-6",
-//            "5-3-6-4-7",
-//            "5-3-6-7-4",
-//            "5-3-7-4-6",
-//            "5-3-7-6-4",
-//            "5-4-3-6-7",
-//            "5-4-3-7-6",
-//            "5-4-6-3-7",
-//            "5-4-6-7-3",
-//            "5-4-7-3-6",
-//            "5-4-7-6-3",
-//            "5-6-3-4-7",
-//            "5-6-3-7-4",
-//            "5-6-4-3-7",
-//            "5-6-4-7-3",
-//            "5-6-7-3-4",
-//            "5-6-7-4-3",
-//            "5-7-3-4-6",
-//            "5-7-3-6-4",
-//            "5-7-4-3-6",
-//            "5-7-4-6-3",
-//            "5-7-6-3-4",
-//            "5-7-6-4-3",
-//            "6-3-4-5-7",
-//            "6-3-4-7-5",
-//            "6-3-5-4-7",
-//            "6-3-5-7-4",
-//            "6-3-7-4-5",
-//            "6-3-7-5-4",
-//            "6-4-3-5-7",
-//            "6-4-3-7-5",
-//            "6-4-5-3-7",
-//            "6-4-5-7-3",
-//            "6-4-7-3-5",
-//            "6-4-7-5-3",
-//            "6-5-3-4-7",
-//            "6-5-3-7-4",
-//            "6-5-4-3-7",
-//            "6-5-4-7-3",
-//            "6-5-7-3-4",
-//            "6-5-7-4-3",
-//            "6-7-3-4-5",
-//            "6-7-3-5-4",
-//            "6-7-4-3-5",
-//            "6-7-4-5-3",
-//            "6-7-5-3-4",
-//            "6-7-5-4-3",
-//            "7-3-4-5-6",
-//            "7-3-4-6-5",
-//            "7-3-5-4-6",
-//            "7-3-5-6-4",
-//            "7-3-6-4-5",
-//            "7-3-6-5-4",
-//            "7-4-3-5-6",
-//            "7-4-3-6-5",
-//            "7-4-5-3-6",
-//            "7-4-5-6-3",
-//            "7-4-6-3-5",
-//            "7-4-6-5-3",
-//            "7-5-3-4-6",
-//            "7-5-3-6-4",
-//            "7-5-4-3-6",
-//            "7-5-4-6-3",
-//            "7-5-6-3-4",
-//            "7-5-6-4-3",
-//            "7-6-3-4-5",
-//            "7-6-3-5-4",
-//            "7-6-4-3-5",
-//            "7-6-4-5-3",
-//            "7-6-5-3-4",
-//            "7-6-5-4-3",
-//    };
-//
-//    for (std::string& cpuOrder : cpuOrderList) {
-//        testingDecryption(cpuOrder);
+//    void *defeat;
+//    if (posix_memalign(&defeat, 64, CACHE_DEFEAT_SIZE) != 0 || !defeat) {
+//        printf("defeat buffer allocation failure\n");
+//        return -1;
 //    }
-
-    void *defeat;
-    if (posix_memalign(&defeat, 64, CACHE_DEFEAT_SIZE) != 0 || !defeat) {
-        printf("defeat buffer allocation failure\n");
-        return -1;
-    }
-    void *defeat0 __attribute__((unused)) = malloc(CACHE_DEFEAT_SIZE);
-    void *defeat1 __attribute__((unused)) = malloc(CACHE_DEFEAT_SIZE);
-#define DEFEATCACHE do { memset_s(defeat0, CACHE_DEFEAT_SIZE, 0, CACHE_DEFEAT_SIZE); memcpy(defeat1, defeat0, CACHE_DEFEAT_SIZE); asm volatile ("mfence"); } while (0)
-
-    void *buffer;
-    if (posix_memalign(&buffer, 64, 2048) != 0 || !buffer) {
-        printf("aligned buffer allocation failure\n");
-        return -1;
-    }
-    memset(buffer, 0, 2048);
-    clearcache(defeat, CACHE_DEFEAT_SIZE);
-
-    testingDecryption(argument);
-
-    free(defeat);
-    free(defeat0);
-    free(defeat1);
+//    void *defeat0 __attribute__((unused)) = malloc(CACHE_DEFEAT_SIZE);
+//    void *defeat1 __attribute__((unused)) = malloc(CACHE_DEFEAT_SIZE);
+//#define DEFEATCACHE do { memset_s(defeat0, CACHE_DEFEAT_SIZE, 0, CACHE_DEFEAT_SIZE); memcpy(defeat1, defeat0, CACHE_DEFEAT_SIZE); asm volatile ("mfence"); } while (0)
+//
+//    void *buffer;
+//    if (posix_memalign(&buffer, 64, 2048) != 0 || !buffer) {
+//        printf("aligned buffer allocation failure\n");
+//        return -1;
+//    }
+//    memset(buffer, 0, 2048);
+//    clearcache(defeat, CACHE_DEFEAT_SIZE);
+//
+//    testingDecryption("");
+//
+//    free(defeat);
+//    free(defeat0);
+//    free(defeat1);
 
     /* SECURE STREAMS BENCHMARK */
 //    testSecureStreamBenchmark();
 
 
     /* NEXMARK BENCHMARK */
-//    testNexmarkBenchmark();
+    testNexmarkBenchmark();
 
 //    ofstream out;
 //    std::cout << "Writing to cryptosdk_engine_ocall\n";

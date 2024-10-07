@@ -221,7 +221,6 @@ void *BidParser::parseFromString(const std::string &str) {
         return nullptr;
     }
 
-    this->bid_->auction = 1000;
     return this->bid_;
 }
 

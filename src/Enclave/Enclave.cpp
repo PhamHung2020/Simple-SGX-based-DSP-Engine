@@ -230,7 +230,7 @@ static inline void FastCall_wait_decrypt_ECall(FastCallStruct *fastCallData, Fas
     char* data;
     int started = 0;
     uint32_t failedTime = 1;
-    const int dataSize = fastCallData->data_buffer->data_size - SGX_AESGCM_MAC_SIZE - SGX_AESGCM_IV_SIZE;
+    const int dataSize = fastCallData->data_buffer->data_size - SGX_AESGCM_MAC_SIZE - SGX_AESGCM_IV_SIZE - 4;
     while(true)
     {
 //        oCallRecordStartTime();

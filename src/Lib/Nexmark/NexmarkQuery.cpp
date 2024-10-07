@@ -396,12 +396,12 @@ void NexmarkQuery::runQuery6_Avg(std::string sourceFilePath, std::string measure
     this->setupConfiguration_(&config, std::move(sourceFilePath), std::move(measurementFileName), std::move(sinkFileName));
 
     config.taskId = 25;
-//    config.taskInputDataSize = sizeof(Q6MaxResult) + SGX_AESGCM_MAC_SIZE + SGX_AESGCM_IV_SIZE + 4;
-    config.taskInputDataSize = sizeof(Q6MaxResult);
+    config.taskInputDataSize = sizeof(Q6MaxResult) + SGX_AESGCM_MAC_SIZE + SGX_AESGCM_IV_SIZE + 4;
+//    config.taskInputDataSize = sizeof(Q6MaxResult);
 
     config.taskShouldBeObserved = true;
-//    config.outputDataSize = sizeof(Q6AverageResult) + SGX_AESGCM_MAC_SIZE + SGX_AESGCM_IV_SIZE + 4;
-    config.outputDataSize = sizeof(Q6AverageResult);
+    config.outputDataSize = sizeof(Q6AverageResult) + SGX_AESGCM_MAC_SIZE + SGX_AESGCM_IV_SIZE + 4;
+//    config.outputDataSize = sizeof(Q6AverageResult);
 
     config.parser = new Q6MaxResultParser();
     config.sink = sinkQ6AverageResult;
