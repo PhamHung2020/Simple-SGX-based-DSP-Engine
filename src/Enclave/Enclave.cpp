@@ -313,7 +313,7 @@ void EcallStartResponderWithDecryption(FastCallStruct* fastECallData, FastCallSt
 //    FastCall_wait_decrypt(fastECallData, &callTable, callId, decryptedData);
     FastCall_wait_decrypt_ECall(fastECallData, &callTable, callId);
 
-    print("Failed time: %d\n", fastECallData->data_buffer->popped_count);
+//    print("Failed time: %d\n", fastECallData->data_buffer->popped_count);
 }
 
 void EcallStartResponder2(FastCallStruct* fastECallData1, FastCallStruct* fastECallData2, FastCallStruct* fastOCallData, const uint16_t callId)

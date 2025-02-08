@@ -295,9 +295,12 @@ void NexmarkQ1(void* data) {
     }
 
     const auto bid = static_cast<Bid*>(data);
+
     // convert dollar to euro
-    long double exchangeRate = 0.92;
-    bid->price = (uint64_t)(bid->price * exchangeRate);
+//    long double exchangeRate = 0.92;
+//    bid->price = (uint64_t)(bid->price * exchangeRate);
+    bid->datetime *= (bid->price % 100);
+
 //    FastCall_request(globalFastOCall, bid);
     FastCall_request_encrypt2(globalFastOCall, bid, encryptedData);
 }
@@ -312,7 +315,7 @@ void NexmarkQ2_Filter(void* data) {
 //    if (bid->auction == 17600 || bid->auction == 27500 || bid->auction == 40700 || bid->auction == 51500) {
 //    if (bid->auction == 17600 || bid->auction == 27500 || bid->auction == 40700) {
 //    if (bid->auction == 17600 || bid->auction == 27500) {
-    if (bid->auction > 1760) {
+    if (bid->auction > 17600) {
             FastCall_request_encrypt2(globalFastOCall, bid, encryptedData);
     }
 }
@@ -357,7 +360,7 @@ void NexmarkQ3_FilterAuction(void* data) {
 
 std::vector<Person*> people;
 std::vector<Auction*> auctions;
-const uint64_t q3JoinWindowSize = 200;
+const uint64_t q3JoinWindowSize = 100;
 const uint64_t q3JoinSlidingStep = 10;
 uint64_t q3PeopleCurrentSliding = q3JoinSlidingStep;
 uint64_t q3AuctionCurrentSliding = q3JoinSlidingStep;
@@ -466,8 +469,9 @@ void NexmarkQ3_MapResult(void* data) {
 
 std::vector<Auction*> auctionsQ4;
 std::vector<Bid*> bidsQ4;
-const uint64_t q4JoinWindowSize = 100;
-const uint64_t q4JoinSlidingStep = 10;
+const uint64_t q4JoinWindowSize = 7700;const uint64_t q4JoinSlidingStep = 5700;
+// const uint64_t q4JoinWindowSize = 100;
+// const uint64_t q4JoinSlidingStep = 10;
 uint64_t q4BidCurrentSliding = q4JoinSlidingStep;
 uint64_t q4AuctionCurrentSliding = q4JoinSlidingStep;
 void NexmarkQ4_JoinAuctionBid(void* data) {
@@ -611,7 +615,7 @@ void NexmarkQ4_MaxAuctionPriceByCategory(void* data) {
     }
 }
 
-uint64_t categories[10] = { 10, 11, 12, 13, 14, 15, 16, 17, 18, 19 };
+uint64_t categories[10] = { 65520, 65521, 65522, 65523, 65524, 65525, 65526, 65527, 65528, 65529 };
 const uint64_t q4JoinCategoryWindowSize = 500;
 const uint64_t q4JoinCategorySlidingStep = 10;
 uint64_t q4JoinCategoryCurrentSlidingStep = q4JoinCategorySlidingStep;
@@ -652,7 +656,7 @@ void NexmarkQ4_JoinWithCategory(void* data) {
         }
 
         for (const auto& result : joinCategoryResultsQ4) {
-            Q4Map1Result mapJoinResult{ result.second->final, result.second->category };
+            Q4Map1Result mapJoinResult{ 0, result.second->final, result.second->category };
             FastCall_request_encrypt2(globalFastOCall, &mapJoinResult, encryptedData);
         }
     }
@@ -709,7 +713,7 @@ void NexmarkQ4_Average(void* data) {
 }
 
 std::vector<Bid*> bidsCountByAuctionQ5;
-const uint64_t q5WindowSize = 200;
+const uint64_t q5WindowSize = 100;
 const uint64_t q5SlidingStep = 10;
 uint64_t q5BidCurrentSliding = q5SlidingStep;
 void NexmarkQ5_CountByAuction(void* data) {
@@ -1355,4 +1359,67 @@ void testDecryption(void* data) {
 //    a += 5;
 
 //    FastCall_request(globalFastOCall, data);
+}
+
+const uint64_t partitionSize = 500;
+const uint64_t partitionStep = 5;
+std::map<uint64_t, std::vector<Q6MaxResult*>> averagePartitions;
+//std::map<uint64_t, std::pair<uint64_t, std::vector<Q6MaxResult*>>> averagePartitions;
+void Nexmark_AvgPartition(void* data) {
+    if (data == NULL) {
+        return;
+    }
+
+    const auto maxResult = static_cast<Q6MaxResult*>(data);
+    const auto seller = maxResult->seller;
+    if (averagePartitions.find(seller) == averagePartitions.end()) {
+//        averagePartitions[seller].first = 0;
+//        averagePartitions[seller].second.reserve(partitionSize);
+
+        averagePartitions[seller].reserve(partitionSize);
+
+    }
+
+//    auto& currentPartition = averagePartitions[seller].second;
+    auto& currentPartition = averagePartitions[seller];
+
+    if (currentPartition.size() >= partitionSize) {
+        delete currentPartition[0];
+        currentPartition.erase(currentPartition.begin());
+    }
+
+    auto* newMaxResult = new Q6MaxResult;
+    newMaxResult->seller = maxResult->seller;
+    newMaxResult->final = maxResult->final;
+    currentPartition.push_back(newMaxResult);
+
+//    averagePartitions[seller].first += 1;
+
+    // processing
+    std::vector<Q6AverageResult> averageResults;
+    for (auto& partition : averagePartitions) {
+//        if (partition.second.second.size() < partitionSize || partition.second.first < partitionStep) {
+        if (partition.second.size() < partitionSize) {
+            continue;
+        }
+
+//        partition.second.first = 0;
+        uint64_t sum_final = 0;
+//        for (const auto& e : partition.second.second) {
+        for (const auto& e : partition.second) {
+            sum_final += e->final;
+        }
+
+        Q6AverageResult newAverageResult{};
+        newAverageResult.seller = partition.first;
+        newAverageResult.final = static_cast<double>(sum_final) * 1.0 / partitionSize;
+        averageResults.push_back(newAverageResult);
+    }
+
+    if (!averageResults.empty()) {
+        for (auto& averageResult : averageResults) {
+//            FastCall_request(globalFastOCall, &averageResult);
+            FastCall_request_encrypt2(globalFastOCall, &averageResult, encryptedData);
+        }
+    }
 }

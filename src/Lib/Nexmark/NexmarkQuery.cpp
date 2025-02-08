@@ -395,7 +395,9 @@ void NexmarkQuery::runQuery6_Avg(std::string sourceFilePath, std::string measure
     ConfigurationTesting config;
     this->setupConfiguration_(&config, std::move(sourceFilePath), std::move(measurementFileName), std::move(sinkFileName));
 
-    config.taskId = 25;
+//    config.taskId = 25;
+    config.taskId = 31;
+
     config.taskInputDataSize = sizeof(Q6MaxResult) + SGX_AESGCM_MAC_SIZE + SGX_AESGCM_IV_SIZE + 4;
 //    config.taskInputDataSize = sizeof(Q6MaxResult);
 

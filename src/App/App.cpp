@@ -161,29 +161,32 @@ void testingDecryption(std::string cpus = "") {
 //    config.outputDataSize = sizeof(Bid) + SGX_AESGCM_MAC_SIZE + SGX_AESGCM_IV_SIZE + 4;
     config.outputDataSize = 16;
     config.sinkFileStream = getSinkFileStream();
-    config.resultDirName = "../../results/testing/rework_openssl";
-    config.measurementDirName = "../../measurements/testing/rework_openssl";
+    config.resultDirName = "../../results/testing/rework_cryptosdk_disabled_hyperthread";
+    config.measurementDirName = "../../measurements/testing/rework_cryptosdk_disabled_hyperthread_perf";
     config.sinkFileName = "test.csv";
-    config.measurementFileName = "16_73546.csv";
+    config.measurementFileName = "16_" + cpus + ".csv";
 
     runEngineWithBufferObserverCrypto(config);
 }
 
 void testSecureStreamBenchmark() {
-    std::string resultDirName = "../../results/secure-sgx/data_master";
-    std::string measurementDirName = "../../measurements/secure-sgx/data_master";
+//    std::string resultDirName = "../../results/secure-sgx/data_master";
+//    std::string measurementDirName = "../../measurements/secure-sgx/data_master";
+
+    std::string resultDirName = "../../results/secure_streams_dataset/map";
+    std::string measurementDirName = "../../measurements/secure_streams_dataset/map";
 
     SecureSgxQuery secureSgxQuery;
     secureSgxQuery.setMeasurementDirName(measurementDirName);
     secureSgxQuery.setResultDirName(resultDirName);
 
-    secureSgxQuery.runMapQuery("../../dataset/secure-sgx-dataset/2005.csv", "process_time_map_2005.csv", "map_2005.csv");
-    secureSgxQuery.runFilterQuery(resultDirName +  "/map_2005.csv", "process_time_filter_2005.csv", "filter_2005.csv");
-    secureSgxQuery.runReduceQuery("../../dataset/secure-sgx-dataset/2005.csv", "process_time_reduce_2005_1000.csv", "reduce_2005_1000.csv");
-    secureSgxQuery.runReduceQuery(resultDirName +  "/filter_2005.csv", "process_time_reduce_2005_100_10.csv", "reduce_2005_100_10.csv");
+    secureSgxQuery.runMapQuery("../../dataset/secure-sgx-dataset/2005_100000.csv", "process_time_map_2005.csv", "map_2005.csv");
+//    secureSgxQuery.runFilterQuery(resultDirName +  "/map_2005.csv", "process_time_filter_2005.csv", "filter_2005.csv");
+//    secureSgxQuery.runReduceQuery("../../dataset/secure-sgx-dataset/2005.csv", "process_time_reduce_2005_1000.csv", "reduce_2005_1000.csv");
+//    secureSgxQuery.runReduceQuery(resultDirName +  "/filter_2005.csv", "process_time_reduce_2005_100_10.csv", "reduce_2005_100_10.csv");
 }
 
-void testNexmarkBenchmark() {
+void testNexmarkBenchmark(std::string ruleName) {
     //  std::string measurementBatchDirName = createMeasurementsDirectory("../../measurements/testNexmark/batch");
     //  std::string resultBatchDirName = createMeasurementsDirectory("../../results/testNexmark/batch");
 
@@ -196,48 +199,78 @@ void testNexmarkBenchmark() {
 //    std::string measurementBatchDirName = "../../measurements/testNexmark/crypto/data_20240801";
 //    std::string resultBatchDirName = "../../results/testNexmark/crypto/data_20240801";
 
-    std::string measurementBatchDirName = "../../measurements/testing/rework_nexmark";
-    std::string resultBatchDirName = "../../results/testing/rework_nexmark";
+    std::string measurementBatchDirName = "../../measurements/dataset/q4/avg";
+    std::string resultBatchDirName = "../../results/dataset/q4/avg";
 //    srand((unsigned) time(nullptr));
 
-    for (int i = 0; i < 5; ++i) {
-        std::string measurementDirName = createDirectory(measurementBatchDirName + "/" + std::to_string(i));
-        std::string resultDirName = createDirectory(resultBatchDirName + "/" + std::to_string(0));
+    for (int i = 0; i < 1; ++i) {
+//        std::string measurementDirName = createDirectory(measurementBatchDirName + "/" + std::to_string(i));
+//        std::string resultDirName = createDirectory(resultBatchDirName + "/" + std::to_string(0));
+
+        std::string measurementDirName = createDirectory(measurementBatchDirName);
+        std::string resultDirName = createDirectory(resultBatchDirName);
 
         NexmarkQuery nexmarkQuery;
         nexmarkQuery.setMeasurementDirName(measurementDirName);
         nexmarkQuery.setResultDirName(resultDirName);
 
-//        nexmarkQuery.runQuery1("../../../other/nexmark-data/bids.csv", "process_time_q1.csv", "q1result.csv");
+//        nexmarkQuery.runQuery1("../../../other/nexmark-data/bids.csv", ruleName + ".csv", ruleName + ".csv");
 
 //        nexmarkQuery.runQuery2_Filter("../../../other/nexmark-data/bids.csv", "process_time_q2_filter_greater_2.csv", "q2result_filter_greater_2.csv");
+//        nexmarkQuery.runQuery2_Filter("../../../other/nexmark-data/bids.csv", ruleName + ".csv", ruleName + ".csv");
 //        nexmarkQuery.runQuery2_Map("../../../other/nexmark-data/bids.csv", "process_time_q2_map.csv", "q2result_map.csv");
+//        nexmarkQuery.runQuery2_Map("../../../other/nexmark-data/bids.csv", ruleName + ".csv", ruleName + ".csv");
 //        nexmarkQuery.runQuery2_Map(resultDirName +  "/q2result_filter_4.csv", "process_time_q2_map.csv", "q2result_map.csv");
 
-//        nexmarkQuery.runQuery3_FilterPerson("../../../other/nexmark-data/people.csv", "process_time_q3_filter_person_4.csv", "q3result_filter_person_4.csv");
-//        nexmarkQuery.runQuery3_FilterAuction("../../../other/nexmark-data/auction.csv", "process_time_q3_filter_auction.csv", "q3result_filter_auction.csv");
-//        nexmarkQuery.runQuery3_JoinPersonAuction("../../../other/nexmark-data/people.csv", "../../../other/nexmark-data/auction.csv", "q3_join_100_50.csv", "q3result_join_100_50.csv");
+//        nexmarkQuery.runQuery3_FilterPerson("../../../other/nexmark-data/people.csv", ruleName + ".csv", ruleName + ".csv");
+//        nexmarkQuery.runQuery3_FilterAuction("../../../other/nexmark-data/auction.csv", ruleName + ".csv", ruleName + ".csv");
+//        nexmarkQuery.runQuery3_JoinPersonAuction("../../../other/nexmark-data/people.csv", "../../../other/nexmark-data/auction.csv", ruleName + ".csv", ruleName + ".csv");
+//        nexmarkQuery.runQuery3_JoinPersonAuction("../../../other/nexmark-data/people.csv", "../../../other/nexmark-data/auction.csv", "q3_join_100_10_3-2-1.csv", "test.csv");
 //        nexmarkQuery.runQuery3_MapJoinResult(resultDirName + "/q3result_join_200_10.csv", "process_time_q3_map.csv", "q3result_map.csv");
 
-//        nexmarkQuery.runQuery4_JoinAuctionBid("../../../other/nexmark-data/auction.csv", "../../../other/nexmark-data/bids.csv", "q4_join1_100_10.csv", "q4result_join1_100_10.csv");
+//        nexmarkQuery.runQuery4_JoinAuctionBid("../../../other/nexmark-data/auction.csv", "../../../other/nexmark-data/bids.csv", ruleName + ".csv", ruleName + ".csv");
 //        nexmarkQuery.runQuery4_MapAuctionBid(resultDirName +  "/q4result_join1_200_10.csv", "process_time_q4_map1.csv", "q4result_map1.csv");
-//        nexmarkQuery.runQuery4_Max(resultDirName +  "/q4result_map1.csv", "process_time_q4_max_500_10.csv", "q4result_max_500_10.csv");
-//        nexmarkQuery.runQuery4_JoinCategory(resultDirName +  "/q4result_map1.csv", "process_time_q4_join_category_500_10.csv", "q4result_join_category_500_10.csv");
-//        nexmarkQuery.runQuery4_Average(resultDirName +  "/q4result_join_category_500_10.csv", "process_time_q4_average_200_10.csv", "q4result_average_200_10.csv");
+//        nexmarkQuery.runQuery4_MapAuctionBid("../../results/dataset/q4/600_10.csv", ruleName + ".csv", ruleName + ".csv");
 
-//        nexmarkQuery.runQuery5_CountByAuction("../../../other/nexmark-data/bids.csv", "process_time_q5_count_by_auction_80_10.csv", "q5result_count_by_auction_80_10.csv");
-//        nexmarkQuery.runQuery5_MaxBatch(resultDirName + "/q5result_count_by_auction_100_10.csv", "process_time_q5_max_80_10.csv", "q5result_max_80_10.csv");
+//        nexmarkQuery.runQuery4_Max("../../results/dataset/q4/48_add_auction_and_bidder_to_price+48_negate_all_uint64_fields.csv", ruleName + ".csv", ruleName + ".csv");
+//        nexmarkQuery.runQuery4_Max(resultDirName +  "/q4result_map1.csv", "process_time_q4_max_500_10.csv", "q4result_max_500_10.csv");
+//        nexmarkQuery.runQuery4_Max(resultDirName +  "/q4result_map1.csv", "q4_max_100_10_3-2-1.csv", "test.csv");
+//        nexmarkQuery.runQuery4_JoinCategory(resultDirName +  "/q4result_map1.csv", "process_time_q4_join_category_500_10.csv", "q4result_join_category_500_10.csv");
+//        nexmarkQuery.runQuery4_JoinCategory("../../results/dataset/q4/max_600_200.csv", ruleName + ".csv", ruleName + ".csv");
+
+        nexmarkQuery.runQuery4_Average("../../results/dataset/q4/join_category_500_100.csv", ruleName + ".csv", ruleName + ".csv");
+//        nexmarkQuery.runQuery4_Average(resultDirName +  "/q4result_join_category_500_10.csv", "process_time_q4_average_200_10.csv", "q4result_average_200_10.csv");
+//        nexmarkQuery.runQuery4_Average(resultDirName +  "/q4result_join_category_500_10.csv", "q4_average_100_10_3-2-1.csv", "test.csv");
+
+//        nexmarkQuery.runQuery5_CountByAuction("../../../other/nexmark-data/bids.csv", ruleName + ".csv", ruleName + ".csv");
+//        nexmarkQuery.runQuery5_MaxBatch("../../results/dataset/q5/count_by_auction/" + ruleName + ".csv", ruleName + ".csv", ruleName + ".csv");
+//        nexmarkQuery.runQuery5_MaxBatch(resultDirName + "/q5result_count_by_auction_100_10.csv", "q5_max_100_10_3-2-1.csv", "test.csv");
 
 //        nexmarkQuery.runQuery6_JoinAuctionBid("../../../other/nexmark-data/auction.csv", "../../../other/nexmark-data/bids.csv", "q6_join_100_10.csv", "q6result_join_100_10.csv");
 //        nexmarkQuery.runQuery6_Filter(resultDirName + "/q6result_join_100_10.csv", "process_time_q6_filter.csv", "q6result_filter.csv");
+//        nexmarkQuery.runQuery6_Filter("../../results/dataset/q4/600_10.csv", ruleName + ".csv", ruleName + ".csv");
+
+//        nexmarkQuery.runQuery6_Max("../../results/dataset/q6/103_filter_price_not_divisible_by_any_field+103_filter_duration_is_not_between_reserve_and_initialBid.csv", ruleName + ".csv", ruleName + ".csv");
 //        nexmarkQuery.runQuery6_Max(resultDirName + "/q6result_filter.csv", "process_time_q6_max_100_10.csv", "q6result_max_100_10.csv");
 //        nexmarkQuery.runQuery6_Avg(resultDirName + "/q6result_max_100_10.csv", "process_time_q6_avg_100.csv", "q6result_avg_100.csv");
-        nexmarkQuery.runQuery6_Avg(resultDirName + "/q6_avg_input_1seller.csv", "process_time_q6_avg_100_1seller.csv", "q6result_avg_100_1seller.csv");
+//        nexmarkQuery.runQuery6_Avg(resultDirName + "/q6result_max_100_10.csv", "q6_avg_100_3-2-1.csv", "test.csv");
+//        nexmarkQuery.runQuery6_Avg(resultDirName + "/q6result_max_100_10.csv", "test.csv", "result_partition_100_10.csv");
+//        nexmarkQuery.runQuery6_Avg(resultDirName + "/q6result_max_100_10.csv", "process_time_partition_avg_500.csv", "result_partition_avg_500.csv");
+//        nexmarkQuery.runQuery6_Avg("../../dataset/nexmark/q6_avg_input_1seller.csv", ruleName + "_1seller.csv", ruleName + "_1seller.csv");
 
 //        nexmarkQuery.runQuery7_MaxJoin("../../../other/bids.csv", "process_time_q7_maxjoin_1500.csv", "q7result_maxjoin_1500.csv");
 
 //        nexmarkQuery.runQuery8_JoinPersonAuction("../../../other/people.csv", "../../../other/auction.csv", "q8_join_600.csv", "q8result_join_600.csv");
 //        nexmarkQuery.runQuery8_MapJoinResult(resultDirName +  "/q8result_join_600.csv", "process_time_q8_map_600.csv", "q8result_map_600.csv");
+
+//        ofstream out;
+//        std::cout << "Writing to cryptosdk_engine_ocall\n";
+//        out.open("../../measurements/testing/rework_nexmark/" + std::to_string(i) + "/tail_0_process_time_q1_ocall.csv", ios::out);
+//        out << "index,time\n";
+//        for (int j = 0; j < recordedEndTime.size(); ++j) {
+//            out << j << "," << recordedEndTime[j] - recordedStartTime[j] << std::endl;
+//        }
+//        out.close();
     }
 }
 
@@ -270,6 +303,7 @@ int SGX_CDECL main(int argc, char *argv[])
 
 //    recordedStartTime.reserve(8000000);
 //    recordedEndTime.reserve(8000000);
+
     /* GENERATE RANDOM STRING */
 //    StringRandomGenerationSource source(1000, 100);
 //    source.prepare();
@@ -322,7 +356,7 @@ int SGX_CDECL main(int argc, char *argv[])
 //    memset(buffer, 0, 2048);
 //    clearcache(defeat, CACHE_DEFEAT_SIZE);
 //
-//    testingDecryption("");
+//    testingDecryption(argument);
 //
 //    free(defeat);
 //    free(defeat0);
@@ -333,17 +367,14 @@ int SGX_CDECL main(int argc, char *argv[])
 
 
     /* NEXMARK BENCHMARK */
-    testNexmarkBenchmark();
+    if (argc < 2) {
+        std::cerr << "Error: No rule name provided." << std::endl;
+        return 1;
+    }
 
-//    ofstream out;
-//    std::cout << "Writing to cryptosdk_engine_ocall\n";
-//    out.open("../../measurements/testing/cryptosdk_engine_ocall/tail_0_16_no_decryption.csv", ios::out);
-//    out << "index,time\n";
-//    for (int i = 0; i < recordedEndTime.size(); ++i) {
-//        out << i << "," << recordedEndTime[i] - recordedStartTime[i] << std::endl;
-//    }
-//    out.close();
-
+    std::string ruleName = argv[1];
+//    testNexmarkBenchmark(ruleName);
+    testSecureStreamBenchmark();
     return 0;
 }
 

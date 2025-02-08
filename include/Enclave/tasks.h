@@ -53,6 +53,7 @@ void NexmarkQ8_Map(void* data);
 
 void NexmarkQA_JoinPersonBid(void* data);
 void testDecryption(void* data);
+void Nexmark_AvgPartition(void* data);
 
 static void (*callbacks[TASK_COUNT])(void*) = {
         MapCsvRowToFlight,
@@ -89,7 +90,8 @@ static void (*callbacks[TASK_COUNT])(void*) = {
         NexmarkQ8_JoinPersonAuction,
         NexmarkQ8_Map,
         NexmarkQA_JoinPersonBid,
-        testDecryption
+        testDecryption,
+        Nexmark_AvgPartition
 };
 
 #if defined(__cplusplus)
