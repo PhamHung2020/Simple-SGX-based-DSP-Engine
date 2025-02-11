@@ -1,33 +1,37 @@
-#ifndef __DATA_TYPES_
-#define __DATA_TYPES_
+#ifndef DATA_TYPES_
+#define DATA_TYPES_
 
-#include <string.h>
+#include <inttypes.h>
 
-typedef struct
-{
-    double timestamp;
-    int sourceId;
-    int key;
-    int data;
-    char message[32];
-} MyEvent;
-
-typedef struct
-{
-    MyEvent event1;
-    MyEvent event2;
-} JoinResult;
-
-enum ActionType
-{
-    REDUCE,
-    JOIN
+struct FlightData {
+    char uniqueCarrier[8];
+    int arrDelay;
 };
 
-struct HotOCallParams
-{
-    JoinResult joinResult;
-    int reduceResult;
+struct FlightFullData {
+    uint64_t year;
+    uint64_t month;
+    uint64_t dayOfMonth;
+    uint64_t dayOfWeek;
+    uint64_t depTime;
+    uint64_t arrTime;
+    char uniqueCarrier[16];
+    uint64_t flightNum;
+    int64_t arrDelay;
+    int64_t depDelay;
+    uint64_t distance;
+};
+
+struct ReducedFlightData {
+    char uniqueCarrier[8];
+    uint32_t count;
+    int total;
+};
+
+struct JoinedFlightData {
+    char uniqueCarrier1[8];
+    char uniqueCarrier2[8];
+    int arrDelay;
 };
 
 #endif

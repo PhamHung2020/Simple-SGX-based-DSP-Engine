@@ -30,6 +30,7 @@
 // #include <stdlib.h>
 #include <sgx_spinlock.h>
 #include <stdbool.h>
+#include <stddef.h>
 // #include "utils.h"
 
 
@@ -60,7 +61,7 @@ static void HotCall_init( HotCall* hotCall )
 {
     hotCall->responderThread    = 0;
     hotCall->spinlock           = SGX_SPINLOCK_INITIALIZER;
-    hotCall->data               = NULL; 
+    hotCall->data               = NULL;
     hotCall->callID             = 0;
     hotCall->keepPolling        = true;
     hotCall->runFunction        = false;
@@ -123,8 +124,8 @@ static inline int HotCall_requestCall( HotCall* hotCall, uint16_t callID, void *
     return numRetries;
 }
 
-static inline void HotCall_waitForCall( HotCall *hotCall, HotCallTable* callTable )  __attribute__((always_inline));
-static inline void HotCall_waitForCall( HotCall *hotCall, HotCallTable* callTable ) 
+static inline void HotCall_waitForCall(HotCall *hotCall, HotCallTable* callTable)  __attribute__((always_inline));
+static inline void HotCall_waitForCall(HotCall *hotCall, HotCallTable* callTable) 
 {
     static int i;
     // volatile void *data;
