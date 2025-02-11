@@ -6,21 +6,21 @@
 - [X] Q2
     - [X] Filter: 304
     - [X] Map: 249
-- [ ] Q3
+- [X] Q3
     - [X] Filter Auction: 372
     - [X] Filter Person: 300
     - [x] Join: 1008
     - [X] Map Join Result: 384
-- [ ] Q4
+- [X] Q4
     - [X] Join: 1010
     - [X] Map Join Result: 384
     - [X] Max: 512
     - [X] Join Category: 512
     - [X] Average: 1018
-- [ ] Q5
+- [X] Q5
     - [X] Count: 750
     - [X] Max: 750
-- [ ] Q6
+- [X] Q6
     - [X] Join = Q4
     - [X] Filter: 321
     - [X] Max: 1094
