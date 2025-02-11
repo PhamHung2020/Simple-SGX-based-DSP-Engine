@@ -30,6 +30,15 @@ public:
     ~FlightDataParser();
 };
 
+class FlightFullDataParser :  public Parser {
+private:
+    FlightFullData* pFlightData_ = nullptr;
+public:
+    FlightFullDataParser();
+    void *parseFromString(const std::string& str) override;
+    ~FlightFullDataParser() override;
+};
+
 class FlightDataIntermediateParser : public Parser {
 private:
     FlightData* pFlightData_ = nullptr;

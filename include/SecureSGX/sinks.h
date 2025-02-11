@@ -19,6 +19,7 @@ extern std::ofstream secureSgxSinkFileStream;
 
 std::ofstream* getSecureSgxSinkFileStream();
 void sinkMap(void* rawData);
+void sinkFlightFullData(void* rawData);
 void sinkReduce(void* rawData);
 
 #endif //SIMPLE_DSP_ENGINE_SINKS_H

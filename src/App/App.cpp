@@ -169,21 +169,25 @@ void testingDecryption(std::string cpus = "") {
     runEngineWithBufferObserverCrypto(config);
 }
 
-void testSecureStreamBenchmark() {
+void testSecureStreamBenchmark(std::string ruleName) {
 //    std::string resultDirName = "../../results/secure-sgx/data_master";
 //    std::string measurementDirName = "../../measurements/secure-sgx/data_master";
 
-    std::string resultDirName = "../../results/secure_streams_dataset/map";
-    std::string measurementDirName = "../../measurements/secure_streams_dataset/map";
+    std::string resultDirName = "../../results/secure_streams_dataset/reduce";
+    std::string measurementDirName = "../../measurements/secure_streams_dataset/reduce";
 
     SecureSgxQuery secureSgxQuery;
     secureSgxQuery.setMeasurementDirName(measurementDirName);
     secureSgxQuery.setResultDirName(resultDirName);
 
-    secureSgxQuery.runMapQuery("../../dataset/secure-sgx-dataset/2005_100000.csv", "process_time_map_2005.csv", "map_2005.csv");
+//    secureSgxQuery.runMapQuery("../../dataset/secure-sgx-dataset/2005_100000.csv", "process_time_map_2005.csv", "flight_data_2005_100000.csv");
+//    secureSgxQuery.runMapQuery(resultDirName +  "/../flight_data_2005_100000.csv", ruleName + ".csv", ruleName + ".csv");
+
 //    secureSgxQuery.runFilterQuery(resultDirName +  "/map_2005.csv", "process_time_filter_2005.csv", "filter_2005.csv");
+//    secureSgxQuery.runFilterQuery(resultDirName +  "/../flight_data_2005_100000.csv", ruleName + ".csv", ruleName + ".csv");
+
 //    secureSgxQuery.runReduceQuery("../../dataset/secure-sgx-dataset/2005.csv", "process_time_reduce_2005_1000.csv", "reduce_2005_1000.csv");
-//    secureSgxQuery.runReduceQuery(resultDirName +  "/filter_2005.csv", "process_time_reduce_2005_100_10.csv", "reduce_2005_100_10.csv");
+    secureSgxQuery.runReduceQuery(resultDirName +  "/../flight_data_2005_100000.csv", ruleName + ".csv", ruleName + ".csv");
 }
 
 void testNexmarkBenchmark(std::string ruleName) {
@@ -374,7 +378,7 @@ int SGX_CDECL main(int argc, char *argv[])
 
     std::string ruleName = argv[1];
 //    testNexmarkBenchmark(ruleName);
-    testSecureStreamBenchmark();
+    testSecureStreamBenchmark(ruleName);
     return 0;
 }
 

@@ -20,6 +20,26 @@ void sinkMap(void* rawData) {
     secureSgxSinkFileStream << flightData->uniqueCarrier << "," << flightData->arrDelay << std::endl;
 }
 
+void sinkFlightFullData(void* rawData) {
+    if (rawData == NULL) {
+        return;
+    }
+
+    const auto flightData = static_cast<FlightFullData*>(rawData);
+    secureSgxSinkFileStream
+        << flightData->year << ","
+        << flightData->month << ","
+        << flightData->dayOfMonth << ","
+        << flightData->dayOfWeek << ","
+        << flightData->depTime << ","
+        << flightData->arrTime << ","
+        << flightData->uniqueCarrier << ","
+        << flightData->flightNum << ","
+        << flightData->arrDelay << ","
+        << flightData->depDelay << ","
+        << flightData->distance << std::endl;
+}
+
 void sinkReduce(void* rawData) {
     if (rawData == NULL) {
         return;

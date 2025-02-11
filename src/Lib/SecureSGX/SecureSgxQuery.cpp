@@ -48,10 +48,18 @@ void SecureSgxQuery::runMapQuery(std::string sourceFilePath, std::string measure
     config.sourceHasHeader = true;
 //    config.sourceCount = 500;
     config.taskId = 0;
-    config.taskInputDataSize = 200 + SGX_AESGCM_MAC_SIZE + SGX_AESGCM_IV_SIZE + 4;
+    config.parser = new FlightFullDataParser();
+
+//    config.taskInputDataSize = 200 + SGX_AESGCM_MAC_SIZE + SGX_AESGCM_IV_SIZE + 4;
+    config.taskInputDataSize = sizeof(FlightFullData) + SGX_AESGCM_MAC_SIZE + SGX_AESGCM_IV_SIZE + 4;
+
     config.taskShouldBeObserved = true;
-    config.outputDataSize = sizeof(FlightData) + SGX_AESGCM_MAC_SIZE + SGX_AESGCM_IV_SIZE + 4;
-    config.sink = sinkMap;
+//    config.outputDataSize = sizeof(FlightData) + SGX_AESGCM_MAC_SIZE + SGX_AESGCM_IV_SIZE + 4;
+    config.outputDataSize = sizeof(FlightFullData) + SGX_AESGCM_MAC_SIZE + SGX_AESGCM_IV_SIZE + 4;
+
+//    config.sink = sinkMap;
+    config.sink = sinkFlightFullData;
+
     config.sinkFileStream = getSecureSgxSinkFileStream();
 
     std::cout << "Start Map Query\n";
@@ -68,11 +76,20 @@ void SecureSgxQuery::runFilterQuery(std::string sourceFilePath, std::string meas
 //    config.sourceCount = 500;
     config.taskId = 1;
     config.parser = new FlightDataIntermediateParser();
-    config.taskInputDataSize = sizeof(FlightData) + SGX_AESGCM_MAC_SIZE + SGX_AESGCM_IV_SIZE + 4;
+    config.parser = new FlightFullDataParser();
+
+//    config.taskInputDataSize = sizeof(FlightData) + SGX_AESGCM_MAC_SIZE + SGX_AESGCM_IV_SIZE + 4;
+    config.taskInputDataSize = sizeof(FlightFullData) + SGX_AESGCM_MAC_SIZE + SGX_AESGCM_IV_SIZE + 4;
+
     config.taskShouldBeObserved = true;
-    config.outputDataSize = sizeof(FlightData) + SGX_AESGCM_MAC_SIZE + SGX_AESGCM_IV_SIZE + 4;
-    config.sink = sinkMap;
+//    config.outputDataSize = sizeof(FlightData) + SGX_AESGCM_MAC_SIZE + SGX_AESGCM_IV_SIZE + 4;
+    config.outputDataSize = sizeof(FlightFullData) + SGX_AESGCM_MAC_SIZE + SGX_AESGCM_IV_SIZE + 4;
+
+//    config.sink = sinkMap;
+    config.sink = sinkFlightFullData;
+
     config.sinkFileStream = getSecureSgxSinkFileStream();
+
 
     std::cout << "Start Filter Query\n";
     runEngineWithBufferObserverCrypto(config);
@@ -86,8 +103,10 @@ void SecureSgxQuery::runReduceQuery(std::string sourceFilePath, std::string meas
 
     config.sourceHasHeader = true;
     config.taskId = 2;
-    config.parser = new FlightDataIntermediateParser();
-    config.taskInputDataSize = sizeof(FlightData) + SGX_AESGCM_MAC_SIZE + SGX_AESGCM_IV_SIZE + 4;
+//    config.parser = new FlightDataIntermediateParser();
+    config.parser = new FlightFullDataParser();
+
+    config.taskInputDataSize = sizeof(FlightFullData) + SGX_AESGCM_MAC_SIZE + SGX_AESGCM_IV_SIZE + 4;
     config.taskShouldBeObserved = true;
     config.outputDataSize = sizeof(ReducedFlightData) + SGX_AESGCM_MAC_SIZE + SGX_AESGCM_IV_SIZE + 4;
     config.sink = sinkReduce;
