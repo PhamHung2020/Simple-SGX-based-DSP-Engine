@@ -7,7 +7,8 @@
 #include "Enclave/enclave_operators.h"
 #include "Enclave/Enclave.h"
 #include "fast_call.h"
-#include "Nexmark/schemas.h"
+//#include "Nexmark/schemas.h"
+#include "StreamBox/schemas.h"
 #include "sgx_trts_exception.h"
 
 #include <cstring>
@@ -21,111 +22,56 @@ FastCallStruct* globalFastOCall;
 circular_buffer* fastOCallBuffer;
 char encryptedData[1000];
 
-bool isPalindrome(uint64_t num) {
-    uint64_t original = num;
-    uint64_t reversed = 0;
-
-    while (num > 0) {
-        uint64_t digit = num % 10;
-        reversed = reversed * 10 + digit;
-        num /= 10;
-    }
-
-    return original == reversed;
-}
-
-bool isPrime(uint64_t number)
-{
-    uint64_t sqrt_number = static_cast<uint64_t>(std::sqrt(number));
-    for(uint64_t i=2; i<=sqrt_number; i++)
-    {
-       if(number%i==0)
-          return false;
-    }  
-    return true;
-}
-
-void MapCsvRowToFlight(void* data) {
+const uint64_t syntheticDataWindowSize = 5500;const uint64_t syntheticDataSlidingStep = 4100;
+// const uint64_t syntheticDataWindowSize = 100;
+// const uint64_t syntheticDataSlidingStep = 10;
+uint64_t syntheticDataCurrentSlidingStep = syntheticDataSlidingStep;
+std::vector<SyntheticData*> syntheticDataArr;
+void TopValuePerKey(void* data) {
     if (data == NULL) {
         return;
     }
 
-    const auto flightData = static_cast<FlightFullData*> (data);
+    const auto parsedData = static_cast<SyntheticData*>(data);
 
-    FastCall_request_encrypt2(globalFastOCall, flightData, encryptedData);
-}
+//     if window size reached --> delete old data
+    if (syntheticDataArr.size() >= syntheticDataWindowSize) {
+        delete syntheticDataArr[0];
+        syntheticDataArr.erase(syntheticDataArr.begin());
+    }
 
-bool FilterFlight_condition(FlightFullData* flightData) {
-    return true;
+    auto* newResult = new SyntheticData;
+    newResult->key = parsedData->key;
+    newResult->value = parsedData->value;
+    syntheticDataArr.push_back(newResult);
 
-}
-
-void FilterFlight(void* data) {
-    if (data == NULL) {
+    if (syntheticDataArr.size() < syntheticDataWindowSize) {
         return;
     }
 
-    const auto flightData = static_cast<FlightFullData*> (data);
+    syntheticDataCurrentSlidingStep++;
 
-    if (FilterFlight_condition(flightData)) {
-//        FastCall_request(globalFastOCall, flightData);
-        FastCall_request_encrypt2(globalFastOCall, flightData, encryptedData);
-    }
-}
+//     if sliding enough --> find the maximum
+    if (syntheticDataCurrentSlidingStep >= syntheticDataSlidingStep) {
+        syntheticDataCurrentSlidingStep = 0;
 
-const uint64_t reduceWindow = 5000;const uint64_t reduceStep = 3600;
-// uint16_t reduceWindow = 100;
-// uint16_t reduceStep = 10;
-uint16_t reduceCurrentStep = reduceStep;
-std::vector<FlightFullData*> receivedFlightData;
-void ReduceFlight(void* data) {
-    if (data == NULL) {
-        return;
-    }
+        std::map<int64_t, int64_t> maxResults;
 
-    const auto flightData = static_cast<FlightFullData*> (data);
-
-    // if window reached max size --> delete old data
-    if (receivedFlightData.size() >= reduceWindow) {
-        delete receivedFlightData[0];
-        receivedFlightData.erase(receivedFlightData.begin());
-    }
-
-    // add new data
-    const auto newFlightData = new FlightFullData;
-    strncpy(newFlightData->uniqueCarrier, flightData->uniqueCarrier, 10);
-    newFlightData->arrDelay = flightData->arrDelay;
-    receivedFlightData.push_back(newFlightData);
-
-    if (receivedFlightData.size() < reduceWindow) {
-        return;
-    }
-
-    reduceCurrentStep++;
-
-    if (reduceCurrentStep >= reduceStep) {
-        reduceCurrentStep = 0;
-
-        std::unordered_map<std::string, std::pair<uint32_t, int>> reducedDataMap;
-        for (const auto& storedFlight : receivedFlightData) {
-            const auto carrier = std::string(storedFlight->uniqueCarrier);
-            if (reducedDataMap.find(carrier) != reducedDataMap.end()) {
-                reducedDataMap[carrier].first += 1;
-                reducedDataMap[carrier].second += storedFlight->arrDelay;
-            } else {
-                reducedDataMap[carrier].first = 1;
-                reducedDataMap[carrier].second = storedFlight->arrDelay;
+//         iterate all events in window to find the maximum
+        for (auto& storedData : syntheticDataArr) {
+//            auto key = std::make_pair(storedData->auctionId, storedData->category);
+            if (maxResults.find(storedData->key) == maxResults.end() || storedData->value > maxResults[storedData->key]) {
+                maxResults[storedData->key] = storedData->value;
             }
         }
 
-        for (auto& reducedData : reducedDataMap) {
-            ReducedFlightData reducedFlightData{};
-            strncpy(reducedFlightData.uniqueCarrier, reducedData.first.c_str(), 8);
-            reducedFlightData.count = reducedData.second.first;
-            reducedFlightData.total = reducedData.second.second;
+        for (auto& maxResult : maxResults) {
+            SyntheticData result{};
+            result.key = maxResult.first;
+            result.value = maxResult.second;
 
-//            FastCall_request(globalFastOCall, &reducedFlightData);
-            FastCall_request_encrypt2(globalFastOCall, &reducedFlightData, encryptedData);
+            // output result
+            FastCall_request_encrypt2(globalFastOCall, &result, encryptedData);
         }
     }
 }

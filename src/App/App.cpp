@@ -11,6 +11,7 @@
 #include "Nexmark/NexmarkQuery.h"
 #include "SecureSGX/sinks.h"
 #include "SecureSGX/SecureSgxQuery.h"
+#include "StreamBox/StreamBoxQuery.h"
 
 #include "Source/StringRandomGenerationSource.h"
 #include "Crypto/aes_gcm.h"
@@ -299,6 +300,19 @@ inline __attribute__((always_inline)) uint64_t clearcache(void *buf, size_t size
     return sum;
 }
 
+void testStreamBoxBenchmark(std::string ruleName) {
+    std::string resultDirName = "../../../leaky-dataset/streambox/results/q1";
+    std::string measurementDirName = "../../../leaky-dataset/streambox/measurements/q1";
+
+    StreamBoxQuery query;
+    query.setMeasurementDirName(measurementDirName);
+    query.setResultDirName(resultDirName);
+
+    query.runQuery1("../../../streambox-tz/synthetic_dataset_for_max.csv", ruleName + ".csv", ruleName + ".csv");
+//    query.runQuery4("../../../streambox-tz/data.csv", ruleName + ".csv", ruleName + ".csv");
+//    query.runQuery3("../../../streambox-tz/synthetic_dataset_1.csv", "../../../streambox-tz/synthetic_dataset_2.csv", ruleName + ".csv", ruleName + ".csv");
+}
+
 /* Application entry */
 int SGX_CDECL main(int argc, char *argv[])
 {
@@ -378,7 +392,8 @@ int SGX_CDECL main(int argc, char *argv[])
 
     std::string ruleName = argv[1];
 //    testNexmarkBenchmark(ruleName);
-    testSecureStreamBenchmark(ruleName);
+//    testSecureStreamBenchmark(ruleName);
+    testStreamBoxBenchmark(ruleName);
     return 0;
 }
 

@@ -56,24 +56,26 @@ Total: 1050
 Paper: [StreamBox-TZ](https://www.usenix.org/conference/atc19/presentation/park-heejin)
 
 Queries
--  [ ] Top Value Per Key
-    -  [ ] Dataset
-    -  [ ] Implementation
+-  Top Value Per Key: 350
+    -  [X] Dataset
+    -  [X] Implementation
 -  [ ] Counting Unique Taxis*
     -  [X] Dataset
     -  [ ] Implementation
--  [ ] Temporal Join*
-    -  [ ] Dataset
-    -  [ ] Implementation
--  [ ] Window Sum*
+-  Temporal Join: 350
     -  [X] Dataset
-    -  [ ] Implementation
+    -  [X] Implementation
+-  Window Sum: 350
+    -  [X] Dataset
+    -  [X] Implementation
 -  [ ] Filter (+Window???)*
-    -  [ ] Dataset
+    -  [X] Dataset
     -  [ ] Implementation
 -  [ ] Power Grid (Max)
     -  [ ] Dataset
     -  [ ] Implementation
+
+Total: 1050
 
 ### Flink (~2K):???
 
