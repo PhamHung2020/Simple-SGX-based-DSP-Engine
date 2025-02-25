@@ -10,10 +10,17 @@
 
 #define TASK_COUNT 37
 
+/* === STREAM BOX === */
 
-void MapCsvRowToFlight(void* data);
-void FilterFlight(void* data);
-void ReduceFlight(void* data);
+void TopValuePerKey(void* data);
+//void AggregateSensorData(void* data);
+//void JoinSyntheticData(void* data);
+
+/* === STREAM BOX === */
+
+//void MapCsvRowToFlight(void* data);
+//void FilterFlight(void* data);
+//void ReduceFlight(void* data);
 //void JoinFlight(void* data);
 //void JoinFlight2Stream(void* data);
 
@@ -56,9 +63,13 @@ void ReduceFlight(void* data);
 //void Nexmark_AvgPartition(void* data);
 
 static void (*callbacks[TASK_COUNT])(void*) = {
-        MapCsvRowToFlight,
-        FilterFlight,
-        ReduceFlight,
+        TopValuePerKey,
+//        AggregateSensorData,
+//        JoinSyntheticData
+
+//        MapCsvRowToFlight,
+//        FilterFlight,
+//        ReduceFlight,
 //        JoinFlight,
 //        JoinFlight2Stream,
 //        MapFlightToFlight,
