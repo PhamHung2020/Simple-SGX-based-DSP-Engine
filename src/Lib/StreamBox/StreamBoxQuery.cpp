@@ -110,3 +110,21 @@ void StreamBoxQuery::runQuery1(std::string sourceFilePath, std::string measureme
     std::cout << "End Query 1 (Top Value per Key)\n";
     this->cleanConfiguration_(&config);
 }
+
+void StreamBoxQuery::runQuery5(std::string sourceFilePath, std::string measurementFileName, std::string sinkFileName) {
+    ConfigurationTesting config;
+    this->setupConfiguration_(&config, std::move(sourceFilePath), std::move(measurementFileName), std::move(sinkFileName));
+
+    config.taskId = 0;
+    config.taskInputDataSize = sizeof(SyntheticData) + SGX_AESGCM_MAC_SIZE + SGX_AESGCM_IV_SIZE + 4;
+    config.taskShouldBeObserved = true;
+    config.outputDataSize = sizeof(SyntheticData) + SGX_AESGCM_MAC_SIZE + SGX_AESGCM_IV_SIZE + 4;
+    config.parser = new SyntheticDataParser();
+    config.sink = sinkSyntheticData;
+    config.sinkFileStream = getStreamBoxSinkFileStream();
+
+    std::cout << "Start Query 5 (Filter)\n";
+    runEngineWithBufferObserverCrypto(config);
+    std::cout << "End Query 5 (Filter)\n";
+    this->cleanConfiguration_(&config);
+}

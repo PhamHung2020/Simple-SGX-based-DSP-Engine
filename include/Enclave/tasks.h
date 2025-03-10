@@ -12,9 +12,10 @@
 
 /* === STREAM BOX === */
 
-void TopValuePerKey(void* data);
+//void TopValuePerKey(void* data);
 //void AggregateSensorData(void* data);
 //void JoinSyntheticData(void* data);
+void FilterSyntheticData(void* data);
 
 /* === STREAM BOX === */
 
@@ -63,9 +64,10 @@ void TopValuePerKey(void* data);
 //void Nexmark_AvgPartition(void* data);
 
 static void (*callbacks[TASK_COUNT])(void*) = {
-        TopValuePerKey,
+//        TopValuePerKey,
 //        AggregateSensorData,
-//        JoinSyntheticData
+//        JoinSyntheticData,
+        FilterSyntheticData
 
 //        MapCsvRowToFlight,
 //        FilterFlight,
