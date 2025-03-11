@@ -301,17 +301,20 @@ inline __attribute__((always_inline)) uint64_t clearcache(void *buf, size_t size
 }
 
 void testStreamBoxBenchmark(std::string ruleName) {
-    std::string resultDirName = "../../../leaky-dataset/streambox/results/q5";
-    std::string measurementDirName = "../../../leaky-dataset/streambox/measurements/q5";
+    std::string resultDirName = "../../../leaky-dataset/streambox/results/q6";
+    std::string measurementDirName = "../../../leaky-dataset/streambox/measurements/q6";
 
     StreamBoxQuery query;
     query.setMeasurementDirName(measurementDirName);
     query.setResultDirName(resultDirName);
 
 //    query.runQuery1("../../../streambox-tz/synthetic_dataset_for_max.csv", ruleName + ".csv", ruleName + ".csv");
+//    query.runQuery2("/home/hungpm/Work/LeackyStream/streambox-tz/trip_data_first_1k.csv", ruleName + ".csv", ruleName + ".csv");
 //    query.runQuery4("../../../streambox-tz/data.csv", ruleName + ".csv", ruleName + ".csv");
 //    query.runQuery3("../../../streambox-tz/synthetic_dataset_1.csv", "../../../streambox-tz/synthetic_dataset_2.csv", ruleName + ".csv", ruleName + ".csv");
-    query.runQuery5("../../../streambox-tz/synthetic_dataset.csv", ruleName + ".csv", ruleName + ".csv");
+//    query.runQuery5("../../../streambox-tz/synthetic_dataset.csv", ruleName + ".csv", ruleName + ".csv");
+    query.runQuery6("/home/hungpm/Work/LeackyStream/streambox-tz/trip_data_first_1k.csv", ruleName + ".csv", ruleName + ".csv");
+
 }
 
 /* Application entry */

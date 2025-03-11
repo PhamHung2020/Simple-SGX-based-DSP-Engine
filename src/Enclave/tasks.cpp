@@ -8,7 +8,8 @@
 #include "StreamBox/schemas.h"
 #include "sgx_trts_exception.h"
 
-#include <cmath>
+#include <map>
+#include <string>
 #include <stdexcept>
 
 using namespace std;
@@ -17,66 +18,56 @@ FastCallStruct* globalFastOCall;
 circular_buffer* fastOCallBuffer;
 char encryptedData[1000];
 
-bool isPalindrome(int64_t num) {
-    num = abs(num);
-    int64_t reversed = 0, original = num;
-
-    while (num > 0) {
-        reversed = reversed * 10 + (num % 10);
-        num /= 10;
-    }
-
-    return original == reversed;
-}
-
-bool isPrime(int64_t num) {
-    num = abs(num); // Take the absolute value
-
-    if (num < 2) return false; // 0 and 1 are not prime numbers
-    if (num == 2 || num == 3) return true; // 2 and 3 are prime
-    if (num % 2 == 0 || num % 3 == 0) return false; // Eliminate even numbers and multiples of 3
-
-    // Check divisibility from 5 to sqrt(num) using 6k ± 1 optimization
-    for (int64_t i = 5; i * i <= num; i += 6) {
-        if (num % i == 0 || num % (i + 2) == 0) return false;
-    }
-
-    return true;
-}
-
-
-// Function to check if a number is a perfect square
-bool isPerfectSquare(int64_t num) {
-    int64_t s = static_cast<int64_t>(std::sqrt(num));
-    return s * s == num;
-}
-
-// Function to check if |num| is a Fibonacci number
-bool isFibonacci(int64_t num) {
-    num = abs(num); // Take the absolute value
-
-    // A number is Fibonacci if and only if (5*n^2 + 4) or (5*n^2 - 4) is a perfect square
-    return isPerfectSquare(5 * num * num + 4) || isPerfectSquare(5 * num * num - 4);
-}
-
-bool FilterCondition(SyntheticData* syntheticData) {
-    if (!isFibonacci(syntheticData->key) || syntheticData->value >= 500) return false;
-    return true;
-}
-
-bool isPowerOf2(int64_t num) {
-    num = abs(num); // Take absolute value
-
-    return (num > 0) && ((num & (num - 1)) == 0);
-}
-
-void FilterSyntheticData(void* data) {
+std::vector<TripData*> trips;
+const uint64_t tripWindowSize = 5500;const uint64_t tripSlidingStep = 4100;
+// const uint64_t tripWindowSize = 5000;
+// const uint64_t tripSlidingStep = 100;
+uint64_t tripCurrentSliding = tripSlidingStep;
+void MaxTrip(void* data) {
     if (data == NULL) {
         return;
     }
 
-    const auto syntheticData = static_cast<SyntheticData*>(data);
-    if (!FilterCondition(syntheticData)) {
-        FastCall_request_encrypt2(globalFastOCall, syntheticData, encryptedData);
+    const auto tripData = static_cast<TripData*>(data);
+
+//     if window size reached --> delete old data
+    if (trips.size() >= tripWindowSize) {
+        delete trips[0];
+        trips.erase(trips.begin());
+    }
+
+    // add new data
+    auto* newTrip = new TripData;
+    strncpy(newTrip->medallion, tripData->medallion, 64);
+    strncpy(newTrip->hackLicense, tripData->hackLicense, 64);
+    strncpy(newTrip->pickupDateTime, tripData->pickupDateTime, 64);
+    strncpy(newTrip->dropOffDateTime, tripData->dropOffDateTime, 64);
+    newTrip->tripTimeInSecs = tripData->tripTimeInSecs;
+    newTrip->tripDistance = tripData->tripDistance;
+    newTrip->pickupLongitude = tripData->pickupLongitude;
+    newTrip->pickupLatitude = tripData->pickupLatitude;
+    newTrip->dropOffLongitude = tripData->dropOffLongitude;
+    newTrip->dropOffLatitude = tripData->dropOffLatitude;
+
+    trips.push_back(newTrip);
+
+    if (trips.size() < tripWindowSize) {
+        return;
+    }
+
+    tripCurrentSliding++;
+
+    // if sliding enough --> count using a hash table<auction_id, count>
+    if (tripCurrentSliding >= tripSlidingStep) {
+        tripCurrentSliding = 0;
+
+        TripData* maxData = trips[0];
+        for (auto& storedTrip : trips) {
+            if (storedTrip->tripTimeInSecs > maxData->tripTimeInSecs) {
+                maxData = storedTrip;
+            }
+        }
+
+        FastCall_request_encrypt2(globalFastOCall, maxData, encryptedData);
     }
 }

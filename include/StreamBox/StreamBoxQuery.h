@@ -13,9 +13,11 @@ public:
     void setResultDirName(std::string& resultDirName);
 
     void runQuery1(std::string, std::string, std::string);
+    void runQuery2(std::string, std::string, std::string);
     void runQuery3(std::string, std::string, std::string, std::string);
     void runQuery4(std::string, std::string, std::string);
     void runQuery5(std::string, std::string, std::string);
+    void runQuery6(std::string, std::string, std::string);
 
 protected:
     std::string measurementDirName_;

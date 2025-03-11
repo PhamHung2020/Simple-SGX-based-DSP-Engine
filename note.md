@@ -59,7 +59,7 @@ Queries
 -  Top Value Per Key: 350
     -  [X] Dataset
     -  [X] Implementation
--  [ ] Counting Unique Taxis*
+-  [ ] Counting Unique Taxis: 512
     -  [X] Dataset
     -  [ ] Implementation
 -  Temporal Join: 350
@@ -68,14 +68,14 @@ Queries
 -  Window Sum: 350
     -  [X] Dataset
     -  [X] Implementation
--  [ ] Filter (+Window???)*
+-  [ ] Filter: 314
     -  [X] Dataset
     -  [ ] Implementation
--  [ ] Power Grid (Max)
+-  [ ] Power Grid: 512
     -  [ ] Dataset
     -  [ ] Implementation
 
-Total: 1050
+Total: 2388
 
 ### Flink (~2K):???
 

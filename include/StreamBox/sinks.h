@@ -22,5 +22,7 @@ std::ofstream* getStreamBoxSinkFileStream();
 void sinkSensorAggregationData(void* rawData);
 void sinkSyntheticData(void* rawData);
 void sinkSyntheticJoinData(void* rawData);
+void sinkTripData(void* rawData);
+void sinkCountTripData(void* rawData);
 
 #endif //STREAM_BOX_SINKS_H

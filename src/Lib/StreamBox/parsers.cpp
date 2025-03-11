@@ -7,6 +7,7 @@
 #include <vector>
 #include <cstring>
 #include <stdexcept>
+#include <iostream>
 
 SensorDataParser::SensorDataParser() {
     this->data_ = new SensorData();
@@ -129,6 +130,100 @@ void *SyntheticDataParser::parseFromString(const std::string &str) {
         } else {
             return nullptr;
 //            this->data_->value = 0;
+        }
+    }
+    catch (const std::invalid_argument &) {
+        return nullptr;
+    }
+
+    return this->data_;
+}
+
+TripParser::TripParser() {
+    this->data_ = new TripData();
+}
+
+TripParser::~TripParser() {
+    delete this->data_;
+}
+
+void *TripParser::parseFromString(const std::string &str) {
+    try {
+        std::vector<std::string> words;
+        std::size_t previousPos = 0;
+        std::size_t pos = str.find(',');
+        while (pos != std::string::npos) {
+            std::string word = str.substr(previousPos, pos - previousPos);
+            words.push_back(word);
+
+            previousPos = pos + 1;
+            pos = str.find(',', previousPos);
+        }
+
+        const std::string word = str.substr(previousPos);
+        words.push_back(word);
+        if (words.size() != 14) {
+            return nullptr;
+        }
+
+        if (!words[0].empty()) {
+            strncpy(this->data_->medallion, words[0].c_str(), 64);
+        } else {
+            strncpy(this->data_->medallion, "UNKNOWN", 64);
+        }
+
+        if (!words[1].empty()) {
+            strncpy(this->data_->hackLicense, words[1].c_str(), 64);
+        } else {
+            strncpy(this->data_->hackLicense, "UNKNOWN", 64);
+        }
+
+        if (!words[5].empty()) {
+            strncpy(this->data_->pickupDateTime, words[5].c_str(), 64);
+        } else {
+            strncpy(this->data_->pickupDateTime, "UNKNOWN", 64);
+        }
+
+        if (!words[6].empty()) {
+            strncpy(this->data_->dropOffDateTime, words[6].c_str(), 64);
+        } else {
+            strncpy(this->data_->dropOffDateTime, "UNKNOWN", 64);
+        }
+
+        if (!words[8].empty()) {
+            this->data_->tripTimeInSecs = std::stoul(words[8]);
+        } else {
+            this->data_->tripTimeInSecs = 0;
+        }
+
+        if (!words[9].empty()) {
+            this->data_->tripDistance = std::stod(words[9]);
+        } else {
+            this->data_->tripDistance = -1;
+        }
+
+        if (!words[10].empty()) {
+            this->data_->pickupLongitude = std::stod(words[10]);
+        } else {
+            this->data_->pickupLongitude = 0;
+        }
+
+        if (!words[11].empty()) {
+            this->data_->pickupLatitude = std::stod(words[11]);
+        } else {
+            this->data_->pickupLatitude = 0;
+        }
+
+        if (!words[12].empty()) {
+            this->data_->dropOffLongitude = std::stod(words[12]);
+        } else {
+            this->data_->dropOffLatitude = 0;
+        }
+
+        if (!words[13].empty()) {
+            this->data_->dropOffLatitude = std::stod(words[13]);
+        } else {
+            this->data_->dropOffLatitude = 0;
         }
     }
     catch (const std::invalid_argument &) {

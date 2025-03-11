@@ -35,4 +35,22 @@ struct SyntheticJoinData {
     SyntheticData data2;
 };
 
+struct TripData {
+    char medallion[64];
+    char hackLicense[64];
+    char pickupDateTime[64];
+    char dropOffDateTime[64];
+    uint64_t tripTimeInSecs;
+    double tripDistance;
+    double pickupLongitude;
+    double pickupLatitude;
+    double dropOffLongitude;
+    double dropOffLatitude;
+};
+
+struct CountTripData {
+    char medallion[64];
+    uint64_t count;
+};
+
 #endif //STREAM_BOX_SCHEMAS_H

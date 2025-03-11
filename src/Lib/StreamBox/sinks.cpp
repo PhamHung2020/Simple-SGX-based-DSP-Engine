@@ -38,3 +38,30 @@ void sinkSyntheticJoinData(void* rawData) {
     const auto data = static_cast<SyntheticJoinData*>(rawData);
     streamBoxSinkFileStream << data->data1.key << "," << data->data1.value << "," << data->data2.key << "," << data->data2.value << std::endl;
 }
+
+void sinkCountTripData(void* rawData) {
+    if (rawData == NULL) {
+        return;
+    }
+
+    const auto data = static_cast<CountTripData*>(rawData);
+    streamBoxSinkFileStream << data->medallion << "," << data->count << std::endl;
+}
+
+void sinkTripData(void* rawData) {
+    if (rawData == NULL) {
+        return;
+    }
+
+    const auto data = static_cast<TripData*>(rawData);
+    streamBoxSinkFileStream << data->medallion << ","
+                            << data->hackLicense << ","
+                            << data->pickupDateTime << ","
+                            << data->dropOffDateTime << ","
+                            << data->tripTimeInSecs << ","
+                            << data->tripDistance << ","
+                            << data->pickupLongitude << ","
+                            << data->pickupLatitude << ","
+                            << data->dropOffLongitude << ","
+                            << data->dropOffLatitude << std::endl;
+}

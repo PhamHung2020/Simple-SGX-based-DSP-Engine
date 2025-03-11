@@ -13,9 +13,11 @@
 /* === STREAM BOX === */
 
 //void TopValuePerKey(void* data);
+//void CountTrip(void* data);
 //void AggregateSensorData(void* data);
 //void JoinSyntheticData(void* data);
-void FilterSyntheticData(void* data);
+//void FilterSyntheticData(void* data);
+void MaxTrip(void* data);
 
 /* === STREAM BOX === */
 
@@ -65,9 +67,10 @@ void FilterSyntheticData(void* data);
 
 static void (*callbacks[TASK_COUNT])(void*) = {
 //        TopValuePerKey,
+        MaxTrip
 //        AggregateSensorData,
 //        JoinSyntheticData,
-        FilterSyntheticData
+//        FilterSyntheticData
 
 //        MapCsvRowToFlight,
 //        FilterFlight,

@@ -128,3 +128,39 @@ void StreamBoxQuery::runQuery5(std::string sourceFilePath, std::string measureme
     std::cout << "End Query 5 (Filter)\n";
     this->cleanConfiguration_(&config);
 }
+
+void StreamBoxQuery::runQuery2(std::string sourceFilePath, std::string measurementFileName, std::string sinkFileName) {
+    ConfigurationTesting config;
+    this->setupConfiguration_(&config, std::move(sourceFilePath), std::move(measurementFileName), std::move(sinkFileName));
+
+    config.taskId = 0;
+    config.taskInputDataSize = sizeof(TripData) + SGX_AESGCM_MAC_SIZE + SGX_AESGCM_IV_SIZE + 4;
+    config.taskShouldBeObserved = true;
+    config.outputDataSize = sizeof(CountTripData) + SGX_AESGCM_MAC_SIZE + SGX_AESGCM_IV_SIZE + 4;
+    config.parser = new TripParser();
+    config.sink = sinkCountTripData;
+    config.sinkFileStream = getStreamBoxSinkFileStream();
+
+    std::cout << "Start Query 2 (Trip Query)\n";
+    runEngineWithBufferObserverCrypto(config);
+    std::cout << "End Query 2 (Trip Query)\n";
+    this->cleanConfiguration_(&config);
+}
+
+void StreamBoxQuery::runQuery6(std::string sourceFilePath, std::string measurementFileName, std::string sinkFileName) {
+    ConfigurationTesting config;
+    this->setupConfiguration_(&config, std::move(sourceFilePath), std::move(measurementFileName), std::move(sinkFileName));
+
+    config.taskId = 0;
+    config.taskInputDataSize = sizeof(TripData) + SGX_AESGCM_MAC_SIZE + SGX_AESGCM_IV_SIZE + 4;
+    config.taskShouldBeObserved = true;
+    config.outputDataSize = sizeof(TripData) + SGX_AESGCM_MAC_SIZE + SGX_AESGCM_IV_SIZE + 4;
+    config.parser = new TripParser();
+    config.sink = sinkTripData;
+    config.sinkFileStream = getStreamBoxSinkFileStream();
+
+    std::cout << "Start Query 6 (Max Trip Query)\n";
+    runEngineWithBufferObserverCrypto(config);
+    std::cout << "End Query 6 (Max Trip Query)\n";
+    this->cleanConfiguration_(&config);
+}
