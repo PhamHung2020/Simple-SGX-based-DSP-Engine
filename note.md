@@ -68,12 +68,12 @@ Queries
 -  Window Sum: 350
     -  [X] Dataset
     -  [X] Implementation
--  [ ] Filter: 314
+-  Filter: 314
     -  [X] Dataset
-    -  [ ] Implementation
--  [ ] Power Grid: 512
-    -  [ ] Dataset
-    -  [ ] Implementation
+    -  [X] Implementation
+-  Power Grid: 512
+    -  [X] Dataset
+    -  [X] Implementation
 
 Total: 2388
 
