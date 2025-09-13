@@ -35,4 +35,13 @@ public:
     void *parseFromString(const std::string &str) override;
 };
 
+class TripParser : public Parser {
+private:
+    TripData* data_ = nullptr;
+public:
+    TripParser();
+    ~TripParser() override;
+    void *parseFromString(const std::string &str) override;
+};
+
 #endif //STREAM_BOX_PARSERS_H

@@ -7,6 +7,7 @@
 
 #include <string>
 #include <fstream>
+#include <cstdint>
 #include "Source/Parser.h"
 
 class ConfigurationTesting {

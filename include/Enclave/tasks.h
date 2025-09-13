@@ -12,44 +12,43 @@
 
 /* === STREAM BOX === */
 
-void TopValuePerKey(void* data);
-//void AggregateSensorData(void* data);
-//void JoinSyntheticData(void* data);
+void StreamBox_Query1_TopValuePerKey(void* data);
+void StreamBox_Query2_CountTrip(void* data);
+void StreamBox_Query3_JoinSyntheticData(void* data);
+void StreamBox_Query4_AggregateSensorData(void* data);
+void StreamBox_Query5_FilterSyntheticData(void* data);
+void StreamBox_Query6_MaxTrip(void* data);
 
-/* === STREAM BOX === */
+/* === SECURE STREAM === */
 
-//void MapCsvRowToFlight(void* data);
-//void FilterFlight(void* data);
-//void ReduceFlight(void* data);
-//void JoinFlight(void* data);
-//void JoinFlight2Stream(void* data);
+void SecureStream_MapCsvRowToFlight(void* data);
+void SecureStream_FilterFlight(void* data);
+void SecureStream_ReduceFlight(void* data);
 
-//void MapFlightToFlight(void* data);
-//void FilterCarrierAndDelay(void* data);
-//void ReduceDelay(void* data);
+/* === NEXMARK === */
 
-//void NexmarkQ1(void* data);
-//void NexmarkQ2_Filter(void* data);
-//void NexmarkQ2_Map(void* data);
-//void NexmarkQ3_FilterPerson(void* data);
-//void NexmarkQ3_FilterAuction(void* data);
-//void NexmarkQ3_JoinPersonAuction(void* data);
-//void NexmarkQ3_MapResult(void* data);
-//void NexmarkQ4_JoinAuctionBid(void* data);
-//void NexmarkQ4_MapAuctionBid(void* data);
-//void NexmarkQ4_MaxAuctionPriceByCategory(void* data);
-//void NexmarkQ4_JoinWithCategory(void* data);
-//void NexmarkQ4_Average(void* data);
+void Nexmark_Query1(void* data);
+void Nexmark_Query2_Filter(void* data);
+void Nexmark_Query2_Map(void* data);
+void Nexmark_Query3_FilterPerson(void* data);
+void Nexmark_Query3_FilterAuction(void* data);
+void Nexmark_Query3_JoinPersonAuction(void* data);
+void Nexmark_Query3_MapResult(void* data);
+void Nexmark_Query4_JoinAuctionBid(void* data);
+void Nexmark_Query4_MapAuctionBid(void* data);
+void Nexmark_Query4_MaxAuctionPriceByCategory(void* data);
+void Nexmark_Query4_JoinWithCategory(void* data);
+void Nexmark_Query4_Average(void* data);
 
 //void NexmarkQ5_CountTotal(void* data);
-//void NexmarkQ5_CountByAuction(void* data);
-//void NexmarkQ5_MaxBatch(void* data);
+void Nexmark_Query5_CountByAuction(void* data);
+void Nexmark_Query5_MaxBatch(void* data);
 //void NexmarkQ5_MaxWindow(void* data);
 
-//void NexmarkQ6_Join(void* data);
-//void NexmarkQ6_Filter(void* data);
-//void NexmarkQ6_Max(void* data);
-//void NexmarkQ6_Avg(void* data);
+void Nexmark_Query6_Join(void* data);
+void Nexmark_Query6_Filter(void* data);
+void Nexmark_Query6_Max(void* data);
+void Nexmark_Query6_Avg(void* data);
 
 //void NexmarkQ7_Max(void* data);
 //void NexmarkQ7_Join(void* data);
@@ -63,41 +62,32 @@ void TopValuePerKey(void* data);
 //void Nexmark_AvgPartition(void* data);
 
 static void (*callbacks[TASK_COUNT])(void*) = {
-        TopValuePerKey,
-//        AggregateSensorData,
-//        JoinSyntheticData
-
-//        MapCsvRowToFlight,
-//        FilterFlight,
-//        ReduceFlight,
-//        JoinFlight,
-//        JoinFlight2Stream,
-//        MapFlightToFlight,
-//        FilterCarrierAndDelay,
-//        ReduceDelay,
-//        NexmarkQ1,
-//        NexmarkQ2_Filter,
-//        NexmarkQ2_Map,
-//        NexmarkQ3_FilterPerson,
-//        NexmarkQ3_FilterAuction,
-//        NexmarkQ3_JoinPersonAuction,
-//        NexmarkQ3_MapResult,
-//        NexmarkQ4_JoinAuctionBid,
-//        NexmarkQ4_MapAuctionBid,
-//        NexmarkQ4_MaxAuctionPriceByCategory,
-//        NexmarkQ4_JoinWithCategory,
-//        NexmarkQ4_Average,
+        SecureStream_MapCsvRowToFlight,
+        SecureStream_FilterFlight,
+        SecureStream_ReduceFlight,
+        Nexmark_Query1,
+        Nexmark_Query2_Filter,
+        Nexmark_Query2_Map,
+        Nexmark_Query3_FilterPerson,
+        Nexmark_Query3_FilterAuction,
+        Nexmark_Query3_JoinPersonAuction,
+        Nexmark_Query3_MapResult,
+        Nexmark_Query4_JoinAuctionBid,
+        Nexmark_Query4_MapAuctionBid,
+        Nexmark_Query4_MaxAuctionPriceByCategory,
+        Nexmark_Query4_JoinWithCategory,
+        Nexmark_Query4_Average,
 
 //        NexmarkQ5_CountTotal, NOT USED
 
-//        NexmarkQ5_CountByAuction,
-//        NexmarkQ5_MaxBatch,
+        Nexmark_Query5_CountByAuction,
+        Nexmark_Query5_MaxBatch,
 
 //        NexmarkQ5_MaxWindow, NOT USED
-//        NexmarkQ6_Join,
-//        NexmarkQ6_Filter,
-//        NexmarkQ6_Max,
-//        NexmarkQ6_Avg,
+        Nexmark_Query6_Join,
+        Nexmark_Query6_Filter,
+        Nexmark_Query6_Max,
+        Nexmark_Query6_Avg,
 
 //        NexmarkQ7_Max, NOT USED
 //        NexmarkQ7_Join, NOT USED
@@ -108,19 +98,15 @@ static void (*callbacks[TASK_COUNT])(void*) = {
 //        NexmarkQA_JoinPersonBid,
 //        testDecryption,
 //        Nexmark_AvgPartition
+
+        StreamBox_Query1_TopValuePerKey,
+        StreamBox_Query2_CountTrip,
+        StreamBox_Query3_JoinSyntheticData,
+        StreamBox_Query4_AggregateSensorData,
+        StreamBox_Query5_FilterSyntheticData,
+        StreamBox_Query6_MaxTrip
+//        JoinSyntheticData,
+//        FilterSyntheticData
 };
-
-#if defined(__cplusplus)
-extern "C" {
-#endif
-    extern int task3Result;
-    extern int task3WindowLength;
-    extern int task3Count;
-
-    extern std::vector<ReducedFlightData> reducedDatas;
-#if defined(__cplusplus)
-}
-#endif
-
 
 #endif //TASKS_H

@@ -20,3 +20,7 @@ src/Lib/**/*.o
 build/**
 dataset/**
 results/**
+source_data/**
+timing_measurements/**
+sinks/**
+source_data.zip

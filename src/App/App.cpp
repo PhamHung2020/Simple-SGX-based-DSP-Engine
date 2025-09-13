@@ -2,25 +2,19 @@
 #include <iostream>
 #include "Enclave_u.h"
 
-#include "App/test.h"
+#include "App/CommandLineArgument.h"
 #include "App/utils.h"
 #include "utils.h"
 #include "Nexmark/schemas.h"
-#include "Nexmark/sinks.h"
-#include "Nexmark/parsers.h"
 #include "Nexmark/NexmarkQuery.h"
-#include "SecureSGX/sinks.h"
 #include "SecureSGX/SecureSgxQuery.h"
 #include "StreamBox/StreamBoxQuery.h"
 
-#include "Source/StringRandomGenerationSource.h"
-#include "Crypto/aes_gcm.h"
-
-#include "sgx_lib.h"
-#include "sgx_urts.h"
 #include <ostream>
-
-#define CACHE_DEFEAT_SIZE 10*1024*1024
+#include <vector>
+#include <string>
+#include <algorithm>
+#include <sys/stat.h>
 
 using namespace std;
 
@@ -36,250 +30,6 @@ inline __attribute__((always_inline))  uint64_t rdtscp()
     return low | ((uint64_t)high) << 32;
 }
 
-void* testOpenSSLWithoutSGXThread(void* data) {
-    uint64_t dataSize = 1000;
-    uint64_t numberOfData = 1000000;
-    StringRandomGenerationSource source(dataSize, numberOfData);
-    source.prepare();
-    auto generatedTexts = source.getGeneratedTexts();
-    std::vector<uint64_t> measurementTimes;
-    measurementTimes.reserve(2000000);
-
-    char encryptedData[10000];
-    char decryptedData[10000];
-
-    for (int i = 0; i < numberOfData; ++i) {
-//        std::cout << generatedTexts[i] << std::endl;
-        aes128GcmEncrypt(
-                (unsigned char *) generatedTexts[i].c_str(),
-                dataSize, NULL, 0,
-                const_cast<unsigned char *>(AES_GCM_KEY),
-                const_cast<unsigned char *>(AES_GCM_IV), SGX_AESGCM_IV_SIZE,
-                (unsigned char *)(encryptedData + SGX_AESGCM_MAC_SIZE + SGX_AESGCM_IV_SIZE),
-                (unsigned char *)(encryptedData));
-
-        auto start = rdtscp();
-
-        aes128GcmDecrypt(
-                (unsigned char*)encryptedData + SGX_AESGCM_MAC_SIZE + SGX_AESGCM_IV_SIZE,
-                dataSize,
-                NULL, 0,
-                (unsigned char*)encryptedData,
-                (unsigned char *)(AES_GCM_KEY),
-                (unsigned char*)(AES_GCM_IV),
-                SGX_AESGCM_IV_SIZE,
-                (unsigned char*)decryptedData);
-
-        auto end = rdtscp();
-        measurementTimes.push_back(end - start);
-//        decryptedData[dataSize+1] = '\0';
-//        std::cout << decryptedData << std::endl;
-    }
-
-    ofstream out;
-    out.open("../../measurements/testing/openssl_without_sgx/" + std::to_string(dataSize) + ".csv", std::ios::out);
-    out << "index,time\n";
-    for (int i = 0; i < numberOfData; ++i) {
-        out << i << "," << measurementTimes[i] << std::endl;
-    }
-    out.close();
-
-    return nullptr;
-}
-
-void testOpenSSLWithoutSGX() {
-    // CPU Affinity
-    pthread_attr_t testOpenSSLWithoutSGXThreadAttr;
-    cpu_set_t testOpenSSLWithoutSGXThreadCpu;
-
-    pthread_attr_init(&testOpenSSLWithoutSGXThreadAttr);
-    CPU_ZERO(&testOpenSSLWithoutSGXThreadCpu);
-    CPU_SET(7, &testOpenSSLWithoutSGXThreadCpu);
-    pthread_attr_setaffinity_np(&testOpenSSLWithoutSGXThreadAttr, sizeof(cpu_set_t), &testOpenSSLWithoutSGXThreadCpu);
-
-    // Start thread
-    pthread_t threadId;
-    std::cout << "Starting...\n";
-    pthread_create(&threadId, &testOpenSSLWithoutSGXThreadAttr, testOpenSSLWithoutSGXThread, nullptr);
-    std::cout << "Started. Waiting for stop....\n";
-
-    // Wait for thread to stop
-    pthread_join(threadId, nullptr);
-    std::cout << "End.\n";
-}
-
-void* testCryptoOCall(void*) {
-    sgx_enclave_id_t enclaveId;
-    if (initialize_enclave(&enclaveId) != SGX_SUCCESS) {
-        std::cout << "Initialize enclave failed. Exiting...\n";
-        return nullptr;
-    }
-    std::cout << "Initialize enclave successfully\n";
-
-    recordedStartTime.reserve(1000005);
-    recordedEndTime.reserve(1000005);
-    sgx_status_t status = testOpenSslOCall(enclaveId);
-    if (status != SGX_SUCCESS) {
-        std::cout << "ECall failed. Exiting...\n";
-        sgx_destroy_enclave(enclaveId);
-        return nullptr;
-    }
-
-    if (sgx_destroy_enclave(enclaveId) != SGX_SUCCESS) {
-        std::cout << "Destroy enclave failed. Exiting...\n";
-        return nullptr;
-    }
-
-    ofstream out;
-    out.open("../../measurements/testing/cryptosdk_ocall/16.csv", ios::out);
-    out << "index,time\n";
-    for (int i = 0; i < 1000000; ++i) {
-        out << i << "," << recordedEndTime[i] - recordedStartTime[i] << std::endl;
-    }
-    out.close();
-
-    return nullptr;
-}
-
-void testingDecryption(std::string cpus = "") {
-    // cpus format: source-enclave-observer-headObserver-sink
-
-    ConfigurationTesting config;
-    if (cpus.length() >= 9) {
-        config.sourceCPU = cpus[0] - 48;
-        config.enclaveCPU = cpus[2] - 48;
-        config.observerCPU = cpus[4] - 48;
-        config.headObserverCPU = cpus[6] - 48;
-        config.sinkCPU = cpus[8] - 48;
-    }
-
-    config.taskInputDataSize = 16 + SGX_AESGCM_MAC_SIZE + SGX_AESGCM_IV_SIZE + 4;
-//    config.taskInputDataSize = 16;
-    config.sourceCount = 1000000;
-    config.taskId = 30;
-    config.taskShouldBeObserved = true;
-    config.sink = sinkChar;
-//    config.outputDataSize = sizeof(Bid) + SGX_AESGCM_MAC_SIZE + SGX_AESGCM_IV_SIZE + 4;
-    config.outputDataSize = 16;
-    config.sinkFileStream = getSinkFileStream();
-    config.resultDirName = "../../results/testing/rework_cryptosdk_disabled_hyperthread";
-    config.measurementDirName = "../../measurements/testing/rework_cryptosdk_disabled_hyperthread_perf";
-    config.sinkFileName = "test.csv";
-    config.measurementFileName = "16_" + cpus + ".csv";
-
-    runEngineWithBufferObserverCrypto(config);
-}
-
-void testSecureStreamBenchmark(std::string ruleName) {
-//    std::string resultDirName = "../../results/secure-sgx/data_master";
-//    std::string measurementDirName = "../../measurements/secure-sgx/data_master";
-
-    std::string resultDirName = "../../results/secure_streams_dataset/reduce";
-    std::string measurementDirName = "../../measurements/secure_streams_dataset/reduce";
-
-    SecureSgxQuery secureSgxQuery;
-    secureSgxQuery.setMeasurementDirName(measurementDirName);
-    secureSgxQuery.setResultDirName(resultDirName);
-
-//    secureSgxQuery.runMapQuery("../../dataset/secure-sgx-dataset/2005_100000.csv", "process_time_map_2005.csv", "flight_data_2005_100000.csv");
-//    secureSgxQuery.runMapQuery(resultDirName +  "/../flight_data_2005_100000.csv", ruleName + ".csv", ruleName + ".csv");
-
-//    secureSgxQuery.runFilterQuery(resultDirName +  "/map_2005.csv", "process_time_filter_2005.csv", "filter_2005.csv");
-//    secureSgxQuery.runFilterQuery(resultDirName +  "/../flight_data_2005_100000.csv", ruleName + ".csv", ruleName + ".csv");
-
-//    secureSgxQuery.runReduceQuery("../../dataset/secure-sgx-dataset/2005.csv", "process_time_reduce_2005_1000.csv", "reduce_2005_1000.csv");
-    secureSgxQuery.runReduceQuery(resultDirName +  "/../flight_data_2005_100000.csv", ruleName + ".csv", ruleName + ".csv");
-}
-
-void testNexmarkBenchmark(std::string ruleName) {
-    //  std::string measurementBatchDirName = createMeasurementsDirectory("../../measurements/testNexmark/batch");
-    //  std::string resultBatchDirName = createMeasurementsDirectory("../../results/testNexmark/batch");
-
-//      std::string measurementBatchDirName = "../../measurements/testNexmark/batch/2024-06-09_23-46-53";
-//      std::string resultBatchDirName = "../../results/testNexmark/batch/2024-06-09_23-46-53";
-
-//   std::string measurementBatchDirName = "../../measurements/testNexmark/batch/2024-06-12_09-58-38";
-//   std::string resultBatchDirName = "../../results/testNexmark/batch/2024-06-12_09-58-38";
-
-//    std::string measurementBatchDirName = "../../measurements/testNexmark/crypto/data_20240801";
-//    std::string resultBatchDirName = "../../results/testNexmark/crypto/data_20240801";
-
-    std::string measurementBatchDirName = "../../measurements/dataset/q4/avg";
-    std::string resultBatchDirName = "../../results/dataset/q4/avg";
-//    srand((unsigned) time(nullptr));
-
-    for (int i = 0; i < 1; ++i) {
-//        std::string measurementDirName = createDirectory(measurementBatchDirName + "/" + std::to_string(i));
-//        std::string resultDirName = createDirectory(resultBatchDirName + "/" + std::to_string(0));
-
-        std::string measurementDirName = createDirectory(measurementBatchDirName);
-        std::string resultDirName = createDirectory(resultBatchDirName);
-
-        NexmarkQuery nexmarkQuery;
-        nexmarkQuery.setMeasurementDirName(measurementDirName);
-        nexmarkQuery.setResultDirName(resultDirName);
-
-//        nexmarkQuery.runQuery1("../../../other/nexmark-data/bids.csv", ruleName + ".csv", ruleName + ".csv");
-
-//        nexmarkQuery.runQuery2_Filter("../../../other/nexmark-data/bids.csv", "process_time_q2_filter_greater_2.csv", "q2result_filter_greater_2.csv");
-//        nexmarkQuery.runQuery2_Filter("../../../other/nexmark-data/bids.csv", ruleName + ".csv", ruleName + ".csv");
-//        nexmarkQuery.runQuery2_Map("../../../other/nexmark-data/bids.csv", "process_time_q2_map.csv", "q2result_map.csv");
-//        nexmarkQuery.runQuery2_Map("../../../other/nexmark-data/bids.csv", ruleName + ".csv", ruleName + ".csv");
-//        nexmarkQuery.runQuery2_Map(resultDirName +  "/q2result_filter_4.csv", "process_time_q2_map.csv", "q2result_map.csv");
-
-//        nexmarkQuery.runQuery3_FilterPerson("../../../other/nexmark-data/people.csv", ruleName + ".csv", ruleName + ".csv");
-//        nexmarkQuery.runQuery3_FilterAuction("../../../other/nexmark-data/auction.csv", ruleName + ".csv", ruleName + ".csv");
-//        nexmarkQuery.runQuery3_JoinPersonAuction("../../../other/nexmark-data/people.csv", "../../../other/nexmark-data/auction.csv", ruleName + ".csv", ruleName + ".csv");
-//        nexmarkQuery.runQuery3_JoinPersonAuction("../../../other/nexmark-data/people.csv", "../../../other/nexmark-data/auction.csv", "q3_join_100_10_3-2-1.csv", "test.csv");
-//        nexmarkQuery.runQuery3_MapJoinResult(resultDirName + "/q3result_join_200_10.csv", "process_time_q3_map.csv", "q3result_map.csv");
-
-//        nexmarkQuery.runQuery4_JoinAuctionBid("../../../other/nexmark-data/auction.csv", "../../../other/nexmark-data/bids.csv", ruleName + ".csv", ruleName + ".csv");
-//        nexmarkQuery.runQuery4_MapAuctionBid(resultDirName +  "/q4result_join1_200_10.csv", "process_time_q4_map1.csv", "q4result_map1.csv");
-//        nexmarkQuery.runQuery4_MapAuctionBid("../../results/dataset/q4/600_10.csv", ruleName + ".csv", ruleName + ".csv");
-
-//        nexmarkQuery.runQuery4_Max("../../results/dataset/q4/48_add_auction_and_bidder_to_price+48_negate_all_uint64_fields.csv", ruleName + ".csv", ruleName + ".csv");
-//        nexmarkQuery.runQuery4_Max(resultDirName +  "/q4result_map1.csv", "process_time_q4_max_500_10.csv", "q4result_max_500_10.csv");
-//        nexmarkQuery.runQuery4_Max(resultDirName +  "/q4result_map1.csv", "q4_max_100_10_3-2-1.csv", "test.csv");
-//        nexmarkQuery.runQuery4_JoinCategory(resultDirName +  "/q4result_map1.csv", "process_time_q4_join_category_500_10.csv", "q4result_join_category_500_10.csv");
-//        nexmarkQuery.runQuery4_JoinCategory("../../results/dataset/q4/max_600_200.csv", ruleName + ".csv", ruleName + ".csv");
-
-        nexmarkQuery.runQuery4_Average("../../results/dataset/q4/join_category_500_100.csv", ruleName + ".csv", ruleName + ".csv");
-//        nexmarkQuery.runQuery4_Average(resultDirName +  "/q4result_join_category_500_10.csv", "process_time_q4_average_200_10.csv", "q4result_average_200_10.csv");
-//        nexmarkQuery.runQuery4_Average(resultDirName +  "/q4result_join_category_500_10.csv", "q4_average_100_10_3-2-1.csv", "test.csv");
-
-//        nexmarkQuery.runQuery5_CountByAuction("../../../other/nexmark-data/bids.csv", ruleName + ".csv", ruleName + ".csv");
-//        nexmarkQuery.runQuery5_MaxBatch("../../results/dataset/q5/count_by_auction/" + ruleName + ".csv", ruleName + ".csv", ruleName + ".csv");
-//        nexmarkQuery.runQuery5_MaxBatch(resultDirName + "/q5result_count_by_auction_100_10.csv", "q5_max_100_10_3-2-1.csv", "test.csv");
-
-//        nexmarkQuery.runQuery6_JoinAuctionBid("../../../other/nexmark-data/auction.csv", "../../../other/nexmark-data/bids.csv", "q6_join_100_10.csv", "q6result_join_100_10.csv");
-//        nexmarkQuery.runQuery6_Filter(resultDirName + "/q6result_join_100_10.csv", "process_time_q6_filter.csv", "q6result_filter.csv");
-//        nexmarkQuery.runQuery6_Filter("../../results/dataset/q4/600_10.csv", ruleName + ".csv", ruleName + ".csv");
-
-//        nexmarkQuery.runQuery6_Max("../../results/dataset/q6/103_filter_price_not_divisible_by_any_field+103_filter_duration_is_not_between_reserve_and_initialBid.csv", ruleName + ".csv", ruleName + ".csv");
-//        nexmarkQuery.runQuery6_Max(resultDirName + "/q6result_filter.csv", "process_time_q6_max_100_10.csv", "q6result_max_100_10.csv");
-//        nexmarkQuery.runQuery6_Avg(resultDirName + "/q6result_max_100_10.csv", "process_time_q6_avg_100.csv", "q6result_avg_100.csv");
-//        nexmarkQuery.runQuery6_Avg(resultDirName + "/q6result_max_100_10.csv", "q6_avg_100_3-2-1.csv", "test.csv");
-//        nexmarkQuery.runQuery6_Avg(resultDirName + "/q6result_max_100_10.csv", "test.csv", "result_partition_100_10.csv");
-//        nexmarkQuery.runQuery6_Avg(resultDirName + "/q6result_max_100_10.csv", "process_time_partition_avg_500.csv", "result_partition_avg_500.csv");
-//        nexmarkQuery.runQuery6_Avg("../../dataset/nexmark/q6_avg_input_1seller.csv", ruleName + "_1seller.csv", ruleName + "_1seller.csv");
-
-//        nexmarkQuery.runQuery7_MaxJoin("../../../other/bids.csv", "process_time_q7_maxjoin_1500.csv", "q7result_maxjoin_1500.csv");
-
-//        nexmarkQuery.runQuery8_JoinPersonAuction("../../../other/people.csv", "../../../other/auction.csv", "q8_join_600.csv", "q8result_join_600.csv");
-//        nexmarkQuery.runQuery8_MapJoinResult(resultDirName +  "/q8result_join_600.csv", "process_time_q8_map_600.csv", "q8result_map_600.csv");
-
-//        ofstream out;
-//        std::cout << "Writing to cryptosdk_engine_ocall\n";
-//        out.open("../../measurements/testing/rework_nexmark/" + std::to_string(i) + "/tail_0_process_time_q1_ocall.csv", ios::out);
-//        out << "index,time\n";
-//        for (int j = 0; j < recordedEndTime.size(); ++j) {
-//            out << j << "," << recordedEndTime[j] - recordedStartTime[j] << std::endl;
-//        }
-//        out.close();
-    }
-}
-
-
 void oCallRecordStartTime() {
     recordedStartTime.push_back(rdtscp());
 }
@@ -288,112 +38,260 @@ void oCallRecordEndTime() {
     recordedEndTime.push_back(rdtscp());
 }
 
-inline __attribute__((always_inline)) uint64_t clearcache(void *buf, size_t size) {
-    uint64_t sum;
-    size_t count = size / sizeof(uint64_t);
-    volatile uint64_t *p = (uint64_t *)buf;
-    while (count--) {
-        sum += *p;
-        *p++ = 0;
-    }
-    asm volatile ("mfence");
-    return sum;
+bool dirExists(const std::string& path) {
+    struct stat info{};
+    return stat(path.c_str(), &info) == 0 && (info.st_mode & S_IFDIR);
 }
 
-void testStreamBoxBenchmark(std::string ruleName) {
-    std::string resultDirName = "../../../leaky-dataset/streambox/results/q1";
-    std::string measurementDirName = "../../../leaky-dataset/streambox/measurements/q1";
+void testSecureStreamBenchmark(const CommandLineArgument& cmdArg) {
+    if (!dirExists(cmdArg.getMeasurementDirName())) {
+        std::cout << "Measurement directory does not exist: " << cmdArg.getMeasurementDirName() << std::endl;
+        exit(1);
+    }
+    if (!dirExists(cmdArg.getResultDirName())) {
+        std::cout << "Result directory does not exist: " << cmdArg.getResultDirName() << std::endl;
+        exit(1);
+    }
+    SecureSgxQuery secureSgxQuery;
+    secureSgxQuery.setMeasurementDirName(cmdArg.getMeasurementDirName());
+    secureSgxQuery.setResultDirName(cmdArg.getResultDirName());
+    const std::string& q = cmdArg.getQueryName();
+    for (uint32_t i = 1; i <= cmdArg.getNumberOfRuns(); ++i) {
+        std::string measurementFile = cmdArg.getBenchmarkName() + "_" + q + "_" + std::to_string(i) + ".csv";
+        std::string sinkFile = cmdArg.getBenchmarkName() + "_" + q + "_" + std::to_string(i) + ".csv";
+        if (q == "MapQuery") {
+            secureSgxQuery.runMapQuery(cmdArg.getSourceFilePath(), measurementFile, sinkFile);
+        } else if (q == "FilterQuery") {
+            secureSgxQuery.runFilterQuery(cmdArg.getSourceFilePath(), measurementFile, sinkFile);
+        } else if (q == "ReduceQuery") {
+            secureSgxQuery.runReduceQuery(cmdArg.getSourceFilePath(), measurementFile, sinkFile);
+        } else {
+            std::cout << "Unknown SecureStream query: " << q << std::endl;
+        }
+    }
+}
 
+void testNexmarkBenchmark(const CommandLineArgument& cmdArg) {
+    if (!dirExists(cmdArg.getMeasurementDirName())) {
+        std::cout << "Measurement directory does not exist: " << cmdArg.getMeasurementDirName() << std::endl;
+        exit(1);
+    }
+    if (!dirExists(cmdArg.getResultDirName())) {
+        std::cout << "Result directory does not exist: " << cmdArg.getResultDirName() << std::endl;
+        exit(1);
+    }
+    NexmarkQuery nexmarkQuery;
+    nexmarkQuery.setMeasurementDirName(cmdArg.getMeasurementDirName());
+    nexmarkQuery.setResultDirName(cmdArg.getResultDirName());
+    const std::string& q = cmdArg.getQueryName();
+    for (uint32_t i = 1; i <= cmdArg.getNumberOfRuns(); ++i) {
+        std::string measurementFile = cmdArg.getBenchmarkName() + "_" + q + "_" + std::to_string(i) + ".csv";
+        std::string sinkFile = cmdArg.getBenchmarkName() + "_" + q + "_" + std::to_string(i) + ".csv";
+        if (q == "Query1") {
+            nexmarkQuery.runQuery1(cmdArg.getSourceFilePath(), measurementFile, sinkFile);
+        } else if (q == "Query2_Filter") {
+            nexmarkQuery.runQuery2_Filter(cmdArg.getSourceFilePath(), measurementFile, sinkFile);
+        } else if (q == "Query2_Map") {
+            nexmarkQuery.runQuery2_Map(cmdArg.getSourceFilePath(), measurementFile, sinkFile);
+        } else if (q == "Query3_FilterPerson") {
+            nexmarkQuery.runQuery3_FilterPerson(cmdArg.getSourceFilePath(), measurementFile, sinkFile);
+        } else if (q == "Query3_FilterAuction") {
+            nexmarkQuery.runQuery3_FilterAuction(cmdArg.getSourceFilePath(), measurementFile, sinkFile);
+        } else if (q == "Query3_JoinPersonAuction") {
+            nexmarkQuery.runQuery3_JoinPersonAuction(cmdArg.getSourceFilePath(), cmdArg.getSourceFilePath2(), measurementFile, sinkFile);
+        } else if (q == "Query3_MapJoinResult") {
+            nexmarkQuery.runQuery3_MapJoinResult(cmdArg.getSourceFilePath(), measurementFile, sinkFile);
+        } else if (q == "Query4_JoinAuctionBid") {
+            nexmarkQuery.runQuery4_JoinAuctionBid(cmdArg.getSourceFilePath(), cmdArg.getSourceFilePath2(), measurementFile, sinkFile);
+        } else if (q == "Query4_MapAuctionBid") {
+            nexmarkQuery.runQuery4_MapAuctionBid(cmdArg.getSourceFilePath(), measurementFile, sinkFile);
+        } else if (q == "Query4_Max") {
+            nexmarkQuery.runQuery4_Max(cmdArg.getSourceFilePath(), measurementFile, sinkFile);
+        } else if (q == "Query4_JoinCategory") {
+            nexmarkQuery.runQuery4_JoinCategory(cmdArg.getSourceFilePath(), measurementFile, sinkFile);
+        } else if (q == "Query4_Average") {
+            nexmarkQuery.runQuery4_Average(cmdArg.getSourceFilePath(), measurementFile, sinkFile);
+        } else if (q == "Query5_CountByAuction") {
+            nexmarkQuery.runQuery5_CountByAuction(cmdArg.getSourceFilePath(), measurementFile, sinkFile);
+        } else if (q == "Query5_MaxBatch") {
+            nexmarkQuery.runQuery5_MaxBatch(cmdArg.getSourceFilePath(), measurementFile, sinkFile);
+        } else if (q == "Query6_JoinAuctionBid") {
+            nexmarkQuery.runQuery6_JoinAuctionBid(cmdArg.getSourceFilePath(), cmdArg.getSourceFilePath2(), measurementFile, sinkFile);
+        } else if (q == "Query6_Filter") {
+            nexmarkQuery.runQuery6_Filter(cmdArg.getSourceFilePath(), measurementFile, sinkFile);
+        } else if (q == "Query6_Max") {
+            nexmarkQuery.runQuery6_Max(cmdArg.getSourceFilePath(), measurementFile, sinkFile);
+        } else if (q == "Query6_Avg") {
+            nexmarkQuery.runQuery6_Avg(cmdArg.getSourceFilePath(), measurementFile, sinkFile);
+        } else if (q == "Query7_MaxJoin") {
+            nexmarkQuery.runQuery7_MaxJoin(cmdArg.getSourceFilePath(), measurementFile, sinkFile);
+        } else if (q == "Query8_JoinPersonAuction") {
+            nexmarkQuery.runQuery8_JoinPersonAuction(cmdArg.getSourceFilePath(), cmdArg.getSourceFilePath2(), measurementFile, sinkFile);
+        } else if (q == "Query8_MapJoinResult") {
+            nexmarkQuery.runQuery8_MapJoinResult(cmdArg.getSourceFilePath(), measurementFile, sinkFile);
+        } else {
+            std::cout << "Unknown Nexmark query: " << q << std::endl;
+        }
+    }
+}
+
+void testStreamBoxBenchmark(const CommandLineArgument& cmdArg) {
+    if (!dirExists(cmdArg.getMeasurementDirName())) {
+        std::cout << "Measurement directory does not exist: " << cmdArg.getMeasurementDirName() << std::endl;
+        exit(1);
+    }
+    if (!dirExists(cmdArg.getResultDirName())) {
+        std::cout << "Result directory does not exist: " << cmdArg.getResultDirName() << std::endl;
+        exit(1);
+    }
     StreamBoxQuery query;
-    query.setMeasurementDirName(measurementDirName);
-    query.setResultDirName(resultDirName);
+    query.setMeasurementDirName(cmdArg.getMeasurementDirName());
+    query.setResultDirName(cmdArg.getResultDirName());
+    const std::string& q = cmdArg.getQueryName();
+    for (uint32_t i = 1; i <= cmdArg.getNumberOfRuns(); ++i) {
+        std::string measurementFile = cmdArg.getBenchmarkName() + "_" + q + "_" + std::to_string(i) + ".csv";
+        std::string sinkFile = cmdArg.getBenchmarkName() + "_" + q + "_" + std::to_string(i) + ".csv";
+        if (q == "Query1") {
+            query.runQuery1(cmdArg.getSourceFilePath(), measurementFile, sinkFile);
+        } else if (q == "Query2") {
+            query.runQuery2(cmdArg.getSourceFilePath(), measurementFile, sinkFile);
+        } else if (q == "Query3") {
+            query.runQuery3(cmdArg.getSourceFilePath(), cmdArg.getSourceFilePath2(), measurementFile, sinkFile);
+        } else if (q == "Query4") {
+            query.runQuery4(cmdArg.getSourceFilePath(), measurementFile, sinkFile);
+        } else if (q == "Query5") {
+            query.runQuery5(cmdArg.getSourceFilePath(), measurementFile, sinkFile);
+        } else if (q == "Query6") {
+            query.runQuery6(cmdArg.getSourceFilePath(), measurementFile, sinkFile);
+        } else {
+            std::cout << "Unknown StreamBox query: " << q << std::endl;
+        }
+    }
+}
 
-    query.runQuery1("../../../streambox-tz/synthetic_dataset_for_max.csv", ruleName + ".csv", ruleName + ".csv");
-//    query.runQuery4("../../../streambox-tz/data.csv", ruleName + ".csv", ruleName + ".csv");
-//    query.runQuery3("../../../streambox-tz/synthetic_dataset_1.csv", "../../../streambox-tz/synthetic_dataset_2.csv", ruleName + ".csv", ruleName + ".csv");
+void runBenchmark(const CommandLineArgument& cmdArg) {
+    std::cout << "Running benchmark: " << cmdArg.getBenchmarkName() << ", query: " << cmdArg.getQueryName() << std::endl;
+    if (cmdArg.getBenchmarkName() == "Nexmark") {
+        testNexmarkBenchmark(cmdArg);
+    } else if (cmdArg.getBenchmarkName() == "SecureStream") {
+        testSecureStreamBenchmark(cmdArg);
+    } else if (cmdArg.getBenchmarkName() == "StreamBox") {
+        testStreamBoxBenchmark(cmdArg);
+    } else {
+        std::cout << "Unknown benchmark name." << std::endl;
+    }
+}
+
+// Hardcoded benchmark and query lists
+const std::vector<std::string> benchmarks = {"Nexmark", "SecureStream", "StreamBox"};
+const std::vector<std::string> nexmarkQueries = {
+    "Query1",
+    "Query2_Filter",
+    "Query2_Map",
+    "Query3_FilterPerson",
+    "Query3_FilterAuction",
+    "Query3_JoinPersonAuction",
+    "Query3_MapJoinResult",
+    "Query4_JoinAuctionBid",
+    "Query4_MapAuctionBid",
+    "Query4_Max",
+    "Query4_JoinCategory",
+    "Query4_Average",
+    "Query5_CountByAuction",
+    "Query5_MaxBatch",
+    "Query6_JoinAuctionBid",
+    "Query6_Filter",
+    "Query6_Max",
+    "Query6_Avg",
+    "Query7_MaxJoin",
+    "Query8_JoinPersonAuction",
+    "Query8_MapJoinResult"
+};
+const std::vector<std::string> secureStreamQueries = {
+    "MapQuery",
+    "FilterQuery",
+    "ReduceQuery"
+};
+const std::vector<std::string> streamBoxQueries = {
+    "Query1",
+    "Query2",
+    "Query3",
+    "Query4",
+    "Query5",
+    "Query6"
+};
+
+void printHelp() {
+    std::cout << "Usage:\n";
+    std::cout << "  -h: display all possible commands\n";
+    std::cout << "  -l: list all benchmark names\n";
+    std::cout << "  -lq <benchmark_name>: list all queries of a benchmark\n";
+    std::cout << "  -r <benchmark_name> <query_name> <source> [<source2>] <measurement_dir> <result_dir> <number_of_runs>: run a benchmark query\n";
+    std::cout << "    Queries requiring two sources: Nexmark: Query3_JoinPersonAuction, Query4_JoinAuctionBid, Query6_JoinAuctionBid, Query8_JoinPersonAuction; StreamBox: Query3\n";
+}
+
+void listBenchmarks() {
+    std::cout << "Available benchmarks:\n";
+    for (const auto& b : benchmarks) {
+        std::cout << "  " << b << std::endl;
+    }
+}
+
+void listQueries(const std::string& benchmark) {
+    std::cout << "Available queries for " << benchmark << ":\n";
+    if (benchmark == "Nexmark") {
+        for (const auto& q : nexmarkQueries) std::cout << "  " << q << std::endl;
+    } else if (benchmark == "SecureStream") {
+        for (const auto& q : secureStreamQueries) std::cout << "  " << q << std::endl;
+    } else if (benchmark == "StreamBox") {
+        for (const auto& q : streamBoxQueries) std::cout << "  " << q << std::endl;
+    } else {
+        std::cout << "  Unknown benchmark name." << std::endl;
+    }
 }
 
 /* Application entry */
 int SGX_CDECL main(int argc, char *argv[])
 {
-//    std::string argument = argv[1];
-//    std::cout << "Argument: " << argument << std::endl;
-
-//    recordedStartTime.reserve(8000000);
-//    recordedEndTime.reserve(8000000);
-
-    /* GENERATE RANDOM STRING */
-//    StringRandomGenerationSource source(1000, 100);
-//    source.prepare();
-//    auto generatedTexts = source.getGeneratedTexts();
-//    ofstream out;
-//    out.open("../../measurements/testing/openssl_ocall/1000.txt", ios::out);
-//    for (int i = 0; i < 100; ++i) {
-//        out << "\"" << generatedTexts[i] << "\"" << ',' << std::endl;
-//    }
-//    out.close();
-
-    /* CRYPTO INSIDE SGX WITH OCALL */
-    // CPU Affinity
-//    pthread_attr_t testThreadAttr;
-//    cpu_set_t testThreadCpu;
-//
-//    pthread_attr_init(&testThreadAttr);
-//    CPU_ZERO(&testThreadCpu);
-//    CPU_SET(7, &testThreadCpu);
-//    pthread_attr_setaffinity_np(&testThreadAttr, sizeof(cpu_set_t), &testThreadCpu);
-//
-//    // Start thread
-//    pthread_t threadId;
-//    std::cout << "Starting...\n";
-//    pthread_create(&threadId, &testThreadAttr, testCryptoOCall, nullptr);
-//    std::cout << "Started. Waiting for stop....\n";
-//
-//    // Wait for thread to stop
-//    pthread_join(threadId, nullptr);
-//    std::cout << "End.\n";
-
-    /* OPENSSL WITHOUT SGX */
-//    testOpenSSLWithoutSGX();
-
-    /* TESTING DECRYPTION */
-//    void *defeat;
-//    if (posix_memalign(&defeat, 64, CACHE_DEFEAT_SIZE) != 0 || !defeat) {
-//        printf("defeat buffer allocation failure\n");
-//        return -1;
-//    }
-//    void *defeat0 __attribute__((unused)) = malloc(CACHE_DEFEAT_SIZE);
-//    void *defeat1 __attribute__((unused)) = malloc(CACHE_DEFEAT_SIZE);
-//#define DEFEATCACHE do { memset_s(defeat0, CACHE_DEFEAT_SIZE, 0, CACHE_DEFEAT_SIZE); memcpy(defeat1, defeat0, CACHE_DEFEAT_SIZE); asm volatile ("mfence"); } while (0)
-//
-//    void *buffer;
-//    if (posix_memalign(&buffer, 64, 2048) != 0 || !buffer) {
-//        printf("aligned buffer allocation failure\n");
-//        return -1;
-//    }
-//    memset(buffer, 0, 2048);
-//    clearcache(defeat, CACHE_DEFEAT_SIZE);
-//
-//    testingDecryption(argument);
-//
-//    free(defeat);
-//    free(defeat0);
-//    free(defeat1);
-
-    /* SECURE STREAMS BENCHMARK */
-//    testSecureStreamBenchmark();
-
-
-    /* NEXMARK BENCHMARK */
     if (argc < 2) {
-        std::cerr << "Error: No rule name provided." << std::endl;
+        printHelp();
+        return 0;
+    }
+    std::string cmd = argv[1];
+    if (cmd == "-h") {
+        printHelp();
+        return 0;
+    } else if (cmd == "-l") {
+        listBenchmarks();
+        return 0;
+    } else if (cmd == "-lq") {
+        if (argc < 3) {
+            std::cout << "Please provide a benchmark name." << std::endl;
+            return 1;
+        }
+        listQueries(argv[2]);
+        return 0;
+    } else if (cmd == "-r") {
+        // Queries requiring two sources
+        std::vector<std::string> twoSourceQueries = {
+            "Query3_JoinPersonAuction", "Query4_JoinAuctionBid", "Query6_JoinAuctionBid", "Query8_JoinPersonAuction", "Query3"
+        };
+        if (argc < 8) {
+            std::cout << "Usage: -r <benchmark_name> <query_name> <source> [<source2>] <measurement_dir> <result_dir> <number_of_runs>" << std::endl;
+            return 1;
+        }
+        std::string queryName = argv[3];
+        bool needsTwoSources = std::find(twoSourceQueries.begin(), twoSourceQueries.end(), queryName) != twoSourceQueries.end();
+        if (needsTwoSources && argc < 9) {
+            std::cout << "Error: Query '" << queryName << "' requires two source files." << std::endl;
+            printHelp();
+            return 1;
+        }
+        CommandLineArgument cmdArg(argc, argv);
+        runBenchmark(cmdArg);
+        return 0;
+    } else {
+        printHelp();
         return 1;
     }
-
-    std::string ruleName = argv[1];
-//    testNexmarkBenchmark(ruleName);
-//    testSecureStreamBenchmark(ruleName);
-    testStreamBoxBenchmark(ruleName);
-    return 0;
 }
-
