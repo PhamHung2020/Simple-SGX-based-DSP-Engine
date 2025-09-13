@@ -19,6 +19,8 @@ done
 
 cd build/$mode
 
+export LD_LIBRARY_PATH=/opt/intel/sgxsdk/lib64:$LD_LIBRARY_PATH
+
 $program -r "Nexmark" "Query1" "../../source_data/nexmark/bids.csv" "../../timing_measurements/nexmark" "../../sinks/nexmark" 1
 $program -r "Nexmark" "Query2_Filter" "../../source_data/nexmark/bids.csv" "../../timing_measurements/nexmark" "../../sinks/nexmark" 1
 $program -r "Nexmark" "Query2_Map" "../../sinks/nexmark/Nexmark_Query2_Filter_1.csv" "../../timing_measurements/nexmark" "../../sinks/nexmark" 1
