@@ -10,12 +10,12 @@
 #include "Nexmark/sinks.h"
 #include "App/utils.h"
 
-void NexmarkQuery::setMeasurementDirName(std::string &measurementDirName) {
-    this->measurementDirName_ = measurementDirName;
+void NexmarkQuery::setMeasurementDirName(const std::string& measurementDirName) {
+    measurementDirName_ = measurementDirName;
 }
 
-void NexmarkQuery::setResultDirName(std::string &resultDirName) {
-    this->resultDirName_ = resultDirName;
+void NexmarkQuery::setResultDirName(const std::string& resultDirName) {
+    resultDirName_ = resultDirName;
 }
 
 void NexmarkQuery::setupConfiguration_(ConfigurationTesting* config, std::string sourceFilePath, std::string measurementFileName, std::string sinkFileName) {
@@ -40,7 +40,7 @@ void NexmarkQuery::runQuery1(std::string sourceFilePath, std::string measurement
     ConfigurationTesting config;
     this->setupConfiguration_(&config, std::move(sourceFilePath), std::move(measurementFileName), std::move(sinkFileName));
 
-    config.taskId = 8;
+    config.taskId = 3;
     config.taskInputDataSize = sizeof(Bid) + SGX_AESGCM_MAC_SIZE + SGX_AESGCM_IV_SIZE + 4;
     config.taskShouldBeObserved = true;
     config.outputDataSize = sizeof(Bid) + SGX_AESGCM_MAC_SIZE + SGX_AESGCM_IV_SIZE + 4;
@@ -58,7 +58,7 @@ void NexmarkQuery::runQuery2_Filter(std::string sourceFilePath, std::string meas
     ConfigurationTesting config;
     this->setupConfiguration_(&config, std::move(sourceFilePath), std::move(measurementFileName), std::move(sinkFileName));
 
-    config.taskId = 9;
+    config.taskId = 4;
     config.taskInputDataSize = sizeof(Bid) + SGX_AESGCM_MAC_SIZE + SGX_AESGCM_IV_SIZE + 4;
     config.taskShouldBeObserved = true;
     config.outputDataSize = sizeof(Bid) + SGX_AESGCM_MAC_SIZE + SGX_AESGCM_IV_SIZE + 4;
@@ -76,7 +76,7 @@ void NexmarkQuery::runQuery2_Map(std::string sourceFilePath, std::string measure
     ConfigurationTesting config;
     this->setupConfiguration_(&config, std::move(sourceFilePath), std::move(measurementFileName), std::move(sinkFileName));
 
-    config.taskId = 10;
+    config.taskId = 5;
     config.taskInputDataSize = sizeof(Bid) + SGX_AESGCM_MAC_SIZE + SGX_AESGCM_IV_SIZE + 4;
     config.taskShouldBeObserved = true;
     config.outputDataSize = sizeof(Q2Result) + SGX_AESGCM_MAC_SIZE + SGX_AESGCM_IV_SIZE + 4;
@@ -94,7 +94,7 @@ void NexmarkQuery::runQuery3_FilterPerson(std::string sourceFilePath, std::strin
     ConfigurationTesting config;
     this->setupConfiguration_(&config, std::move(sourceFilePath), std::move(measurementFileName), std::move(sinkFileName));
 
-    config.taskId = 11;
+    config.taskId = 6;
     config.taskInputDataSize = sizeof(Person) + SGX_AESGCM_MAC_SIZE + SGX_AESGCM_IV_SIZE + 4;
     config.taskShouldBeObserved = true;
     config.outputDataSize = sizeof(Person) + SGX_AESGCM_MAC_SIZE + SGX_AESGCM_IV_SIZE + 4;
@@ -112,7 +112,7 @@ void NexmarkQuery::runQuery3_FilterAuction(std::string sourceFilePath, std::stri
     ConfigurationTesting config;
     this->setupConfiguration_(&config, std::move(sourceFilePath), std::move(measurementFileName), std::move(sinkFileName));
 
-    config.taskId = 12;
+    config.taskId = 7;
     config.taskInputDataSize = sizeof(Auction) + SGX_AESGCM_MAC_SIZE + SGX_AESGCM_IV_SIZE + 4;
     config.taskShouldBeObserved = true;
     config.outputDataSize = sizeof(Auction) + SGX_AESGCM_MAC_SIZE + SGX_AESGCM_IV_SIZE + 4;
@@ -144,7 +144,7 @@ void NexmarkQuery::runQuery3_JoinPersonAuction(std::string sourceFilePath1, std:
     config.sourceCount2 = -1;
     config.parser2 = new AuctionParser();
 
-    config.taskId = 13;
+    config.taskId = 8;
     config.taskInputDataSize1 = sizeof(Person) + SGX_AESGCM_MAC_SIZE + SGX_AESGCM_IV_SIZE + 4;
     config.taskInputDataSize2 = sizeof(Auction) + SGX_AESGCM_MAC_SIZE + SGX_AESGCM_IV_SIZE + 4;
     config.taskShouldBeObserved = true;
@@ -162,7 +162,7 @@ void NexmarkQuery::runQuery3_MapJoinResult(std::string sourceFilePath, std::stri
     ConfigurationTesting config;
     this->setupConfiguration_(&config, std::move(sourceFilePath), std::move(measurementFileName), std::move(sinkFileName));
 
-    config.taskId = 14;
+    config.taskId = 9;
     config.taskInputDataSize = sizeof(Q3JoinResult) + SGX_AESGCM_MAC_SIZE + SGX_AESGCM_IV_SIZE + 4;
     config.taskShouldBeObserved = true;
     config.outputDataSize = sizeof(Q3Result) + SGX_AESGCM_MAC_SIZE + SGX_AESGCM_IV_SIZE + 4;
@@ -195,7 +195,7 @@ void NexmarkQuery::runQuery4_JoinAuctionBid(std::string sourceFilePath1, std::st
     config.sourceCount2 = -1;
     config.parser2 = new BidParser();
 
-    config.taskId = 15;
+    config.taskId = 10;
     config.taskInputDataSize1 = sizeof(Auction) + SGX_AESGCM_MAC_SIZE + SGX_AESGCM_IV_SIZE + 4;
     config.taskInputDataSize2 = sizeof(Bid) + SGX_AESGCM_MAC_SIZE + SGX_AESGCM_IV_SIZE + 4;
     config.taskShouldBeObserved = true;
@@ -214,7 +214,7 @@ void NexmarkQuery::runQuery4_MapAuctionBid(std::string sourceFilePath, std::stri
     ConfigurationTesting config;
     this->setupConfiguration_(&config, std::move(sourceFilePath), std::move(measurementFileName), std::move(sinkFileName));
 
-    config.taskId = 16;
+    config.taskId = 11;
     config.taskInputDataSize = sizeof(Q4Join1Result) + SGX_AESGCM_MAC_SIZE + SGX_AESGCM_IV_SIZE + 4;
     config.taskShouldBeObserved = true;
     config.outputDataSize = sizeof(Q4Map1Result) + SGX_AESGCM_MAC_SIZE + SGX_AESGCM_IV_SIZE + 4;
@@ -232,7 +232,7 @@ void NexmarkQuery::runQuery4_Max(std::string sourceFilePath, std::string measure
     ConfigurationTesting config;
     this->setupConfiguration_(&config, std::move(sourceFilePath), std::move(measurementFileName), std::move(sinkFileName));
 
-    config.taskId = 17;
+    config.taskId = 12;
     config.taskInputDataSize = sizeof(Q4Map1Result) + SGX_AESGCM_MAC_SIZE + SGX_AESGCM_IV_SIZE + 4;
     config.taskShouldBeObserved = true;
     config.outputDataSize = sizeof(Q4Map1Result) + SGX_AESGCM_MAC_SIZE + SGX_AESGCM_IV_SIZE + 4;
@@ -250,7 +250,7 @@ void NexmarkQuery::runQuery4_JoinCategory(std::string sourceFilePath, std::strin
     ConfigurationTesting config;
     this->setupConfiguration_(&config, std::move(sourceFilePath), std::move(measurementFileName), std::move(sinkFileName));
 
-    config.taskId = 18;
+    config.taskId = 13;
     config.taskInputDataSize = sizeof(Q4Map1Result) + SGX_AESGCM_MAC_SIZE + SGX_AESGCM_IV_SIZE + 4;
     config.taskShouldBeObserved = true;
     config.outputDataSize = sizeof(Q4Map1Result) + SGX_AESGCM_MAC_SIZE + SGX_AESGCM_IV_SIZE + 4;
@@ -268,7 +268,7 @@ void NexmarkQuery::runQuery4_Average(std::string sourceFilePath, std::string mea
     ConfigurationTesting config;
     this->setupConfiguration_(&config, std::move(sourceFilePath), std::move(measurementFileName), std::move(sinkFileName));
 
-    config.taskId = 19;
+    config.taskId = 14;
     config.taskInputDataSize = sizeof(Q4Map1Result) + SGX_AESGCM_MAC_SIZE + SGX_AESGCM_IV_SIZE + 4;
     config.taskShouldBeObserved = true;
     config.outputDataSize = sizeof(Q4AverageResult) + SGX_AESGCM_MAC_SIZE + SGX_AESGCM_IV_SIZE + 4;
@@ -286,7 +286,7 @@ void NexmarkQuery::runQuery5_CountByAuction(std::string sourceFilePath, std::str
     ConfigurationTesting config;
     this->setupConfiguration_(&config, std::move(sourceFilePath), std::move(measurementFileName), std::move(sinkFileName));
 
-    config.taskId = 20;
+    config.taskId = 15;
     config.taskInputDataSize = sizeof(Bid) + SGX_AESGCM_MAC_SIZE + SGX_AESGCM_IV_SIZE + 4;
     config.taskShouldBeObserved = true;
     config.outputDataSize = sizeof(Q5CountByAuctionResult) + SGX_AESGCM_MAC_SIZE + SGX_AESGCM_IV_SIZE + 4;
@@ -306,7 +306,7 @@ void NexmarkQuery::runQuery5_MaxBatch(std::string sourceFilePath, std::string me
     ConfigurationTesting config;
     this->setupConfiguration_(&config, std::move(sourceFilePath), std::move(measurementFileName), std::move(sinkFileName));
 
-    config.taskId = 21;
+    config.taskId = 16;
     config.taskInputDataSize = sizeof(Q5CountByAuctionResult) + SGX_AESGCM_MAC_SIZE + SGX_AESGCM_IV_SIZE + 4;
     config.taskShouldBeObserved = true;
     config.outputDataSize = sizeof(Q5CountByAuctionResult) + SGX_AESGCM_MAC_SIZE + SGX_AESGCM_IV_SIZE + 4;
@@ -338,7 +338,7 @@ void NexmarkQuery::runQuery6_JoinAuctionBid(std::string sourceFilePath1, std::st
     config.sourceCount2 = -1;
     config.parser2 = new BidParser();
 
-    config.taskId = 22;
+    config.taskId = 17;
     config.taskInputDataSize1 = sizeof(Auction) + SGX_AESGCM_MAC_SIZE + SGX_AESGCM_IV_SIZE + 4;
     config.taskInputDataSize2 = sizeof(Bid) + SGX_AESGCM_MAC_SIZE + SGX_AESGCM_IV_SIZE + 4;
     config.taskShouldBeObserved = true;
@@ -357,7 +357,7 @@ void NexmarkQuery::runQuery6_Filter(std::string sourceFilePath, std::string meas
     ConfigurationTesting config;
     this->setupConfiguration_(&config, std::move(sourceFilePath), std::move(measurementFileName), std::move(sinkFileName));
 
-    config.taskId = 23;
+    config.taskId = 18;
     config.taskInputDataSize = sizeof(Q6JoinResult) + SGX_AESGCM_MAC_SIZE + SGX_AESGCM_IV_SIZE + 4;
     config.taskShouldBeObserved = true;
     config.outputDataSize = sizeof(Q6JoinResult) + SGX_AESGCM_MAC_SIZE + SGX_AESGCM_IV_SIZE + 4;
@@ -376,7 +376,7 @@ void NexmarkQuery::runQuery6_Max(std::string sourceFilePath, std::string measure
     ConfigurationTesting config;
     this->setupConfiguration_(&config, std::move(sourceFilePath), std::move(measurementFileName), std::move(sinkFileName));
 
-    config.taskId = 24;
+    config.taskId = 19;
     config.taskInputDataSize = sizeof(Q6JoinResult) + SGX_AESGCM_MAC_SIZE + SGX_AESGCM_IV_SIZE + 4;
     config.taskShouldBeObserved = true;
     config.outputDataSize = sizeof(Q6MaxResult) + SGX_AESGCM_MAC_SIZE + SGX_AESGCM_IV_SIZE + 4;
@@ -396,7 +396,7 @@ void NexmarkQuery::runQuery6_Avg(std::string sourceFilePath, std::string measure
     this->setupConfiguration_(&config, std::move(sourceFilePath), std::move(measurementFileName), std::move(sinkFileName));
 
 //    config.taskId = 25;
-    config.taskId = 31;
+    config.taskId = 20;
 
     config.taskInputDataSize = sizeof(Q6MaxResult) + SGX_AESGCM_MAC_SIZE + SGX_AESGCM_IV_SIZE + 4;
 //    config.taskInputDataSize = sizeof(Q6MaxResult);
@@ -492,4 +492,3 @@ void NexmarkQuery::cleanConfiguration_(ConfigurationTesting *config) {
     delete config->parser1;
     delete config->parser2;
 }
-

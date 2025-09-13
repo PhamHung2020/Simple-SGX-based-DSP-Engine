@@ -158,9 +158,6 @@ void testMemCpy() {
 }
 
 void testMemCpy2(char* outMem) {
-//    for (int i = 0; i < size; ++i) {
-//        from[i] = (char )i;
-//    }
     memcpy(outMem, from, size);
 }
 

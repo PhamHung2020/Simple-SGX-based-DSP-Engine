@@ -9,8 +9,8 @@
 
 class SecureSgxQuery {
 public:
-    void setMeasurementDirName(std::string& measurementDirName);
-    void setResultDirName(std::string& resultDirName);
+    void setMeasurementDirName(const std::string& measurementDirName);
+    void setResultDirName(const std::string& resultDirName);
 
     void runMapQuery(std::string sourceFilePath, std::string measurementFileName, std::string sinkFileName);
     void runFilterQuery(std::string sourceFilePath, std::string measurementFileName, std::string sinkFileName);

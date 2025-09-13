@@ -77,7 +77,7 @@ void runEngineWithBufferObserverCrypto(ConfigurationTesting& config, bool should
     // ====================== Write measurements ==============================
     const size_t nBuffer = engine.getBufferCount();
 
-    for (size_t i = 0; i < nBuffer; ++i) {
+    for (size_t i = 0; i < nBuffer - 1; ++i) {
         if (!engine.isObserved(static_cast<int>(i))) {
             continue;
         }
@@ -93,7 +93,7 @@ void runEngineWithBufferObserverCrypto(ConfigurationTesting& config, bool should
         std::string headFileFullPath = createdMeasurementDirName;
         headFileFullPath.append("/").append(headFilename);
 
-        std::cout << "Writing measurements for head buffer " << i << std::endl;
+        std::cout << "Writing measurements for head buffer " << i+1 << std::endl;
         writeObservedMeasurementToFile(headFileFullPath, engine.getHeadObservedData(static_cast<int>(i+1)));
     }
 

@@ -9,8 +9,8 @@
 
 class StreamBoxQuery {
 public:
-    void setMeasurementDirName(std::string& measurementDirName);
-    void setResultDirName(std::string& resultDirName);
+    void setMeasurementDirName(const std::string& measurementDirName);
+    void setResultDirName(const std::string& resultDirName);
 
     void runQuery1(std::string, std::string, std::string);
     void runQuery2(std::string, std::string, std::string);
