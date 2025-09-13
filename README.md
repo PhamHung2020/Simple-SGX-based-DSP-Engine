@@ -12,7 +12,7 @@ This project is tested on Ubuntu 22.04 LTS, with following dependencies:
 - **Openssl**: Version 3.0.13.
 - **Python**: Version 3.12.
 
-To install the required packages, run _install.sh_ script.
+To install the required packages, run _install.sh_ script with _sudo_.
 
 ## Building the Tool
 

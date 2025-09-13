@@ -69,14 +69,10 @@ if [[ "${PYTHON_VERSION}" < "${REQUIRED_VERSION}" ]]; then
 fi
 
 # Copy libraries to sgxsdk
-SGX_LIB_DIR="/opt/intel/sgxsdk/lib64"
-SGX_INCLUDE_DIR="/opt/intel/sgxsdk/include"
-
-sudo cp libraries/* "$SGX_LIB_DIR"
-sudo chmod 644 "$SGX_LIB_DIR"/*
-
-sudo cp -R include/sgxssl/ "$SGX_INCLUDE_DIR"
-sudo chmod -R 755 "$SGX_INCLUDE_DIR"
+echo "Copying necessary libraries to SGX SDK..."
+sudo cp libraries/* /opt/intel/sgxsdk/lib64
+sudo cp -R include/sgxssl/ /opt/intel/sgxsdk/include
+echo "Libraries copied."
 
 echo "All dependencies installed."
 
