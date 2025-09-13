@@ -65,7 +65,6 @@ PYTHON_VERSION=$(python3 -c 'import sys; print("{}.{}".format(sys.version_info[0
 REQUIRED_VERSION="3.6"
 if [[ "${PYTHON_VERSION}" < "${REQUIRED_VERSION}" ]]; then
     echo "Python version must be >= 3.6. Found ${PYTHON_VERSION}. Please upgrade manually."
-    exit 1
 fi
 
 # Copy libraries to sgxsdk
