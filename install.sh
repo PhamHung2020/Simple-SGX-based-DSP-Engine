@@ -42,6 +42,15 @@ else
     echo "Make already installed."
 fi
 
+# Install OpenSSL
+if ! command -v make &> /dev/null; then
+    echo "Installing OpenSSL..."
+    sudo apt-get update
+    sudo apt-get install -y libssl-dev
+else
+    echo "OpenSSL already installed."
+fi
+
 # Install Python (>=3.6)
 if ! command -v python3 &> /dev/null; then
     echo "Installing Python3..."
