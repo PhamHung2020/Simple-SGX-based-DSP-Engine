@@ -10,7 +10,7 @@ if [[ -z "$mode" ]]; then
 fi
 
 # Check and create required directories
-for dir in "../../source_data/streambox" "../../timing_measurements/streambox" "../../sinks/streambox"; do
+for dir in "./source_data/streambox" "./timing_measurements/streambox" "./sinks/streambox"; do
     if [ ! -d "$dir" ]; then
         echo "Directory $dir does not exist. Creating..."
         mkdir -p "$dir"

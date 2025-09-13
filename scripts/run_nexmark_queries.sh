@@ -10,7 +10,7 @@ if [[ -z "$mode" ]]; then
 fi
 
 # Check and create required directories
-for dir in "../../source_data/nexmark" "../../timing_measurements/nexmark" "../../sinks/nexmark"; do
+for dir in "./source_data/nexmark" "./timing_measurements/nexmark" "./sinks/nexmark"; do
     if [ ! -d "$dir" ]; then
         echo "Directory $dir does not exist. Creating..."
         mkdir -p "$dir"
