@@ -2,20 +2,84 @@
 
 This project provides a simple DSP engine running on Intel SGX using HotCalls, designed to benchmark and analyze query leakage in secure stream processing systems.
 
+## Organization
+
+This repository is organized into the following main directories:
+- For the DSP engine and benchmarks:
+  - config: Configuration files for compiling SGX projects.
+  - include: Header files for the project.
+  - src: Source code for the DSP engine and benchmarks.
+  - scripts: Scripts to run benchmarks and manage experiments.
+  - libraries: External libraries used in the project.
+- For data analysis and visualization:
+  - notebooks: Jupyter notebooks and Python code for data analysis, visualization, and produce results in the paper.
+
 ## Prerequisites
 
-This project is tested on Ubuntu 22.04 LTS, with following dependencies:
-- **Intel SGX SDK**: Version 2.24. Ensure you have the Intel SGX SDK installed. Follow the instructions at [Intel SGX SDK Installation Guide](https://download.01.org/intel-sgx/latest/linux-latest/docs/Intel_SGX_SW_Installation_Guide_for_Linux.pdf).
-- **CMake**: Version 3.28.3.
-- **GCC**: Version 13.3.0.
-- **Make**: GNU Make 4.3.
-- **Openssl**: Version 3.0.13.
-- **Python**: Version 3.12.
+This project is tested on Ubuntu 22.04 LTS, Intel SGX supported, with following dependencies:
+- If you want to run the DSP engine:
+  - **Intel SGX SDK**: Version 2.24. Ensure you have the Intel SGX SDK installed. Follow the instructions at [Intel SGX SDK Installation Guide](https://download.01.org/intel-sgx/latest/linux-latest/docs/Intel_SGX_SW_Installation_Guide_for_Linux.pdf).
+  - **CMake**: Version 3.28.3.
+  - **GCC**: Version 13.3.0.
+  - **Make**: GNU Make 4.3.
+  - **Openssl**: Version 3.0.13.
+- If you want to run the notebooks and produce results in the paper:
+  - **Python**: Version 3.12.
 
-To install the required packages, run _install.sh_ script with _sudo_.
+If you want to run the DSP engine but your machine does not support Intel SGX, you can run the engine in SGX simulation mode. See the section "Running in SGX Simulation Mode" below for more details.
+To install all dependencies, run _install.sh_ script with _sudo_.
 
-## Building the Tool
+## Data visualization and produce results in the paper
 
+Notebooks and Python scripts for producing results in the paper are located in the _notebooks_ folder. These notebooks and code are tested with Python 3.12.
+
+Required Python packages are listed in _notebooks/requirements.txt_. You can create a virtual environment using Venv, then install required packages using pip:
+
+```sh
+pip install -r notebooks/requirements.txt
+```
+
+Or you can use Conda if you prefer.
+
+There are 3 folders:
+- **notebooks/cdf**: Contains Jupyter notebooks for CDF related results.
+- **notebooks/ts2vec**: Contains Jupyter notebooks for TS2VEC related results.
+- **notebooks/utils**: Contains useful Python scripts, used by notebooks in 2 previous folders.
+
+In **notebooks/cdf** and **notebooks/ts2vec** folders, each has following notebooks:
+- **classification.ipynb**: Perform operator classifications.
+- **cross_classification.ipynb**: Perform cross classification - use models trained on Nexmark dataset to perform classification on Secure Stream dataset.
+- **regression.ipynb**: Perform operators' parameters prediction.
+- **visualization.ipynb**: Generate figures used in the paper.
+
+If you wish to run these notebooks:
+- First download the dataset, which is our timing measurements of the queries in the paper, from the following link: [Timing dataset](https://zenodo.org/records/17115025).
+- Unzip the downloaded file, you will see 2 zip files: nexmark_dataset.zip and secure_sgx_dataset.zip. Continue unzipping them, and place them under the _notebooks_ folder. The whole dataset is around 41GB after unzipping.
+- Finally, install the required packages and run the notebooks.
+
+## DSP Engine
+
+This prototype DPS engine was used to run the benchmarks in the paper and generate the dataset mentioned above. If you wish to run this tool, follow the instructions below.
+
+### Using Docker
+
+A Dockerfile is provided to set up the environment. To build the Docker image, run:
+
+```sh
+docker build -t dsp_sgx .
+```
+
+After building the image, you can run a container with:
+
+```sh
+docker run -it dsp_sgx
+```
+
+Once the container is running, you can go in to to 
+
+### Natively building the DSP Engine
+
+If you prefer to build the project natively, ensure you have all the prerequisites installed as mentioned above.
 Before running any commands, build the project using:
 
 ```sh
@@ -25,32 +89,32 @@ make <mode>
 where <mode> can be either `debug` or `release`. Default mode is `debug`.
 This will compile the application and its dependencies, then produce a runnable file in the folder _build/\<mode>_.
 
-## Command Line Usage
+### DSP Engine Command Line Usage
 
 After building, change directory to _build/\<mode>_, then you can run the tool with the following commands:
 
-### Display Help
+#### Display Help
 
 ```sh
 ./app -h
 ```
 Shows all available commands and their usage.
 
-### List All Benchmarks
+#### List All Benchmarks
 
 ```sh
 ./app -l
 ```
 Lists all supported benchmark names.
 
-### List Queries of a Benchmark
+#### List Queries of a Benchmark
 
 ```sh
 ./app -lq <benchmark_name>
 ```
 Lists all available queries for the specified benchmark. Benchmark names include: `nexmark`, `securestream`, and `streambox`.
 
-### Run a Query
+#### Run a Query
 
 ```sh
 ./app -r <benchmark_name> <query_name> <source1> [<source2>] <measurement_dir> <result_dir> <number_of_runs>
@@ -71,12 +135,12 @@ Runs the specified query from the chosen benchmark. Some queries may require two
 ./app -r nexmark q1 dataset/nexmark/auctions.csv measurements/nexmark results/nexmark 3
 ```
 
-## Running in SGX Simulation Mode
+### Running in SGX Simulation Mode
 To compile and run the application in SGX simulation mode, change the `Makefile` to set `SGX_MODE=SIM` and then build the project. This mode allows you to test the application without requiring actual SGX hardware.
 
-## Running queries in the paper
+### Running queries in the paper
 
-Download the datasource used in the experiments from the following links: [source_data](https://drive.google.com/file/d/1144xgE9u4ZwF7hgLMe5Wh5k6OUTcEHvr/view?usp=drive_link). Unzip the file and place the unzipped folder (named _source_data_) under the root directory of the project.
+Download the datasource used in the experiments from the following links: [source_data](https://github.com/PhamHung2020/Simple-SGX-based-DSP-Engine/releases/download/data_source/source_data.zip). Unzip the file and place the unzipped folder (named _source_data_) under the root directory of the project.
 
 To run benchmarks used in the associated research paper, after building the project, execute the corresponding script for the desired benchmark:
 - For `nexmark` benchmark, run **_scripts/run_nexmark_queries.sh_**.
