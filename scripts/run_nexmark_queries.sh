@@ -10,7 +10,7 @@ if [[ -z "$mode" ]]; then
 fi
 
 # Check and create required directories
-for dir in "../../source_data/nexmark" "../../timing_measurements/nexmark" "../../sinks/nexmark"; do
+for dir in "./source_data/nexmark" "./timing_measurements/nexmark" "./sinks/nexmark"; do
     if [ ! -d "$dir" ]; then
         echo "Directory $dir does not exist. Creating..."
         mkdir -p "$dir"
@@ -18,6 +18,8 @@ for dir in "../../source_data/nexmark" "../../timing_measurements/nexmark" "../.
 done
 
 cd build/$mode
+
+export LD_LIBRARY_PATH=/opt/intel/sgxsdk/lib64:$LD_LIBRARY_PATH
 
 $program -r "Nexmark" "Query1" "../../source_data/nexmark/bids.csv" "../../timing_measurements/nexmark" "../../sinks/nexmark" 1
 $program -r "Nexmark" "Query2_Filter" "../../source_data/nexmark/bids.csv" "../../timing_measurements/nexmark" "../../sinks/nexmark" 1

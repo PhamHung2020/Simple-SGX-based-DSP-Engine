@@ -42,6 +42,15 @@ else
     echo "Make already installed."
 fi
 
+# Install OpenSSL
+if ! command -v make &> /dev/null; then
+    echo "Installing OpenSSL..."
+    sudo apt-get update
+    sudo apt-get install -y libssl-dev
+else
+    echo "OpenSSL already installed."
+fi
+
 # Install Python (>=3.6)
 if ! command -v python3 &> /dev/null; then
     echo "Installing Python3..."
@@ -58,6 +67,12 @@ if [[ "${PYTHON_VERSION}" < "${REQUIRED_VERSION}" ]]; then
     echo "Python version must be >= 3.6. Found ${PYTHON_VERSION}. Please upgrade manually."
     exit 1
 fi
+
+# Copy libraries to sgxsdk
+echo "Copying necessary libraries to SGX SDK..."
+sudo cp libraries/* /opt/intel/sgxsdk/lib64
+sudo cp -R include/sgxssl/ /opt/intel/sgxsdk/include
+echo "Libraries copied."
 
 echo "All dependencies installed."
 

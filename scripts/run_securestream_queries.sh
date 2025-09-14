@@ -10,7 +10,7 @@ if [[ -z "$mode" ]]; then
 fi
 
 # Check and create required directories
-for dir in "../../source_data/securestream" "../../timing_measurements/securestream" "../../sinks/securestream"; do
+for dir in "./source_data/securestream" "./timing_measurements/securestream" "./sinks/securestream"; do
     if [ ! -d "$dir" ]; then
         echo "Directory $dir does not exist. Creating..."
         mkdir -p "$dir"
@@ -18,6 +18,8 @@ for dir in "../../source_data/securestream" "../../timing_measurements/securestr
 done
 
 cd build/$mode
+
+export LD_LIBRARY_PATH=/opt/intel/sgxsdk/lib64:$LD_LIBRARY_PATH
 
 $program -r "SecureStream" "MapQuery" "../../source_data/securestream/2005_100000.csv" "../../timing_measurements/securestream" "../../sinks/securestream" 1
 $program -r "SecureStream" "FilterQuery" "../../sinks/securestream/SecureStream_MapQuery_1.csv" "../../timing_measurements/securestream" "../../sinks/securestream" 1

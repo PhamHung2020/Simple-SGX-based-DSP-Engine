@@ -10,7 +10,7 @@ if [[ -z "$mode" ]]; then
 fi
 
 # Check and create required directories
-for dir in "../../source_data/streambox" "../../timing_measurements/streambox" "../../sinks/streambox"; do
+for dir in "./source_data/streambox" "./timing_measurements/streambox" "./sinks/streambox"; do
     if [ ! -d "$dir" ]; then
         echo "Directory $dir does not exist. Creating..."
         mkdir -p "$dir"
@@ -18,6 +18,8 @@ for dir in "../../source_data/streambox" "../../timing_measurements/streambox" "
 done
 
 cd build/$mode
+
+export LD_LIBRARY_PATH=/opt/intel/sgxsdk/lib64:$LD_LIBRARY_PATH
 
 $program -r "StreamBox" "Query1" "../../source_data/streambox/synthetic_dataset_for_q1.csv" "../../timing_measurements/streambox" "../../sinks/streambox" 1
 $program -r "StreamBox" "Query2" "../../source_data/streambox/trip_data_first_5k.csv" "../../timing_measurements/streambox" "../../sinks/streambox" 1

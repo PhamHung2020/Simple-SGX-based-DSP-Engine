@@ -9,7 +9,10 @@ This project is tested on Ubuntu 22.04 LTS, with following dependencies:
 - **CMake**: Version 3.28.3.
 - **GCC**: Version 13.3.0.
 - **Make**: GNU Make 4.3.
+- **Openssl**: Version 3.0.13.
 - **Python**: Version 3.12.
+
+To install the required packages, run _install.sh_ script with _sudo_.
 
 ## Building the Tool
 
