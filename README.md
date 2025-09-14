@@ -2,6 +2,15 @@
 
 This project provides a simple DSP engine running on Intel SGX using HotCalls, designed to benchmark and analyze query leakage in secure stream processing systems.
 
+## Organization
+
+- config: Configuration files for compiling SGX projects.
+- include: Header files for the project.
+- src: Source code for the DSP engine and benchmarks.
+- scripts: Scripts to run benchmarks and manage experiments.
+- libraries: External libraries used in the project.
+- notebooks: Jupyter notebooks and Python code for data analysis, visualization, and produce results in the paper.
+
 ## Prerequisites
 
 This project is tested on Ubuntu 22.04 LTS, with following dependencies:
@@ -85,3 +94,23 @@ To run benchmarks used in the associated research paper, after building the proj
 
 Results, which is the output of the queries, will be stored in the _sinks_ folder. Timing measurements will be saved in the _timing_measurements_ folder.
 You can modify the scripts to change parameters such as the number of runs or input data files as needed.
+
+## Running notebooks for data analysis, visualization, and produce results in the paper
+
+Notebooks and Python scripts for data analysis and visualization are located in the _notebooks_ folder. Required Python packages are listed in _notebooks/requirements.txt_. You can install them using pip:
+
+```sh
+pip install -r notebooks/requirements.txt
+```
+
+However, these notebooks are still in the process of being cleaned, organized, and documented. Below is a brief description of each notebook and Pyhton files:
+- **notebooks/load_dataset.py**: Python script to preprocess and load datasets.
+- **notebooks/ml_regression.py**: Python script containing functions for performing regression.
+- **notebooks/cdf.ipynb**: Jupyter notebook to calculate and perform classification based on CDF.
+- **notebooks/cross.ipynb**: Jupyter notebook to use a model trained on a benchmark to perform classification on another benchmark (cross classification).
+- **notebooks/ts2vec_classification.ipynb**: Jupyter notebook to use the ts2vec model for classification.
+- *notebooks/ts2vec_regression.ipynb*: Jupyter notebook to use the ts2vec model for regression.
+- **notebooks/ts2vec_visualize.ipynb**: Jupyter notebook to use the ts2vec model for visualization.
+
+If you wish to run these notebooks, first download the dataset, which is the output of the queries in the paper, from the following link: [output_data](https://drive.google.com/file/d/1JHk3Yk9bX4eX4F7hgLMe5Wh5k6OUTcEHvr/view?usp=drive_link). Unzip the file and place under the _notebooks_ folder. Then, install the required packages and run the notebooks.
+This file will be updated regularly to provide detail instructions.

@@ -1,0 +1,10 @@
+numpy
+pandas
+sklearn
+matplotlib
+torch
+seaborn
+scipy
+ts2vec
+xgboost
+tqdm
