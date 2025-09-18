@@ -57,7 +57,7 @@ if ! command -v python3.12 &> /dev/null; then
     sudo apt update && sudo apt upgrade -y
     sudo add-apt-repository ppa:deadsnakes/ppa
     sudo apt update
-    sudo apt install python3.12 python3.12-distutils python3.12-venv
+    sudo apt install -y python3.12 python3.12-venv
 else
     echo "Python3.12 already installed."
 fi
