@@ -61,26 +61,20 @@ If you wish to run these notebooks:
 
 This prototype DPS engine was used to run the benchmarks in the paper and generate the dataset mentioned above. If you wish to run this tool, follow the instructions below.
 
-### Using Docker
+### Building the DSP Engine
 
-A Dockerfile is provided to set up the environment. To build the Docker image, run:
-
+Clone the repository and navigate to the root directory of the project.
 ```sh
-docker build -t dsp_sgx .
+git clone https://github.com/PhamHung2020/Simple-SGX-based-DSP-Engine
+cd Simple-SGX-based-DSP-Engine
 ```
 
-After building the image, you can run a container with:
-
+Install all dependencies by running:
 ```sh
-docker run -it dsp_sgx
+sudo ./install.sh
 ```
 
-Once the container is running, you can go in to to 
-
-### Natively building the DSP Engine
-
-If you prefer to build the project natively, ensure you have all the prerequisites installed as mentioned above.
-Before running any commands, build the project using:
+Build the project using:
 
 ```sh
 make <mode>
@@ -88,6 +82,12 @@ make <mode>
 
 where <mode> can be either `debug` or `release`. Default mode is `debug`.
 This will compile the application and its dependencies, then produce a runnable file in the folder _build/\<mode>_.
+
+Export the SGX SDK environment variables by running:
+```sh
+source /opt/intel/sgxsdk/environment
+```
+Everytime you open a new terminal, remember to run this command to set the environment variables.
 
 ### DSP Engine Command Line Usage
 
