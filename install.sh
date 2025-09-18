@@ -43,28 +43,23 @@ else
 fi
 
 # Install OpenSSL
-if ! command -v make &> /dev/null; then
-    echo "Installing OpenSSL..."
-    sudo apt-get update
-    sudo apt-get install -y libssl-dev
-else
-    echo "OpenSSL already installed."
-fi
+#if ! command -v make &> /dev/null; then
+echo "Installing OpenSSL..."
+sudo apt-get update
+sudo apt-get install -y libssl-dev
+#else
+#    echo "OpenSSL already installed."
+#fi
 
-# Install Python (>=3.6)
-if ! command -v python3 &> /dev/null; then
-    echo "Installing Python3..."
-    sudo apt-get update
-    sudo apt-get install -y python3 python3-pip
+# Install Python3.12
+if ! command -v python3.12 &> /dev/null; then
+    echo "Installing Python3.12..."
+    sudo apt update && sudo apt upgrade -y
+    sudo add-apt-repository ppa:deadsnakes/ppa
+    sudo apt update
+    sudo apt install python3.12 python3.12-distutils python3.12-venv
 else
-    echo "Python3 already installed."
-fi
-
-# Check Python version
-PYTHON_VERSION=$(python3 -c 'import sys; print("{}.{}".format(sys.version_info[0], sys.version_info[1]))')
-REQUIRED_VERSION="3.6"
-if [[ "${PYTHON_VERSION}" < "${REQUIRED_VERSION}" ]]; then
-    echo "Python version must be >= 3.6. Found ${PYTHON_VERSION}. Please upgrade manually."
+    echo "Python3.12 already installed."
 fi
 
 # Copy libraries to sgxsdk
