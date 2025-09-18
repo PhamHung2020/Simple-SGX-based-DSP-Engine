@@ -89,6 +89,23 @@ source /opt/intel/sgxsdk/environment
 ```
 Everytime you open a new terminal, remember to run this command to set the environment variables.
 
+### Running queries in the paper
+
+Run the script:
+```sh
+scripts/download_source_data_for_queries.sh
+```
+
+The script will download the datasource used in the experiments from the following links: [source_data](https://github.com/PhamHung2020/Simple-SGX-based-DSP-Engine/releases/download/data_source/source_data.zip), then unzip the file and place the unzipped folder (named _source_data_) under the root directory of the project.
+
+To run benchmarks used in the associated research paper, after building the project, execute the corresponding script for the desired benchmark:
+- For `nexmark` benchmark, run **_scripts/run_nexmark_queries.sh_**.
+- For `securestream` benchmark, run **_scripts/run_securestream_queries.sh_**.
+- For `streambox` benchmark, run **_scripts/run_streambox_queries.sh_**.
+
+Results, which is the output of the queries, will be stored in the _sinks_ folder. Timing measurements will be saved in the _timing_measurements_ folder.
+You can modify the scripts to change parameters such as the number of runs or input data files as needed.
+
 ### DSP Engine Command Line Usage
 
 After building, change directory to _build/\<mode>_, then you can run the tool with the following commands:
@@ -137,15 +154,4 @@ Runs the specified query from the chosen benchmark. Some queries may require two
 
 ### Running in SGX Simulation Mode
 To compile and run the application in SGX simulation mode, change the `Makefile` to set `SGX_MODE=SIM` and then build the project. This mode allows you to test the application without requiring actual SGX hardware.
-
-### Running queries in the paper
-
-Download the datasource used in the experiments from the following links: [source_data](https://github.com/PhamHung2020/Simple-SGX-based-DSP-Engine/releases/download/data_source/source_data.zip). Unzip the file and place the unzipped folder (named _source_data_) under the root directory of the project.
-
-To run benchmarks used in the associated research paper, after building the project, execute the corresponding script for the desired benchmark:
-- For `nexmark` benchmark, run **_scripts/run_nexmark_queries.sh_**.
-- For `securestream` benchmark, run **_scripts/run_securestream_queries.sh_**.
-- For `streambox` benchmark, run **_scripts/run_streambox_queries.sh_**.
-
-Results, which is the output of the queries, will be stored in the _sinks_ folder. Timing measurements will be saved in the _timing_measurements_ folder.
-You can modify the scripts to change parameters such as the number of runs or input data files as needed.
+In case your hardware supports SGX, you can set `SGX_MODE=HW` to run the application on real SGX hardware.
